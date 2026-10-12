@@ -270,8 +270,9 @@
 
   img {
     max-width: 100% !important;
-    image-rendering: -webkit-optimize-contrast !important;
-    image-rendering: crisp-edges !important;
+    image-rendering: auto !important;
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
   }
 
   /* Structural Table Rows and Form Fields Protection */

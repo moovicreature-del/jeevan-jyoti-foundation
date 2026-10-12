@@ -23,7 +23,9 @@ import {
   Lock,
   Archive,
   ArrowDownToLine,
-  Check
+  Check,
+  GitBranch,
+  HelpCircle
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import {
@@ -277,6 +279,29 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({ isOpen, onClos
                 </span>
               </div>
             )}
+          </div>
+
+          {/* GitHub Push & Data Sync Advisory */}
+          <div className="bg-amber-50/90 border border-amber-300 rounded-2xl p-4 space-y-2 text-xs text-amber-950">
+            <div className="flex items-center gap-2 font-bold text-amber-900">
+              <GitBranch className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>गिटहब (GitHub) में डेटा अपडेट न होने का कारण एवं समाधान:</span>
+            </div>
+            <p className="text-amber-900/90 leading-relaxed text-[11px]">
+              <strong>1. ब्राउज़र डेटा बनाम गिटहब कोड:</strong> एडमिन पैनल में जोड़े गए बदलाव आपके ब्राउज़र की <code className="bg-amber-200/60 px-1 py-0.5 rounded font-mono">localStorage</code> और <strong>Firebase Firestore</strong> में सेव होते हैं। गिटहब केवल फाइल्स (Code) को ट्रैक करता है, वह ब्राउज़र का लोकल डेटा अपने-आप फेच नहीं कर सकता।
+            </p>
+            <p className="text-amber-900/90 leading-relaxed text-[11px]">
+              <strong>2. गिटहब पर बदलाव भेजने के सही कमांड्स:</strong> यदि आपने कोड या फाइल्स में बदलाव किया है, तो प्रोजेक्ट डायरेक्टरी में टर्मिनल खोलकर ये कमांड्स चलाएं:
+            </p>
+            <div className="bg-slate-900 text-slate-100 p-2.5 rounded-xl font-mono text-[11px] space-y-1">
+              <div className="text-emerald-400">git status</div>
+              <div className="text-emerald-400">git add .</div>
+              <div className="text-emerald-400">git commit -m &quot;Update NGO data, seal, and configuration&quot;</div>
+              <div className="text-emerald-400">git push origin main</div>
+            </div>
+            <p className="text-amber-900/90 leading-relaxed text-[11px]">
+              <strong>3. लाइव वेबसाइट (Vercel / Netlify) पर डेटा सिंक:</strong> नीचे दिए गए बटन से बैकअप JSON डाउनलोड करें ताकि सभी रिकॉर्ड्स सुरक्षित रहें, तथा लाइव डिप्लॉयमेंट में Firebase क्रेडेंशियल्स सुनिश्चित करें ताकि सभी यूज़र्स को रीयल-टाइम डेटा मिले।
+            </p>
           </div>
 
           {/* Last Backup History Status */}

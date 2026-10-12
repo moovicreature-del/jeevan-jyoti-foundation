@@ -63,14 +63,32 @@ export const HeroSection: React.FC<Props> = ({
       ? `${FOUNDATION_INFO.nameHindi} (${FOUNDATION_INFO.nameEnglish})\n📍 ${FOUNDATION_INFO.address}\n\n🌟 हमारा मिशन: "सेवा • शिक्षा • स्वास्थ्य"\nग़ाज़ीपुर के ग्रामीण व निर्धन बच्चों को निःशुल्क गुणवत्तापूर्ण शिक्षा, अन्नपूर्णा भोजन सेवा एवं निःशुल्क चिकित्सा शिविर।\n\nहमारे मिशन से जुड़ें और सहयोग करें:`
       : `${FOUNDATION_INFO.nameEnglish}\n📍 Ghazipur, Uttar Pradesh, India\n\n🌟 Mission: Free evening schools for underprivileged children, Annapurna daily meals, healthcare camps & women empowerment.\n\nJoin and support our mission:`;
 
-    const sharePayload = {
-      title: shareTitle,
-      text: shareText,
-      url: shareUrl,
-    };
+    const activeThumbUrl = content.appThumbnailUrl || content.appLogoUrl || '/uploads/ngo_logo.png';
 
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
+        // Try file sharing if supported by browser/device for instant rich card thumbnail preview
+        let shareFiles: File[] | undefined;
+        try {
+          if (activeThumbUrl && navigator.canShare) {
+            const resp = await fetch(activeThumbUrl);
+            const blob = await resp.blob();
+            const file = new File([blob], 'jeevan-jyoti-logo.png', { type: blob.type || 'image/png' });
+            if (navigator.canShare({ files: [file] })) {
+              shareFiles = [file];
+            }
+          }
+        } catch {
+          // File fetch optional fallback
+        }
+
+        const sharePayload: ShareData = {
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+          ...(shareFiles && shareFiles.length > 0 ? { files: shareFiles } : {})
+        };
+
         await navigator.share(sharePayload);
         setShareStatus('shared');
         setTimeout(() => setShareStatus('idle'), 3000);

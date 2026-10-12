@@ -92,6 +92,44 @@ export function App() {
 
   // Check URL params and boot background services on mount
   useEffect(() => {
+    // Purge any obsolete/stale legacy logo and seal cache from browser memory permanently
+    if (typeof window !== 'undefined') {
+      try {
+        const logoKey = localStorage.getItem('jjf_custom_logo');
+        if (logoKey && (logoKey.includes('old') || logoKey.includes('1791445209912') || logoKey.includes('1791445272050') || logoKey.includes('cloudinary'))) {
+          localStorage.removeItem('jjf_custom_logo');
+        }
+        const sealKey = localStorage.getItem('jjf_custom_certificate_seal');
+        if (sealKey && (sealKey.includes('old') || sealKey.includes('76347e15') || sealKey.includes('cloudinary') || sealKey.includes('imgur'))) {
+          localStorage.removeItem('jjf_custom_certificate_seal');
+        }
+        const thumbKey = localStorage.getItem('jjf_custom_thumbnail');
+        if (thumbKey && (thumbKey.includes('old') || thumbKey.includes('1791445209912') || thumbKey.includes('1791445272050') || thumbKey.includes('cloudinary'))) {
+          localStorage.removeItem('jjf_custom_thumbnail');
+        }
+        const homeContentStr = localStorage.getItem('jjf_home_content');
+        if (homeContentStr) {
+          const hc = JSON.parse(homeContentStr);
+          let changed = false;
+          if (hc.appLogoUrl && (hc.appLogoUrl.includes('1791445209912') || hc.appLogoUrl.includes('1791445272050') || hc.appLogoUrl.includes('old'))) {
+            hc.appLogoUrl = '/uploads/ngo_logo.png';
+            changed = true;
+          }
+          if (hc.appThumbnailUrl && (hc.appThumbnailUrl.includes('1791445209912') || hc.appThumbnailUrl.includes('1791445272050') || hc.appThumbnailUrl.includes('old') || hc.appThumbnailUrl === '/pwa-icon-512.png')) {
+            hc.appThumbnailUrl = '/uploads/ngo_logo.png';
+            changed = true;
+          }
+          if (hc.certificateSealUrl && (hc.certificateSealUrl.includes('old') || hc.certificateSealUrl.includes('76347e15') || hc.certificateSealUrl.includes('cloudinary'))) {
+            hc.certificateSealUrl = '/uploads/official_seal.png';
+            changed = true;
+          }
+          if (changed) {
+            localStorage.setItem('jjf_home_content', JSON.stringify(hc));
+          }
+        }
+      } catch {}
+    }
+
     // Automated background service: Archive all issued certificates to Firestore 'public_verified_archive'
     initAutomatedPublicArchiveBackgroundSync().catch(() => {});
 

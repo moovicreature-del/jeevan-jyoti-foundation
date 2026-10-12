@@ -95,9 +95,9 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
         if (customLogo || customThumb || validSeal) {
           return {
             ...DEFAULT_HOME_CONTENT,
-            appLogoUrl: customLogo || '',
-            appThumbnailUrl: (customThumb && customThumb !== '/pwa-icon-512.png') ? customThumb : '',
-            certificateSealUrl: validSeal,
+            appLogoUrl: customLogo || '/uploads/ngo_logo.png',
+            appThumbnailUrl: (customThumb && customThumb !== '/pwa-icon-512.png') ? customThumb : '/uploads/ngo_logo.png',
+            certificateSealUrl: validSeal || '/uploads/official_seal.png',
             certificateSealVariant: (customSealVariant as any) || 'gold-crimson'
           };
         }

@@ -126,10 +126,16 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       ? { width: `${resolvedSize}px`, height: `${resolvedSize}px` } 
       : { width: resolvedSize, height: resolvedSize };
 
+    // For local/internal assets (/uploads/ngo_logo.png or /logo.png), keep the authentic pristine source
+    // to prevent pixelation/blurring on high-DPI displays, downloads, certificates, and print
+    const logoSourceUrl = effectiveLogoUrl.startsWith('http')
+      ? getOptimizedImageUrl(effectiveLogoUrl, { width: typeof resolvedSize === 'number' ? resolvedSize * 4 : 512, quality: 95 })
+      : effectiveLogoUrl;
+
     return (
       <img
         id={id}
-        src={getOptimizedImageUrl(effectiveLogoUrl, { width: typeof resolvedSize === 'number' ? resolvedSize * 2 : 256, quality: 80 })}
+        src={logoSourceUrl}
         alt={alt}
         className={`object-contain rounded-full inline-block shrink-0 ${className} ${watermark ? 'pointer-events-none select-none' : ''}`}
         style={{

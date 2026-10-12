@@ -221,8 +221,9 @@ export const DEFAULT_HOME_CONTENT: AppHomeContent = {
   ruralWorkVideoUrl: 'https://www.youtube.com/watch?v=0kF5s7J_C3A',
   bannerTitle: 'सशक्त ग़ाज़ीपुर, समृद्ध समाज',
   bannerSubtitle: 'हमारे सेवा अभियानों से जुड़ें और समाज निर्माण में अपना योगदान दें',
-  appLogoUrl: '',
-  certificateSealUrl: '',
+  appLogoUrl: '/uploads/ngo_logo.png',
+  appThumbnailUrl: '/uploads/ngo_logo.png',
+  certificateSealUrl: '/uploads/official_seal.png',
   certificateSealVariant: 'gold-crimson',
   updatedBy: 'सिस्टम एडमिन',
   updatedAt: new Date().toISOString()
@@ -632,7 +633,7 @@ export function applyDynamicAppThumbnail(thumbnailUrl: string = ''): void {
 
   const resolvedThumb = (!isPermanentlyDeleted && thumbnailUrl && thumbnailUrl.trim() && thumbnailUrl.trim() !== '/pwa-icon-512.png')
     ? thumbnailUrl.trim()
-    : '/pwa-icon-512.png';
+    : '/uploads/ngo_logo.png';
 
   try {
     const timestamp = Date.now();

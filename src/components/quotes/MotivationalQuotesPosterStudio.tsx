@@ -676,23 +676,39 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
       ctx.lineWidth = 2.0;
       ctx.stroke();
 
-      // Draw custom logo inside medallion only if custom logo is active
+      // Draw authentic NGO logo inside medallion
       let customLogoUrl = '';
       try {
-        customLogoUrl = localStorage.getItem('jjf_custom_logo') || '';
+        const stored = localStorage.getItem('jjf_custom_logo') || '';
+        if (stored && !stored.includes('old') && !stored.includes('1791445209912') && !stored.includes('1791445272050')) {
+          customLogoUrl = stored;
+        }
       } catch {
         // Ignore
       }
+      if (!customLogoUrl) {
+        customLogoUrl = '/uploads/ngo_logo.png';
+      }
+
       if (customLogoUrl) {
         const stripLogoImg = new Image();
         stripLogoImg.crossOrigin = 'anonymous';
         await new Promise<void>((resolve) => {
           stripLogoImg.onload = () => resolve();
-          stripLogoImg.onerror = () => resolve();
+          stripLogoImg.onerror = () => {
+            stripLogoImg.onload = () => resolve();
+            stripLogoImg.onerror = () => resolve();
+            stripLogoImg.src = '/logo.png';
+          };
           stripLogoImg.src = customLogoUrl;
         });
         if (stripLogoImg.complete && stripLogoImg.naturalWidth > 0) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(stripLogoX + stripLogoSize / 2, stripLogoY + stripLogoSize / 2, stripLogoSize / 2 - 2, 0, Math.PI * 2);
+          ctx.clip();
           ctx.drawImage(stripLogoImg, stripLogoX + 2, stripLogoY + 2, stripLogoSize - 4, stripLogoSize - 4);
+          ctx.restore();
         }
       }
 
@@ -1215,85 +1231,29 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
       });
 
       ctx.save();
-      // 1. Royal Crimson & Gold Ribbon Tails Underneath
-      const ribbonTopY = centerY + sealDiam * 0.36;
-      // Left Ribbon Tail
-      ctx.fillStyle = '#8B0000';
-      ctx.strokeStyle = '#D4AF37';
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.moveTo(centerX - sealDiam * 0.16, ribbonTopY);
-      ctx.lineTo(centerX - sealDiam * 0.38, ribbonTopY + sealDiam * 0.38);
-      ctx.lineTo(centerX - sealDiam * 0.22, ribbonTopY + sealDiam * 0.30);
-      ctx.lineTo(centerX - sealDiam * 0.08, ribbonTopY + sealDiam * 0.38);
-      ctx.lineTo(centerX - sealDiam * 0.04, ribbonTopY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
 
-      // Right Ribbon Tail
-      ctx.fillStyle = '#A52A2A';
-      ctx.strokeStyle = '#D4AF37';
-      ctx.beginPath();
-      ctx.moveTo(centerX + sealDiam * 0.04, ribbonTopY);
-      ctx.lineTo(centerX + sealDiam * 0.08, ribbonTopY + sealDiam * 0.38);
-      ctx.lineTo(centerX + sealDiam * 0.22, ribbonTopY + sealDiam * 0.30);
-      ctx.lineTo(centerX + sealDiam * 0.38, ribbonTopY + sealDiam * 0.38);
-      ctx.lineTo(centerX + sealDiam * 0.16, ribbonTopY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      // Center Gold Band with "GOVT. REG."
-      const bandW = sealDiam * 0.44;
-      const bandH = sealDiam * 0.14;
-      ctx.fillStyle = '#D4AF37';
-      ctx.strokeStyle = '#8B0000';
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.roundRect(centerX - bandW / 2, ribbonTopY - 2, bandW, bandH, [Math.round(bandH * 0.25)]);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = '#8B0000';
-      ctx.font = `900 ${Math.max(7, Math.round(sealDiam * 0.085))}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('GOVT. REG.', centerX, ribbonTopY - 2 + bandH / 2);
-
-      // 2. Main Circular Royal Embossed Medal Frame
-      ctx.shadowColor = 'rgba(139, 0, 0, 0.35)';
-      ctx.shadowBlur = 10;
-      ctx.shadowOffsetY = 4;
+      // 1. Clean Circular Seal Backing
       ctx.fillStyle = '#FFFFFF';
       ctx.beginPath();
-      ctx.arc(centerX, centerY, sealDiam * 0.48, 0, Math.PI * 2);
+      ctx.arc(centerX, centerY, sealDiam * 0.46, 0, Math.PI * 2);
       ctx.fill();
 
-      // Outer Gold Rim
-      ctx.shadowColor = 'transparent';
+      // Subtle Outer Gold Rim
       ctx.strokeStyle = '#D4AF37';
-      ctx.lineWidth = Math.max(2.5, Math.round(sealDiam * 0.04));
+      ctx.lineWidth = Math.max(1.8, Math.round(sealDiam * 0.03));
       ctx.stroke();
 
-      // Inner Crimson Stroke
-      ctx.strokeStyle = '#8B0000';
-      ctx.lineWidth = Math.max(1.8, Math.round(sealDiam * 0.025));
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, sealDiam * 0.44, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // 3. Authentic Uploaded Seal Image (1:1 circular clipped)
+      // 2. Authentic Uploaded Seal Image (1:1 circular clipped)
       if (sealImg.complete && sealImg.naturalWidth > 0) {
         ctx.save();
         ctx.beginPath();
-        ctx.arc(centerX, centerY, sealDiam * 0.42, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, sealDiam * 0.44, 0, Math.PI * 2);
         ctx.clip();
-        ctx.drawImage(sealImg, centerX - sealDiam * 0.42, centerY - sealDiam * 0.42, sealDiam * 0.84, sealDiam * 0.84);
+        ctx.drawImage(sealImg, centerX - sealDiam * 0.44, centerY - sealDiam * 0.44, sealDiam * 0.88, sealDiam * 0.88);
         ctx.restore();
       }
 
-      // 4. Verified Security Checkmark Shield on Top-Right
+      // 3. Verified Security Checkmark Shield on Top-Right
       const checkR = Math.max(7, Math.round(sealDiam * 0.12));
       const checkX = centerX + sealDiam * 0.36;
       const checkY = centerY - sealDiam * 0.36;

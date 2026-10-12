@@ -3,12 +3,14 @@ import { jsPDF } from 'jspdf';
 import { toPng } from 'html-to-image';
 import { getActiveOfficialSealUrl, OFFICIAL_SEAL_BASE64_DATA_URL, DEFAULT_OFFICIAL_SEAL_URL } from '../data/officialSealData';
 
-export const PUBLIC_LOGO_URL = '';
+export const PUBLIC_LOGO_URL = '/uploads/ngo_logo.png';
+export const FALLBACK_LOGO_URL = '/logo.png';
 
 /**
- * Converts an image URL to a clean base64 data URL via canvas/fetch.
- * This guarantees cross-origin compliance (CORS bypass for local assets)
- * and prevents html2canvas from failing or omitting images.
+ * Converts an image URL to a clean base64 data URL via canvas/fetch at full native resolution.
+ * This guarantees cross-origin compliance (CORS bypass for local assets),
+ * prevents html2canvas / html-to-image from failing or omitting images,
+ * and maintains maximum pixel clarity without downsampling blur.
  */
 export async function convertImageToDataUrl(url: string): Promise<string> {
   try {
@@ -21,19 +23,23 @@ export async function convertImageToDataUrl(url: string): Promise<string> {
       reader.readAsDataURL(blob);
     });
   } catch (err) {
-    // Fallback using an Image object drawn to an offscreen canvas
+    // Fallback using an Image object drawn to an offscreen canvas at full natural resolution
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.referrerPolicy = 'no-referrer';
       img.onload = () => {
         try {
+          const naturalW = img.naturalWidth || img.width || 400;
+          const naturalH = img.naturalHeight || img.height || 400;
           const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth || img.width || 200;
-          canvas.height = img.naturalHeight || img.height || 200;
+          canvas.width = naturalW;
+          canvas.height = naturalH;
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.drawImage(img, 0, 0);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, naturalW, naturalH);
             resolve(canvas.toDataURL('image/png'));
             return;
           }
@@ -50,23 +56,37 @@ export async function convertImageToDataUrl(url: string): Promise<string> {
 
 /**
  * Helper function that forces all image elements (and background-image watermarks)
- * within a certificate/document container to resolve to the public asset URL,
+ * within a certificate/document container to resolve to pristine high-resolution URLs,
  * configures cross-origin policies ('anonymous' & 'no-referrer'), pre-loads them,
- * and caches them as base64 data URLs before triggering html2canvas.
+ * and caches them as base64 data URLs before triggering capture.
  *
  * Returns a restoration/cleanup function to be called in a finally block.
  */
 export async function forceResolvePublicAssets(element: HTMLElement): Promise<() => void> {
   const images = Array.from(element.querySelectorAll('img'));
   const allElements = Array.from(element.querySelectorAll('*')) as HTMLElement[];
-  const originalImgStates: Array<{ img: HTMLImageElement; src: string; crossOrigin: string | null }> = [];
+  const originalImgStates: Array<{
+    img: HTMLImageElement;
+    src: string;
+    crossOrigin: string | null;
+    imageRendering: string;
+  }> = [];
   const originalBgStates: Array<{ el: HTMLElement; bgImage: string }> = [];
 
   // 1. Process <img> elements
   const imgPromises = images.map(async (img) => {
     const origSrc = img.getAttribute('src') || img.src;
     const origCrossOrigin = img.getAttribute('crossorigin');
-    originalImgStates.push({ img, src: origSrc, crossOrigin: origCrossOrigin });
+    const origImageRendering = img.style.imageRendering;
+    originalImgStates.push({
+      img,
+      src: origSrc,
+      crossOrigin: origCrossOrigin,
+      imageRendering: origImageRendering
+    });
+
+    // Enforce smooth, high-resolution rendering during export
+    img.style.imageRendering = 'auto';
 
     // Handle crossOrigin & referrer policies
     img.crossOrigin = 'anonymous';
@@ -75,24 +95,43 @@ export async function forceResolvePublicAssets(element: HTMLElement): Promise<()
 
     // Resolve target src for image (custom logo, remote url, or fallback asset)
     let targetSrc = origSrc;
-    const isSealImg = img.hasAttribute('data-official-seal') || img.alt?.includes('Seal') || origSrc?.includes('seal');
+    const isSealImg =
+      img.hasAttribute('data-official-seal') ||
+      img.alt?.toLowerCase().includes('seal') ||
+      img.alt?.includes('मुहर') ||
+      origSrc?.toLowerCase().includes('seal');
+
+    const isLogoImg =
+      img.id?.includes('logo') ||
+      img.alt?.toLowerCase().includes('logo') ||
+      img.alt?.includes('लोगो') ||
+      origSrc?.toLowerCase().includes('logo');
+
     if (isSealImg) {
       if (origSrc && !origSrc.includes('old') && !origSrc.includes('76347e15')) {
         targetSrc = origSrc;
       } else {
         const activeSeal = getActiveOfficialSealUrl();
-        targetSrc = activeSeal || origSrc;
+        targetSrc = activeSeal || '/uploads/official_seal.png';
       }
       if (targetSrc) {
         img.src = targetSrc;
       }
+    } else if (isLogoImg) {
+      // Strip low-res query params like ?w=150 or &quality=80 for full-resolution capture
+      if (origSrc && origSrc.includes('?')) {
+        targetSrc = origSrc.split('?')[0];
+      } else if (!origSrc) {
+        targetSrc = PUBLIC_LOGO_URL;
+      }
+      img.src = targetSrc;
     } else if (!targetSrc && PUBLIC_LOGO_URL) {
       targetSrc = PUBLIC_LOGO_URL;
     }
 
     try {
       if (targetSrc && !targetSrc.startsWith('data:')) {
-        // Convert to base64 Data URL to guarantee CORS and instant rendering in html2canvas
+        // Convert to base64 Data URL to guarantee CORS and instant ultra-HD rendering
         const dataUrl = await convertImageToDataUrl(targetSrc);
         img.src = dataUrl;
       }
@@ -157,8 +196,9 @@ export async function forceResolvePublicAssets(element: HTMLElement): Promise<()
 
   // Return cleanup function to restore DOM state after capture
   return () => {
-    originalImgStates.forEach(({ img, src, crossOrigin }) => {
+    originalImgStates.forEach(({ img, src, crossOrigin, imageRendering }) => {
       img.src = src;
+      img.style.imageRendering = imageRendering;
       if (crossOrigin !== null) {
         img.setAttribute('crossorigin', crossOrigin);
       } else {
@@ -187,15 +227,23 @@ export async function downloadElementAsPdf(
     // 1. Force resolve all images to public URLs and data URLs for CORS safety
     cleanup = await forceResolvePublicAssets(element);
 
-    // 2. Render to high-fidelity canvas with html2canvas
+    // 2. Render to high-fidelity 300 DPI canvas with html2canvas (300 DPI / 96 DPI = 3.125)
     const canvas = await html2canvas(element, {
-      scale: 3,
+      scale: 3.125,
       backgroundColor: '#ffffff',
       useCORS: true,
       allowTaint: false,
       scrollX: 0,
       scrollY: 0,
       logging: false,
+      imageTimeout: 15000,
+      onclone: (_clonedDoc, clonedElement) => {
+        const clonedImgs = clonedElement.querySelectorAll('img');
+        clonedImgs.forEach((img) => {
+          img.style.imageRendering = 'auto';
+          (img.style as any).webkitOptimizeContrast = '';
+        });
+      },
       ignoreElements: (node) => {
         if (node instanceof HTMLElement && (node.classList.contains('no-print') || node.classList.contains('no-export'))) {
           return true;
@@ -203,6 +251,12 @@ export async function downloadElementAsPdf(
         return false;
       }
     });
+
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
 
     const imgData = canvas.toDataURL('image/jpeg', 0.98);
     const elemWidth = canvas.width;

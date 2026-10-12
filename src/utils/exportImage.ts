@@ -122,11 +122,13 @@ function getImageDimensions(
   });
 }
 
+// 300 DPI scale calculation: Standard web CSS is 96 DPI. 300 DPI / 96 DPI ≈ 3.125 (rounded to min 3.125 for authentic 300 DPI print quality)
+export const DEFAULT_PRINT_DPI_SCALE = 3.125;
+
 /**
- * Robust capture of any HTMLElement to high-resolution Image Data URL.
- * Uses html-to-image as PRIMARY strategy because it renders via SVG foreignObject in the browser's
- * native engine, which fully supports modern CSS features (like Tailwind v4's oklab/oklch colors).
- * This completely prevents html2canvas's "Attempting to parse an unsupported color function 'oklab'" crash.
+ * Robust capture of any HTMLElement to 300 DPI high-resolution Image Data URL.
+ * Employs high-quality canvas rendering with imageSmoothingQuality: 'high'
+ * and full SVG foreignObject / html2canvas pipelines so logos and seals never pixelate.
  */
 export async function captureElementToImageData(
   element: HTMLElement,
@@ -137,7 +139,8 @@ export async function captureElementToImageData(
     backgroundColor?: string;
   }
 ): Promise<{ dataUrl: string; width: number; height: number } | null> {
-  const scale = options?.scale ?? 3;
+  // Ensure default export resolution is at least 300 DPI (scale >= 3.125)
+  const scale = options?.scale ? Math.max(options.scale, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE;
   const quality = options?.quality ?? 0.98;
   const format = options?.format ?? 'jpeg';
   const bg = options?.backgroundColor ?? '#FFFFFF';
@@ -151,7 +154,7 @@ export async function captureElementToImageData(
     console.warn('Asset resolution warning:', err);
   }
 
-  // 2. Primary Strategy: html-to-image (Native browser rendering, natively supports oklab/oklch)
+  // 2. Primary Strategy: html-to-image (Native browser rendering, natively supports oklab/oklch colors)
   try {
     const config = {
       quality: quality,
@@ -182,7 +185,7 @@ export async function captureElementToImageData(
     console.warn('html-to-image capture warning, attempting html2canvas fallback:', h2iErr);
   }
 
-  // 3. Secondary Strategy: html2canvas fallback
+  // 3. Secondary Strategy: html2canvas fallback with 300 DPI Canvas and high-fidelity smoothing
   try {
     const canvas = await html2canvas(element, {
       scale: scale,
@@ -192,6 +195,15 @@ export async function captureElementToImageData(
       scrollX: 0,
       scrollY: 0,
       logging: false,
+      imageTimeout: 15000,
+      onclone: (_clonedDoc, clonedElement) => {
+        // Ensure all images in cloned document use high quality smooth filtering instead of pixelated nearest-neighbor
+        const clonedImgs = clonedElement.querySelectorAll('img');
+        clonedImgs.forEach((img) => {
+          img.style.imageRendering = 'auto';
+          (img.style as any).webkitOptimizeContrast = '';
+        });
+      },
       ignoreElements: (node) => {
         if (node instanceof HTMLElement && (node.classList.contains('no-print') || node.classList.contains('no-export'))) {
           return true;
@@ -199,6 +211,13 @@ export async function captureElementToImageData(
         return false;
       }
     });
+
+    // Ensure 2D context smoothing
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
 
     const dataUrl = canvas.toDataURL(format === 'png' ? 'image/png' : 'image/jpeg', quality);
     return {
@@ -215,7 +234,7 @@ export async function captureElementToImageData(
 }
 
 /**
- * High-Resolution PNG Export (300 DPI)
+ * High-Resolution PNG Export (300 DPI by default)
  */
 export async function exportElementAsPng(
   element: HTMLElement,
@@ -226,7 +245,7 @@ export async function exportElementAsPng(
   const result = await captureElementToImageData(element, {
     format: 'png',
     quality: options?.quality ?? 1.0,
-    scale: options?.pixelRatio ?? 3,
+    scale: options?.pixelRatio ? Math.max(options.pixelRatio, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE,
     backgroundColor: options?.backgroundColor ?? '#FFFFFF'
   });
 
@@ -258,7 +277,7 @@ export async function exportElementAsJpg(
   const result = await captureElementToImageData(element, {
     format: 'jpeg',
     quality: options?.quality ?? 0.98,
-    scale: options?.pixelRatio ?? 3,
+    scale: options?.pixelRatio ? Math.max(options.pixelRatio, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE,
     backgroundColor: options?.backgroundColor ?? '#FFFFFF'
   });
 
@@ -279,7 +298,7 @@ export async function exportElementAsJpg(
 }
 
 /**
- * High-Resolution Vector-Wrapped PDF Export (A4 Precision Fit with Aspect Ratio Preservation)
+ * High-Resolution Vector-Wrapped PDF Export (A4 Precision Fit with Aspect Ratio Preservation at 300 DPI)
  */
 export async function exportElementAsPdf(
   element: HTMLElement,
@@ -290,7 +309,7 @@ export async function exportElementAsPdf(
   const result = await captureElementToImageData(element, {
     format: 'jpeg',
     quality: options?.quality ?? 0.98,
-    scale: options?.pixelRatio ?? 3,
+    scale: options?.pixelRatio ? Math.max(options.pixelRatio, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE,
     backgroundColor: options?.backgroundColor ?? '#FFFFFF'
   });
 
@@ -346,7 +365,7 @@ export async function exportElementAsPdf(
 }
 
 /**
- * High-Resolution Multi-Page PDF Export (e.g. Page 1: Front Side, Page 2: Back Side)
+ * High-Resolution Multi-Page PDF Export (e.g. Page 1: Front Side, Page 2: Back Side at 300 DPI)
  */
 export async function exportElementsAsMultiPagePdf(
   elements: (HTMLElement | null)[],
@@ -366,7 +385,7 @@ export async function exportElementsAsMultiPagePdf(
       const result = await captureElementToImageData(element, {
         format: 'jpeg',
         quality: options?.quality ?? 0.98,
-        scale: options?.pixelRatio ?? 3,
+        scale: options?.pixelRatio ? Math.max(options.pixelRatio, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE,
         backgroundColor: options?.backgroundColor ?? '#FFFFFF'
       });
 
