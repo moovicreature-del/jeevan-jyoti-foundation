@@ -12,7 +12,7 @@ export type CertificateCategoryType =
   | 'task_appreciation'
   | 'festival_greeting';
 
-export type CertificateApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type CertificateApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export interface RegisteredCertificateItem {
   id: string;
@@ -27,12 +27,15 @@ export interface RegisteredCertificateItem {
   photoUrl?: string;
   amount?: number;
   details?: string;
-  status: 'active' | 'verified' | 'certified';
+  status: 'active' | 'verified' | 'certified' | 'cancelled' | 'revoked';
   approvalStatus?: CertificateApprovalStatus;
   approvedAt?: string;
   approvedBy?: string;
   rejectionReason?: string;
   rejectedAt?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancellationReason?: string;
   rawVolunteer?: Volunteer;
   rawDonation?: DonationRecord;
   rawTask?: TaskRecord;
@@ -335,7 +338,94 @@ export function rejectCertificateInRegistry(certId: string, reason?: string): Re
 }
 
 /**
- * Super Admin Deletion: Permanently deletes certificate from local registry & Firestore
+ * Super Admin Cancellation / Revocation: Cancels an issued certificate or I-card
+ */
+export function cancelCertificateInRegistry(
+  certId: string,
+  reason: string = 'प्रशासनिक आदेश द्वारा निरस्त / रद्द',
+  cancelledBy: string = 'Super Admin'
+): RegisteredCertificateItem | null {
+  const current = getAllRegisteredCertificates();
+  const normId = normalizeCertificateId(certId);
+  const idx = current.findIndex((c) => normalizeCertificateId(c.id) === normId);
+  if (idx < 0) return null;
+
+  const timestamp = new Date().toISOString();
+  const updated: RegisteredCertificateItem = {
+    ...current[idx],
+    status: 'cancelled',
+    approvalStatus: 'cancelled',
+    cancellationReason: reason,
+    cancelledAt: timestamp,
+    cancelledBy: cancelledBy,
+    updatedAt: timestamp
+  };
+
+  current[idx] = updated;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+  } catch (e) {
+    console.warn('Failed to update local storage for cancellation:', e);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('jjf_certificate_saved', { detail: updated }));
+  }
+
+  saveCertificateToFirestore(updated).catch((err) => {
+    console.debug('Background Firestore cancellation note:', err);
+  });
+
+  return updated;
+}
+
+/**
+ * Super Admin Reactivation: Reactivates a cancelled or rejected certificate
+ */
+export function reactivateCertificateInRegistry(
+  certId: string,
+  reactivatedBy: string = 'Super Admin'
+): RegisteredCertificateItem | null {
+  const current = getAllRegisteredCertificates();
+  const normId = normalizeCertificateId(certId);
+  const idx = current.findIndex((c) => normalizeCertificateId(c.id) === normId);
+  if (idx < 0) return null;
+
+  const timestamp = new Date().toISOString();
+  const updated: RegisteredCertificateItem = {
+    ...current[idx],
+    status: 'active',
+    approvalStatus: 'approved',
+    approvedAt: timestamp,
+    approvedBy: reactivatedBy,
+    cancellationReason: undefined,
+    cancelledAt: undefined,
+    cancelledBy: undefined,
+    rejectionReason: undefined,
+    rejectedAt: undefined,
+    updatedAt: timestamp
+  };
+
+  current[idx] = updated;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+  } catch (e) {
+    console.warn('Failed to reactivate certificate in local storage:', e);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('jjf_certificate_saved', { detail: updated }));
+  }
+
+  saveCertificateToFirestore(updated).catch((err) => {
+    console.debug('Background Firestore reactivation note:', err);
+  });
+
+  return updated;
+}
+
+/**
+ * Super Admin Deletion: Permanently deletes certificate from local registry, offline cache & Firestore
  */
 export async function deleteCertificateFromRegistry(certId: string): Promise<boolean> {
   const current = getAllRegisteredCertificates();
@@ -344,6 +434,28 @@ export async function deleteCertificateFromRegistry(certId: string): Promise<boo
 
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+
+    // Also remove from any offline cached phone registries
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('jjf_offline_certs_')) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.certificates)) {
+              const cleaned = parsed.certificates.filter((c: any) => normalizeCertificateId(c.id) !== normId);
+              if (cleaned.length !== parsed.certificates.length) {
+                parsed.certificates = cleaned;
+                localStorage.setItem(key, JSON.stringify(parsed));
+              }
+            }
+          }
+        } catch {
+          // ignore cache parse error
+        }
+      }
+    }
   } catch (e) {
     console.warn('Failed to delete from local registry:', e);
   }
@@ -1008,6 +1120,13 @@ export function computeCertificatePipelineStats(
       count: statusCounts.active || 0,
       percentage: totalAllTime > 0 ? Math.round(((statusCounts.active || 0) / totalAllTime) * 100) : 0,
       color: '#d97706'
+    },
+    {
+      status: 'cancelled',
+      labelHi: 'रद्द / निरस्त (Cancelled)',
+      count: statusCounts.cancelled || 0,
+      percentage: totalAllTime > 0 ? Math.round(((statusCounts.cancelled || 0) / totalAllTime) * 100) : 0,
+      color: '#dc2626'
     }
   ];
 

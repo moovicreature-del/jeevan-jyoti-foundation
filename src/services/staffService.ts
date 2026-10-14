@@ -5,7 +5,11 @@
 
 import { StaffMember } from '../types/staff';
 import { INITIAL_STAFF_MEMBERS } from '../data/initialStaffData';
-import { saveCertificateToRegistry } from './certificateRegistryService';
+import {
+  saveCertificateToRegistry,
+  deleteCertificateFromRegistry,
+  cancelCertificateInRegistry
+} from './certificateRegistryService';
 
 const STAFF_STORAGE_KEY = 'jjf_staff_registry_v3';
 
@@ -277,7 +281,46 @@ export function markStaffWhatsAppNotified(id: string): void {
 }
 
 /**
- * Delete staff member from registry
+ * Cancel / Revoke an issued staff member ID card
+ */
+export function cancelStaffMember(
+  id: string,
+  reason: string = 'प्रशासनिक आदेश द्वारा पहचान पत्र निरस्त',
+  adminName: string = 'Admin'
+): StaffMember | null {
+  const current = getAllStaffMembers();
+  const index = current.findIndex((m) => m.id.toLowerCase() === id.toLowerCase());
+  if (index === -1) return null;
+
+  const nowIso = new Date().toISOString();
+  const updatedStaff: StaffMember = {
+    ...current[index],
+    status: 'cancelled',
+    statusUpdatedAt: nowIso,
+    cancelledAt: nowIso,
+    cancelledBy: adminName,
+    cancellationReason: reason
+  };
+
+  current[index] = updatedStaff;
+
+  try {
+    localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(current));
+    // Also cancel in central certificate registry
+    cancelCertificateInRegistry(id, reason, adminName);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
+    }
+  } catch (err) {
+    console.error('Failed to cancel staff card:', err);
+  }
+
+  return updatedStaff;
+}
+
+/**
+ * Delete staff member from registry completely
  */
 export function deleteStaffMember(id: string): boolean {
   const current = getAllStaffMembers();
@@ -286,6 +329,9 @@ export function deleteStaffMember(id: string): boolean {
 
   try {
     localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(filtered));
+    // Also expunge from central certificate registry
+    deleteCertificateFromRegistry(id).catch((err) => console.debug('Central deletion note:', err));
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
     }
@@ -326,4 +372,23 @@ export function findStaffMember(query: string): StaffMember | null {
   );
 
   return byPartial || null;
+}
+
+/**
+ * Find staff member specifically by 10-digit registered mobile number
+ */
+export function findStaffByMobile(mobile: string): StaffMember | null {
+  if (!mobile) return null;
+  const digitsOnly = mobile.replace(/[^0-9]/g, '');
+  if (digitsOnly.length < 10) return null;
+  const searchPhone = digitsOnly.slice(-10);
+
+  const all = getAllStaffMembers();
+  return (
+    all.find(
+      (m) =>
+        (m.mobile && m.mobile.replace(/[^0-9]/g, '').slice(-10) === searchPhone) ||
+        (m.emergencyContact && m.emergencyContact.replace(/[^0-9]/g, '').slice(-10) === searchPhone)
+    ) || null
+  );
 }

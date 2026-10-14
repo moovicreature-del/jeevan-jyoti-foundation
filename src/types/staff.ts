@@ -3,7 +3,7 @@
 // जीवन ज्योति फाउंडेशन - स्टाफ मॉडल एवं डेटा प्रारूप
 // ============================================================================
 
-export type StaffStatus = 'pending' | 'approved' | 'rejected' | 'active' | 'verified' | 'leave';
+export type StaffStatus = 'pending' | 'approved' | 'rejected' | 'active' | 'verified' | 'leave' | 'cancelled';
 
 export type StaffRelationType =
   | 'So'        // S/o (सुपुत्र)
@@ -76,6 +76,9 @@ export interface StaffMember {
   rejectedAt?: string;
   approvedAt?: string;
   approvedBy?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancellationReason?: string;
   whatsappNotified?: boolean;
   whatsappNotifiedAt?: string;
   staffBadgeLevel: 'कोर टीम (Core Team)' | 'कार्यकारी स्टाफ (Executive Staff)' | 'वरिष्ठ अधिकारी (Lead Officer)';

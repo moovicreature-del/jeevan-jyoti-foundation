@@ -35,7 +35,9 @@ import {
   ShieldAlert,
   ShieldCheck,
   History,
-  Activity
+  Activity,
+  Ban,
+  RotateCcw
 } from 'lucide-react';
 import { StaffMember, StaffStatus, StaffCardTheme, StaffCardLanguage, formatRelationLabel } from '../../types/staff';
 import {
@@ -43,6 +45,7 @@ import {
   approveStaffMember,
   rejectStaffMember,
   deleteStaffMember,
+  cancelStaffMember,
   generateStaffApprovalWhatsAppUrl,
   markStaffWhatsAppNotified,
   getStaffDownloadUrl
@@ -54,7 +57,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 export const TabStaffApprovalManager: React.FC = () => {
   const { adminProfile } = useAdminAuth();
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'cancelled'>('pending');
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -75,6 +78,13 @@ export const TabStaffApprovalManager: React.FC = () => {
   // Rejection Dialog Modal
   const [rejectModalStaff, setRejectModalStaff] = useState<StaffMember | null>(null);
   const [rejectionReason, setRejectionReason] = useState('विवरण अथवा दस्तावेज अपूर्ण हैं।');
+
+  // Cancellation Dialog Modal (Cancel Issued ID Card)
+  const [cancelModalStaff, setCancelModalStaff] = useState<StaffMember | null>(null);
+  const [cancelReasonStaff, setCancelReasonStaff] = useState('प्रशासनिक समीक्षा अथवा सेवा समाप्ति उपरांत पहचान पत्र निरस्त');
+
+  // Delete Confirmation Dialog Modal
+  const [deleteModalStaff, setDeleteModalStaff] = useState<StaffMember | null>(null);
 
   const refreshList = () => {
     setStaffList(getAllStaffMembers());
@@ -100,11 +110,13 @@ export const TabStaffApprovalManager: React.FC = () => {
     const pending = staffList.filter((s) => s.status === 'pending').length;
     const approved = staffList.filter((s) => s.status === 'approved' || s.status === 'active' || s.status === 'verified').length;
     const rejected = staffList.filter((s) => s.status === 'rejected').length;
+    const cancelled = staffList.filter((s) => s.status === 'cancelled').length;
     return {
       total: staffList.length,
       pending,
       approved,
-      rejected
+      rejected,
+      cancelled
     };
   }, [staffList]);
 
@@ -115,6 +127,7 @@ export const TabStaffApprovalManager: React.FC = () => {
       if (statusFilter === 'pending' && staff.status !== 'pending') return false;
       if (statusFilter === 'approved' && staff.status !== 'approved' && staff.status !== 'active' && staff.status !== 'verified') return false;
       if (statusFilter === 'rejected' && staff.status !== 'rejected') return false;
+      if (statusFilter === 'cancelled' && staff.status !== 'cancelled') return false;
 
       // Filter by Search Query
       if (searchQuery.trim()) {
@@ -158,16 +171,33 @@ export const TabStaffApprovalManager: React.FC = () => {
     refreshList();
   };
 
+  // Handle Cancel Issued I-Card Action
+  const handleConfirmCancelStaff = () => {
+    if (!cancelModalStaff) return;
+    const adminName = adminProfile?.name || 'Admin';
+    cancelStaffMember(cancelModalStaff.id, cancelReasonStaff, adminName);
+    showToast(`⚠️ ${cancelModalStaff.fullName} (${cancelModalStaff.id}) का पहचान पत्र निरस्त (Cancelled) कर दिया गया।`);
+    setCancelModalStaff(null);
+    if (previewStaff?.id === cancelModalStaff.id) {
+      setPreviewStaff({ ...previewStaff, status: 'cancelled' });
+    }
+    refreshList();
+  };
+
   // Handle Delete Action
   const handleDelete = (staff: StaffMember) => {
-    const confirmed = window.confirm(
-      `क्या आप सुनिश्चित हैं कि आप ${staff.fullName} (${staff.id}) का स्टाफ रिकॉर्ड स्थायी रूप से हटाना चाहते हैं?`
-    );
-    if (confirmed) {
-      deleteStaffMember(staff.id);
-      showToast(`🗑️ स्टाफ रिकॉर्ड हटा दिया गया।`);
-      refreshList();
+    setDeleteModalStaff(staff);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteModalStaff) return;
+    deleteStaffMember(deleteModalStaff.id);
+    showToast(`🗑️ ${deleteModalStaff.fullName} (${deleteModalStaff.id}) का स्टाफ रिकॉर्ड हमेशा के लिए हटा दिया गया।`);
+    setDeleteModalStaff(null);
+    if (previewStaff?.id === deleteModalStaff.id) {
+      setPreviewStaff(null);
     }
+    refreshList();
   };
 
   // Admin Direct PDF Download for Preview
@@ -242,6 +272,20 @@ export const TabStaffApprovalManager: React.FC = () => {
           rowBg: 'hover:bg-red-50/30',
           pulse: false,
           icon: XCircle
+        };
+      case 'cancelled':
+        return {
+          label: 'Cancelled',
+          labelHindi: 'पहचान पत्र निरस्त',
+          subtext: 'आदेश द्वारा निरस्त',
+          badgeBg: 'bg-rose-50 border-rose-300 text-rose-900',
+          dotBg: 'bg-rose-500',
+          ringColor: 'ring-rose-400',
+          indicatorBar: 'bg-rose-500',
+          textColor: 'text-rose-800',
+          rowBg: 'hover:bg-rose-50/30',
+          pulse: false,
+          icon: Ban
         };
       default:
         return {
@@ -323,7 +367,7 @@ export const TabStaffApprovalManager: React.FC = () => {
       </div>
 
       {/* KPI Overview Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         {/* 1. Pending Approval Card */}
         <button
           onClick={() => setStatusFilter('pending')}
@@ -373,7 +417,30 @@ export const TabStaffApprovalManager: React.FC = () => {
           <p className="text-[10px] text-slate-500 mt-1">सक्रिय व जारी पहचान पत्र</p>
         </button>
 
-        {/* 3. Rejected Card */}
+        {/* 3. Cancelled Card */}
+        <button
+          onClick={() => setStatusFilter('cancelled')}
+          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+            statusFilter === 'cancelled'
+              ? 'bg-rose-500/15 border-rose-500 shadow-md ring-2 ring-rose-400/30'
+              : 'bg-white border-slate-200 hover:border-rose-400'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-rose-700">
+              निरस्त आई-कार्ड (Cancelled)
+            </span>
+            <div className="w-7 h-7 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center">
+              <Ban className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2">
+            <span>{counts.cancelled}</span>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-1">रद्द किए गए पहचान पत्र</p>
+        </button>
+
+        {/* 4. Rejected Card */}
         <button
           onClick={() => setStatusFilter('rejected')}
           className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
@@ -396,7 +463,7 @@ export const TabStaffApprovalManager: React.FC = () => {
           <p className="text-[10px] text-slate-500 mt-1">निरस्त की गई अर्जियां</p>
         </button>
 
-        {/* 4. Total Staff */}
+        {/* 5. Total Staff */}
         <button
           onClick={() => setStatusFilter('all')}
           className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
@@ -427,6 +494,7 @@ export const TabStaffApprovalManager: React.FC = () => {
           {[
             { id: 'pending', label: '⏳ लंबित अप्रूवल', count: counts.pending, color: 'text-amber-800 bg-amber-100' },
             { id: 'approved', label: '✅ स्वीकृत स्टाफ', count: counts.approved, color: 'text-emerald-800 bg-emerald-100' },
+            { id: 'cancelled', label: '🚫 निरस्त आई-कार्ड', count: counts.cancelled, color: 'text-rose-800 bg-rose-100' },
             { id: 'rejected', label: '❌ अस्वीकृत', count: counts.rejected, color: 'text-red-800 bg-red-100' },
             { id: 'all', label: '👥 सभी स्टाफ', count: counts.total, color: 'text-blue-800 bg-blue-100' }
           ].map((tab) => (
@@ -578,6 +646,7 @@ export const TabStaffApprovalManager: React.FC = () => {
                   const isPending = staff.status === 'pending';
                   const isApproved = staff.status === 'approved' || staff.status === 'active' || staff.status === 'verified';
                   const isRejected = staff.status === 'rejected';
+                  const isCancelled = staff.status === 'cancelled';
                   const statusInfo = getStatusIndicator(staff.status);
                   const StatusIcon = statusInfo.icon;
 
@@ -585,7 +654,7 @@ export const TabStaffApprovalManager: React.FC = () => {
                     <tr
                       key={staff.id}
                       className={`transition-colors relative group ${statusInfo.rowBg} ${
-                        isPending ? 'bg-amber-50/20' : isRejected ? 'bg-red-50/15' : 'hover:bg-blue-50/30'
+                        isPending ? 'bg-amber-50/20' : isRejected ? 'bg-red-50/15' : isCancelled ? 'bg-rose-50/15' : 'hover:bg-blue-50/30'
                       }`}
                     >
                       {/* Staff Member & Photo */}
@@ -815,76 +884,79 @@ export const TabStaffApprovalManager: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Actions Column */}
+                      {/* Actions Column: Approve / Cancel / Reactivate / Reject / Delete */}
                       <td className="px-4 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Action for PENDING: Instant Approve or Reject */}
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {/* 1. Approve Button (for pending registrations) */}
                           {isPending && (
-                            <>
-                              <button
-                                onClick={() => handleApprove(staff)}
-                                className="px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-[11px] font-black shadow-xs transition flex items-center gap-1 cursor-pointer border border-emerald-400"
-                                title="स्वीकृत करें और WhatsApp लिंक भेजें"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-200" />
-                                <span>स्वीकृत करें</span>
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setRejectModalStaff(staff);
-                                  setRejectionReason('विवरण अथवा दस्तावेज अपूर्ण होने के कारण');
-                                }}
-                                className="px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
-                                title="अस्वीकृत करें"
-                              >
-                                <XCircle className="w-3.5 h-3.5" />
-                                <span>अस्वीकृत</span>
-                              </button>
-                            </>
-                          )}
-
-                          {/* Action for APPROVED: WhatsApp Direct Link */}
-                          {isApproved && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  const whatsappUrl = generateStaffApprovalWhatsAppUrl(staff);
-                                  setWhatsappModalData({ staff, url: whatsappUrl });
-                                }}
-                                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-black shadow-xs transition flex items-center gap-1 cursor-pointer"
-                                title="स्टाफ के WhatsApp पर आई-कार्ड लिंक भेजें"
-                              >
-                                <Send className="w-3 h-3" />
-                                <span>WhatsApp लिंक</span>
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setRejectModalStaff(staff);
-                                  setRejectionReason('प्रशासनिक समीक्षा के उपरांत स्थिति निलंबित/अस्वीकृत की गई');
-                                }}
-                                className="px-2 py-1.5 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded-lg text-[11px] font-medium transition cursor-pointer"
-                                title="स्थिति बदलें / निरस्त करें"
-                              >
-                                निरस्त
-                              </button>
-                            </>
-                          )}
-
-                          {/* Action for REJECTED: Re-Approve */}
-                          {isRejected && (
                             <button
                               onClick={() => handleApprove(staff)}
-                              className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[11px] font-black shadow-xs transition flex items-center gap-1 cursor-pointer"
-                              title="पुनः समीक्षा कर स्वीकृत करें"
+                              className="px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-[11px] font-black shadow-xs transition flex items-center gap-1 cursor-pointer border border-emerald-400"
+                              title="स्वीकृत करें (Approve) और WhatsApp लिंक भेजें"
                             >
-                              <Check className="w-3.5 h-3.5" />
-                              <span>पुनः स्वीकृत</span>
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-200" />
+                              <span>स्वीकृत करें</span>
                             </button>
                           )}
 
-                          {/* Preview I-Card (Both Sides) */}
+                          {/* 2. WhatsApp Button (for issued/approved cards) */}
+                          {isApproved && (
+                            <button
+                              onClick={() => {
+                                const whatsappUrl = generateStaffApprovalWhatsAppUrl(staff);
+                                setWhatsappModalData({ staff, url: whatsappUrl });
+                              }}
+                              className="px-2 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-black shadow-xs transition flex items-center gap-1 cursor-pointer"
+                              title="स्टाफ के WhatsApp पर आई-कार्ड लिंक भेजें"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>WhatsApp</span>
+                            </button>
+                          )}
+
+                          {/* 3. Cancel Issued I-Card Button (for approved / issued cards) */}
+                          {isApproved && (
+                            <button
+                              onClick={() => {
+                                setCancelModalStaff(staff);
+                                setCancelReasonStaff('प्रशासनिक समीक्षा अथवा सेवा समाप्ति उपरांत पहचान पत्र निरस्त');
+                              }}
+                              className="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
+                              title="जारी आई-कार्ड निरस्त / रद्द करें (Cancel Issued I-Card)"
+                            >
+                              <Ban className="w-3.5 h-3.5 text-amber-700" />
+                              <span>निरस्त करें</span>
+                            </button>
+                          )}
+
+                          {/* 4. Reactivate Button (if cancelled or rejected) */}
+                          {(isCancelled || isRejected) && (
+                            <button
+                              onClick={() => handleApprove(staff)}
+                              className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+                              title="आई-कार्ड पुनः बहाल व स्वीकृत करें"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 text-blue-600" />
+                              <span>पुनः बहाल</span>
+                            </button>
+                          )}
+
+                          {/* 5. Reject Button (for pending only) */}
+                          {isPending && (
+                            <button
+                              onClick={() => {
+                                setRejectModalStaff(staff);
+                                setRejectionReason('विवरण अथवा दस्तावेज अपूर्ण होने के कारण');
+                              }}
+                              className="px-2 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
+                              title="अस्वीकृत करें (Reject)"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>अस्वीकृत</span>
+                            </button>
+                          )}
+
+                          {/* 6. Preview I-Card (Always Available) */}
                           <button
                             onClick={() => {
                               setPreviewStaff(staff);
@@ -896,13 +968,14 @@ export const TabStaffApprovalManager: React.FC = () => {
                             <Eye className="w-3.5 h-3.5 text-blue-800" />
                           </button>
 
-                          {/* Delete */}
+                          {/* 7. Delete Button (Permanent deletion from database) */}
                           <button
                             onClick={() => handleDelete(staff)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
-                            title="स्टाफ रिकॉर्ड हटाएं"
+                            className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
+                            title="स्टाफ रिकॉर्ड हमेशा के लिए हटाएं (Delete)"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                            <span>डिलीट</span>
                           </button>
                         </div>
                       </td>
@@ -922,6 +995,7 @@ export const TabStaffApprovalManager: React.FC = () => {
             const isPending = staff.status === 'pending';
             const isApproved = staff.status === 'approved' || staff.status === 'active' || staff.status === 'verified';
             const isRejected = staff.status === 'rejected';
+            const isCancelled = staff.status === 'cancelled';
             const statusInfo = getStatusIndicator(staff.status);
             const StatusIcon = statusInfo.icon;
 
@@ -1095,7 +1169,7 @@ export const TabStaffApprovalManager: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Right: Action Buttons (Approve / Reject / Preview / WhatsApp) */}
+                  {/* Right: Action Buttons (Approve / Cancel / Reactivate / Preview / Delete) */}
                   <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                     {/* IF PENDING: Show Approve and Reject buttons */}
                     {isPending && (
@@ -1121,7 +1195,7 @@ export const TabStaffApprovalManager: React.FC = () => {
                       </>
                     )}
 
-                    {/* IF APPROVED: Show WhatsApp Resend & Card Download */}
+                    {/* IF APPROVED (ISSUED): Show WhatsApp Link & Cancel Button */}
                     {isApproved && (
                       <>
                         <button
@@ -1130,33 +1204,35 @@ export const TabStaffApprovalManager: React.FC = () => {
                             setWhatsappModalData({ staff, url: whatsappUrl });
                           }}
                           className="flex-1 lg:flex-none px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
-                          title="स्टाफ के WhatsApp पर आई-कार्ड डाउनलोड लिंक पुनः भेजें"
+                          title="स्टाफ के WhatsApp पर आई-कार्ड डाउनलोड लिंक भेजें"
                         >
                           <Send className="w-3.5 h-3.5" />
-                          <span>WhatsApp पर लिंक भेजें</span>
+                          <span>WhatsApp पर भेजें</span>
                         </button>
 
                         <button
                           onClick={() => {
-                            setRejectModalStaff(staff);
-                            setRejectionReason('प्रशासनिक समीक्षा के उपरांत स्थिति निलंबित/अस्वीकृत की गई');
+                            setCancelModalStaff(staff);
+                            setCancelReasonStaff('प्रशासनिक समीक्षा अथवा सेवा समाप्ति उपरांत पहचान पत्र निरस्त');
                           }}
-                          className="px-2.5 py-2.5 text-slate-500 hover:text-red-700 hover:bg-red-50 rounded-xl text-xs font-bold transition cursor-pointer"
-                          title="स्थिति बदलें / अस्वीकृत करें"
+                          className="px-3 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5"
+                          title="जारी आई-कार्ड निरस्त / रद्द करें (Cancel Issued I-Card)"
                         >
-                          <span>अस्वीकृत</span>
+                          <Ban className="w-3.5 h-3.5 text-amber-700" />
+                          <span>आई-कार्ड निरस्त करें</span>
                         </button>
                       </>
                     )}
 
-                    {/* IF REJECTED: Show Re-Approve Option */}
-                    {isRejected && (
+                    {/* IF CANCELLED OR REJECTED: Show Reactivate Option */}
+                    {(isCancelled || isRejected) && (
                       <button
                         onClick={() => handleApprove(staff)}
-                        className="px-3.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+                        title="आई-कार्ड पुनः बहाल व स्वीकृत करें"
                       >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>पुनः स्वीकृत करें</span>
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>पुनः बहाल / स्वीकृत करें</span>
                       </button>
                     )}
 
@@ -1173,13 +1249,14 @@ export const TabStaffApprovalManager: React.FC = () => {
                       <span>कार्ड देखें</span>
                     </button>
 
-                    {/* Delete button */}
+                    {/* Delete button (Permanent Deletion) */}
                     <button
                       onClick={() => handleDelete(staff)}
-                      className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition cursor-pointer"
-                      title="स्टाफ रिकॉर्ड हटाएं"
+                      className="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      title="स्टाफ रिकॉर्ड हमेशा के लिए हटाएं (Delete)"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                      <span>डिलीट</span>
                     </button>
                   </div>
                 </div>
@@ -1311,6 +1388,165 @@ export const TabStaffApprovalManager: React.FC = () => {
                 className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-black rounded-xl shadow-md cursor-pointer"
               >
                 अस्वीकृत करें (Confirm)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION DIALOG MODAL */}
+      {deleteModalStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border-2 border-red-500 p-5 space-y-4 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3 text-red-700">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-black">स्टाफ रिकॉर्ड डिलीट करें</h3>
+                <span className="text-[11px] text-red-600 font-bold block">स्थायी निष्कासन (Permanent Delete)</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              क्या आप सचमुच <strong>{deleteModalStaff.fullName}</strong> (स्टाफ आईडी: <span className="font-mono text-red-700 font-bold">{deleteModalStaff.id}</span>, मोबाइल: <span className="font-mono font-bold">+91 {deleteModalStaff.mobile}</span>) का स्टाफ पंजीकरण फॉर्म डिलीट करना चाहते हैं?
+            </p>
+
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 space-y-1">
+              <div className="font-bold flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                <span>महत्वपूर्ण सूचना:</span>
+              </div>
+              <p className="text-[11px] leading-tight text-red-800">
+                डिलीट करने पर इस सदस्य का रिकॉर्ड डेटाबेस से स्थायी रूप से हट जाएगा और इनके मोबाइल नंबर से आई-कार्ड नहीं खुलेगा।
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={() => setDeleteModalStaff(null)}
+                className="flex-1 py-2.5 border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 cursor-pointer"
+              >
+                रद्द करें (Cancel)
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-black rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>हाँ, डिलीट करें (Delete)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CANCEL ISSUED I-CARD CONFIRMATION DIALOG MODAL */}
+      {cancelModalStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border-2 border-amber-400 p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                  <Ban className="w-6 h-6 text-amber-700" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 leading-tight">
+                    जारी आई-कार्ड निरस्त / रद्द करें
+                  </h3>
+                  <span className="text-[11px] text-amber-800 font-bold block mt-0.5">
+                    Cancel & Revoke Issued Staff I-Card
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setCancelModalStaff(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Target Staff Summary */}
+            <div className="bg-amber-50/80 rounded-2xl p-4 border border-amber-200 space-y-2 text-xs">
+              <div className="flex justify-between items-center border-b border-amber-200/60 pb-1.5">
+                <span className="font-bold text-slate-600">स्टाफ सदस्य का नाम:</span>
+                <span className="font-black text-slate-900">{cancelModalStaff.fullName}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-amber-200/60 pb-1.5">
+                <span className="font-bold text-slate-600">स्टाफ आईडी (Staff ID):</span>
+                <span className="font-mono font-black text-amber-900">{cancelModalStaff.id}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-amber-200/60 pb-1.5">
+                <span className="font-bold text-slate-600">पद (Designation):</span>
+                <span className="font-bold text-[#8B0000]">{cancelModalStaff.designation}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-slate-600">पंजीकृत मोबाइल:</span>
+                <span className="font-mono font-bold text-slate-800">+91 {cancelModalStaff.mobile}</span>
+              </div>
+            </div>
+
+            {/* Quick Reason selector & custom input */}
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-800 block">
+                निरस्तीकरण का कारण चुनें अथवा लिखें (Cancellation Reason):
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {[
+                  'सेवा / संबद्धता समाप्ति उपरांत निरस्त',
+                  'अनुशासनात्मक प्रशासनिक आदेश',
+                  'गलत प्रविष्टि अथवा डुप्लीकेट कार्ड',
+                  'प्रशासनिक समीक्षा के उपरांत निरस्त'
+                ].map((reason) => (
+                  <button
+                    key={reason}
+                    type="button"
+                    onClick={() => setCancelReasonStaff(reason)}
+                    className={`p-2 rounded-xl border text-left font-medium transition cursor-pointer text-[11px] ${
+                      cancelReasonStaff === reason
+                        ? 'bg-amber-100 border-amber-400 text-amber-950 font-bold shadow-2xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                rows={2}
+                value={cancelReasonStaff}
+                onChange={(e) => setCancelReasonStaff(e.target.value)}
+                placeholder="विस्तृत कारण लिखें..."
+                className="w-full p-2.5 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Warning Note */}
+            <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <strong>प्रभाव:</strong> इस आई-कार्ड की स्थिति 'निरस्त (Cancelled)' हो जाएगी। ऑनलाइन सत्यापन पोर्टल और क्यूआर कोड स्कैन करने पर यह पहचान पत्र अमान्य व निरस्त प्रदर्शित होगा। आप चाहें तो भविष्य में इसे पुनः बहाल कर सकते हैं।
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setCancelModalStaff(null)}
+                className="flex-1 py-2.5 border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 cursor-pointer"
+              >
+                रद्द न करें (Back)
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancelStaff}
+                className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Ban className="w-4 h-4" />
+                <span>हाँ, आई-कार्ड निरस्त करें</span>
               </button>
             </div>
           </div>
@@ -1464,7 +1700,9 @@ export const TabStaffApprovalManager: React.FC = () => {
                       ? '⏳ अनुमोदन हेतु लंबित (Pending)'
                       : previewStaff.status === 'rejected'
                       ? '❌ अस्वीकृत (Rejected)'
-                      : '✅ स्वीकृत व सक्रिय (Approved)'}
+                      : previewStaff.status === 'cancelled'
+                      ? '⛔ निरस्त व अमान्य (Cancelled / Revoked)'
+                      : '✅ स्वीकृत व सक्रिय (Approved & Issued)'}
                   </div>
                 </div>
 
@@ -1491,6 +1729,84 @@ export const TabStaffApprovalManager: React.FC = () => {
                     <Printer className="w-4 h-4" />
                     <span>सीधा प्रिंट करें</span>
                   </button>
+                </div>
+
+                {/* Administrative Decision Buttons (Approve / Cancel / Reactivate / Reject / Delete) */}
+                <div className="pt-3 border-t border-slate-200 space-y-2">
+                  <div className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                    प्रशासनिक निर्णय (Admin Decision):
+                  </div>
+                  <div className="space-y-1.5">
+                    {/* Approve button for pending registrations */}
+                    {previewStaff.status === 'pending' && (
+                      <button
+                        onClick={() => {
+                          handleApprove(previewStaff);
+                          setPreviewStaff(null);
+                        }}
+                        className="w-full py-2 px-3 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl text-xs font-black shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer border border-emerald-400"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                        <span>फॉर्म स्वीकृत करें (Approve & Issue ID)</span>
+                      </button>
+                    )}
+
+                    {/* Cancel Issued I-Card button (if currently approved / active) */}
+                    {(previewStaff.status === 'approved' || previewStaff.status === 'active' || previewStaff.status === 'verified') && (
+                      <button
+                        onClick={() => {
+                          setCancelModalStaff(previewStaff);
+                          setCancelReasonStaff('प्रशासनिक समीक्षा अथवा सेवा समाप्ति उपरांत पहचान पत्र निरस्त');
+                        }}
+                        className="w-full py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                        title="जारी आई-कार्ड निरस्त / रद्द करें"
+                      >
+                        <Ban className="w-3.5 h-3.5 text-amber-700" />
+                        <span>पहचान पत्र निरस्त करें (Cancel / Revoke I-Card)</span>
+                      </button>
+                    )}
+
+                    {/* Reactivate Button (if cancelled or rejected) */}
+                    {(previewStaff.status === 'cancelled' || previewStaff.status === 'rejected') && (
+                      <button
+                        onClick={() => {
+                          handleApprove(previewStaff);
+                          setPreviewStaff({ ...previewStaff, status: 'approved' });
+                        }}
+                        className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                        title="पहचान पत्र पुनः बहाल व स्वीकृत करें"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-blue-200" />
+                        <span>पहचान पत्र पुनः बहाल व स्वीकृत करें (Reactivate)</span>
+                      </button>
+                    )}
+
+                    {/* Reject Button (if pending) */}
+                    {previewStaff.status === 'pending' && (
+                      <button
+                        onClick={() => {
+                          setRejectModalStaff(previewStaff);
+                          setRejectionReason('विवरण अथवा दस्तावेज अपूर्ण हैं।');
+                        }}
+                        className="w-full py-2 px-3 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>फॉर्म अस्वीकृत करें (Reject)</span>
+                      </button>
+                    )}
+
+                    {/* Delete Button (Permanent Delete) */}
+                    <button
+                      onClick={() => {
+                        handleDelete(previewStaff);
+                      }}
+                      className="w-full py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      title="स्टाफ रिकॉर्ड हमेशा के लिए हटाएं"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                      <span>फॉर्म हमेशा के लिए हटाएं (Permanent Delete)</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

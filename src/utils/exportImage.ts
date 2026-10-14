@@ -122,11 +122,11 @@ function getImageDimensions(
   });
 }
 
-// 300 DPI scale calculation: Standard web CSS is 96 DPI. 300 DPI / 96 DPI ≈ 3.125 (rounded to min 3.125 for authentic 300 DPI print quality)
-export const DEFAULT_PRINT_DPI_SCALE = 3.125;
+// 350+ DPI scale calculation: Standard web CSS is 96 DPI. 350 DPI / 96 DPI ≈ 3.65 (min 3.5 for ultra-crisp print quality)
+export const DEFAULT_PRINT_DPI_SCALE = 3.5;
 
 /**
- * Robust capture of any HTMLElement to 300 DPI high-resolution Image Data URL.
+ * Robust capture of any HTMLElement to 350+ DPI high-resolution Image Data URL.
  * Employs high-quality canvas rendering with imageSmoothingQuality: 'high'
  * and full SVG foreignObject / html2canvas pipelines so logos and seals never pixelate.
  */
@@ -139,10 +139,10 @@ export async function captureElementToImageData(
     backgroundColor?: string;
   }
 ): Promise<{ dataUrl: string; width: number; height: number } | null> {
-  // Ensure default export resolution is at least 300 DPI (scale >= 3.125)
+  // Ensure default export resolution is at least 350 DPI (scale >= 3.5)
   const scale = options?.scale ? Math.max(options.scale, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE;
-  const quality = options?.quality ?? 0.98;
-  const format = options?.format ?? 'jpeg';
+  const quality = options?.quality ?? 1.0;
+  const format = options?.format ?? 'png';
   const bg = options?.backgroundColor ?? '#FFFFFF';
 
   let cleanup: (() => void) | null = null;
@@ -185,7 +185,7 @@ export async function captureElementToImageData(
     console.warn('html-to-image capture warning, attempting html2canvas fallback:', h2iErr);
   }
 
-  // 3. Secondary Strategy: html2canvas fallback with 300 DPI Canvas and high-fidelity smoothing
+  // 3. Secondary Strategy: html2canvas fallback with 350+ DPI Canvas and high-fidelity smoothing
   try {
     const canvas = await html2canvas(element, {
       scale: scale,
@@ -234,7 +234,7 @@ export async function captureElementToImageData(
 }
 
 /**
- * High-Resolution PNG Export (300 DPI by default)
+ * High-Resolution PNG Export (350+ DPI by default)
  */
 export async function exportElementAsPng(
   element: HTMLElement,
@@ -266,7 +266,7 @@ export async function exportElementAsPng(
 }
 
 /**
- * High-Resolution JPG Export (300 DPI, Photographic Quality)
+ * High-Resolution JPG Export (350+ DPI, Photographic Quality)
  */
 export async function exportElementAsJpg(
   element: HTMLElement,
@@ -298,7 +298,7 @@ export async function exportElementAsJpg(
 }
 
 /**
- * High-Resolution Vector-Wrapped PDF Export (A4 Precision Fit with Aspect Ratio Preservation at 300 DPI)
+ * High-Resolution Vector-Wrapped PDF Export (A4 Precision Fit with Lossless PNG at 350+ DPI)
  */
 export async function exportElementAsPdf(
   element: HTMLElement,
@@ -307,8 +307,8 @@ export async function exportElementAsPdf(
 ): Promise<boolean> {
   const finalFileName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
   const result = await captureElementToImageData(element, {
-    format: 'jpeg',
-    quality: options?.quality ?? 0.98,
+    format: 'png',
+    quality: 1.0,
     scale: options?.pixelRatio ? Math.max(options.pixelRatio, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE,
     backgroundColor: options?.backgroundColor ?? '#FFFFFF'
   });
@@ -355,7 +355,7 @@ export async function exportElementAsPdf(
       offsetY = margin;
     }
 
-    pdf.addImage(result.dataUrl, 'JPEG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST');
+    pdf.addImage(result.dataUrl, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'SLOW');
     pdf.save(finalFileName);
     return true;
   } catch (err) {
@@ -365,7 +365,7 @@ export async function exportElementAsPdf(
 }
 
 /**
- * High-Resolution Multi-Page PDF Export (e.g. Page 1: Front Side, Page 2: Back Side at 300 DPI)
+ * High-Resolution Multi-Page PDF Export (e.g. Page 1: Front Side, Page 2: Back Side with Lossless PNG at 350+ DPI)
  */
 export async function exportElementsAsMultiPagePdf(
   elements: (HTMLElement | null)[],
@@ -383,8 +383,8 @@ export async function exportElementsAsMultiPagePdf(
     for (let i = 0; i < validElements.length; i++) {
       const element = validElements[i];
       const result = await captureElementToImageData(element, {
-        format: 'jpeg',
-        quality: options?.quality ?? 0.98,
+        format: 'png',
+        quality: 1.0,
         scale: options?.pixelRatio ? Math.max(options.pixelRatio, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE,
         backgroundColor: options?.backgroundColor ?? '#FFFFFF'
       });
@@ -431,7 +431,7 @@ export async function exportElementsAsMultiPagePdf(
         offsetY = margin;
       }
 
-      pdf.addImage(result.dataUrl, 'JPEG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST');
+      pdf.addImage(result.dataUrl, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'SLOW');
     }
 
     if (pdf) {

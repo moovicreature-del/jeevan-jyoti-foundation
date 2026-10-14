@@ -176,12 +176,15 @@ export const StaffHubModal: React.FC<StaffHubModalProps> = ({
               </div>
 
               <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                स्टाफ आईडी अथवा पंजीकृत मोबाइल नंबर दर्ज करें। अपना स्टाइलिश व डायनामिक पहचान पत्र (आगे व पीछे का दृश्य) देखें और उच्च गुणवत्ता में PDF या PNG डाउनलोड करें।
+                पंजीकृत मोबाइल नंबर दर्ज करके अपना आधिकारिक 2-Page पहचान पत्र खोलें व डाउनलोड करें (आई-कार्ड संस्था प्रशासन द्वारा अप्रूव होने के बाद ही जारी होता है)।
               </p>
 
               <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+                <span className="text-[10.5px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md">
+                  📱 मोबाइल नंबर से ओपन
+                </span>
                 <span className="text-[10.5px] font-bold bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-md">
-                  🪪 स्टाइलिश डायनामिक कार्ड
+                  🪪 2-Page प्रिंट-रेडी कार्ड
                 </span>
                 <span className="text-[10.5px] font-bold bg-purple-100 text-purple-900 px-2 py-0.5 rounded-md">
                   📥 हिन्दी व English दोनों भाषाओं में डाउनलोड

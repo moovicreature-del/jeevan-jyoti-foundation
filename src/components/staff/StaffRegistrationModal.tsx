@@ -272,23 +272,26 @@ export const StaffRegistrationModal: React.FC<StaffRegistrationModalProps> = ({
             </div>
 
             {/* Approval Workflow & WhatsApp Notification Notice */}
-            <div className="max-w-md mx-auto p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-300 rounded-2xl text-left space-y-2.5 text-xs text-gray-700">
-              <div className="flex items-center gap-2 text-emerald-800 font-black">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>आई-कार्ड सत्यापन एवं डाउनलोड प्रक्रिया:</span>
+            <div className="max-w-md mx-auto p-4 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-300 rounded-2xl text-left space-y-2.5 text-xs text-gray-800 shadow-xs">
+              <div className="flex items-center gap-2 text-[#8B0000] font-black">
+                <ShieldCheck className="w-5 h-5 text-[#8B0000] shrink-0" />
+                <span className="text-[13px]">आई-कार्ड जारी होने की आधिकारिक प्रक्रिया:</span>
               </div>
-              <ul className="space-y-1.5 pl-1">
+              <div className="p-2.5 bg-white/80 rounded-xl border border-amber-200 text-[11.5px] leading-relaxed text-amber-950 font-medium">
+                <strong className="text-[#8B0000]">⚠️ अनिवार्य नियम:</strong> स्टाफ पहचान पत्र केवल तभी जारी (Issue) होगा जब <strong>संस्था प्रशासन (Admin Login)</strong> द्वारा आपके इस पंजीकरण फॉर्म को विधिवत <strong>स्वीकृत (Approve)</strong> किया जाएगा।
+              </div>
+              <ul className="space-y-1.5 pl-1 text-[11.5px]">
                 <li className="flex items-start gap-2">
-                  <span className="text-emerald-700 font-black mt-0.5">1.</span>
-                  <span><strong>एडमिन सत्यापन (Admin Approval):</strong> आपका आवेदन संस्था प्रशासन को प्राप्त हो गया है। विवरण की समीक्षा के बाद इसे स्वीकृत (Approve) किया जाएगा।</span>
+                  <span className="text-[#8B0000] font-black mt-0.5">1.</span>
+                  <span><strong>एडमिन सत्यापन (Admin Approval):</strong> आपका आवेदन एडमिन पोर्टल पर समीक्षा हेतु दर्ज हो गया है। एडमिन द्वारा Approve, Reject या Delete का निर्णय लिया जाता है।</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-emerald-700 font-black mt-0.5">2.</span>
-                  <span><strong>WhatsApp पर सीधा लिंक:</strong> स्वीकृति मिलते ही आपके रजिस्टर्ड मोबाइल (<strong>+91 {registeredStaff.mobile}</strong>) के WhatsApp पर आई-कार्ड डाउनलोड लिंक प्राप्त होगा।</span>
+                  <span className="text-[#8B0000] font-black mt-0.5">2.</span>
+                  <span><strong>रजिस्टर्ड मोबाइल नंबर से कार्ड ओपन:</strong> जैसे ही एडमिन फॉर्म को <strong>Approve</strong> करेंगे, आप सीधे अपना रजिस्टर्ड मोबाइल नंबर (<strong>+91 {registeredStaff.mobile}</strong>) दर्ज करके अपना डिजिटल 2-Page आई-कार्ड देख व डाउनलोड कर सकेंगे।</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-emerald-700 font-black mt-0.5">3.</span>
-                  <span><strong>OTP सत्यापन द्वारा डाउनलोड:</strong> अप्रूवल के बाद आप वेबसाइट से अपने रजिस्टर्ड मोबाइल पर OTP सत्यापन करके भी सीधे उच्च गुणवत्ता वाला 2-Page आई-कार्ड डाउनलोड कर सकते हैं।</span>
+                  <span className="text-[#8B0000] font-black mt-0.5">3.</span>
+                  <span><strong>WhatsApp सूचना:</strong> स्वीकृति मिलते ही आपके रजिस्टर्ड मोबाइल के WhatsApp पर भी बधाई संदेश व सीधा लिंक प्राप्त होगा।</span>
                 </li>
               </ul>
             </div>
@@ -297,10 +300,16 @@ export const StaffRegistrationModal: React.FC<StaffRegistrationModalProps> = ({
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <button
                 onClick={() => onSuccessViewCard(registeredStaff)}
-                className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-[#8B0000] via-red-700 to-amber-600 hover:from-red-800 hover:to-amber-700 text-white font-black text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-[#8B0000] via-red-700 to-amber-600 hover:from-red-800 hover:to-amber-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Award className="w-4 h-4 text-amber-300" />
-                <span>आई-कार्ड स्थिति देखें (View Card Status)</span>
+                <Phone className="w-4 h-4 text-amber-300" />
+                <span>मोबाइल नंबर से स्थिति जांचें (Check Status)</span>
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full sm:w-auto px-5 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer"
+              >
+                पूर्ण / बन्द करें (Done)
               </button>
               <button
                 onClick={() => {
@@ -309,9 +318,9 @@ export const StaffRegistrationModal: React.FC<StaffRegistrationModalProps> = ({
                   setFatherOrHusbandName('');
                   setMobile('');
                 }}
-                className="w-full sm:w-auto px-5 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-sm rounded-xl transition-colors cursor-pointer"
+                className="w-full sm:w-auto px-4 py-3 text-amber-900 hover:bg-amber-50 font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
-                + एक और स्टाफ जोड़ें (Add Another)
+                + नया फॉर्म भरें
               </button>
             </div>
           </div>

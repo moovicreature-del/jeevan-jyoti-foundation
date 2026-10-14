@@ -35,7 +35,9 @@ import {
   ThumbsDown,
   Trash2,
   Share2,
-  AlertCircle
+  AlertCircle,
+  Ban,
+  RotateCcw
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -64,6 +66,8 @@ import {
   parseDateComponents,
   approveCertificateInRegistry,
   rejectCertificateInRegistry,
+  cancelCertificateInRegistry,
+  reactivateCertificateInRegistry,
   deleteCertificateFromRegistry,
   getCertificateApprovalWhatsAppUrl,
   dispatchCertificateApprovalNotifications
@@ -95,6 +99,13 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
   const [selectedCertDetail, setSelectedCertDetail] = useState<RegisteredCertificateItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [actionProcessingId, setActionProcessingId] = useState<string | null>(null);
+
+  // Cancellation Dialog State
+  const [cancelModalCert, setCancelModalCert] = useState<RegisteredCertificateItem | null>(null);
+  const [cancellationReason, setCancellationReason] = useState<string>('प्रशासनिक समीक्षा के उपरांत निरस्त');
+
+  // Delete Dialog State
+  const [deleteModalCert, setDeleteModalCert] = useState<RegisteredCertificateItem | null>(null);
 
   // Month options with bilingual labels
   const monthOptions = [
@@ -263,17 +274,66 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
     }
   };
 
-  // Admin Deletion Action: Permanently delete certificate
-  const handleDeleteCertificate = async (cert: RegisteredCertificateItem, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    const confirmed = window.confirm(`क्या आप निश्चित रूप से प्रमाण पत्र ${cert.id} (${cert.recipientName}) को डेटाबेस से स्थायी रूप से हटाना (Delete) चाहते हैं?`);
-    if (!confirmed) return;
+  // Admin Cancellation Action: Confirms cancellation/revocation of certificate or I-card
+  const handleConfirmCancel = async () => {
+    if (!cancelModalCert) return;
+    const cert = cancelModalCert;
+    setActionProcessingId(cert.id);
+    try {
+      const updated = cancelCertificateInRegistry(
+        cert.id,
+        cancellationReason.trim() || 'प्रशासनिक आदेश द्वारा निरस्त',
+        adminProfile?.name || 'Super Admin'
+      );
+      if (updated) {
+        toast.error(`⚠️ प्रमाण पत्र ${cert.id} सफलतापूर्वक रद्द/निरस्त (Cancelled) कर दिया गया।`);
+        await loadAnalyticsData(false);
+        if (selectedCertDetail && selectedCertDetail.id === cert.id) {
+          setSelectedCertDetail(updated);
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'त्रुटि हुई');
+    } finally {
+      setActionProcessingId(null);
+      setCancelModalCert(null);
+    }
+  };
 
+  // Admin Reactivation Action: Reactivates a cancelled or rejected certificate
+  const handleReactivateCertificate = async (cert: RegisteredCertificateItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setActionProcessingId(cert.id);
+    try {
+      const updated = reactivateCertificateInRegistry(cert.id, adminProfile?.name || 'Super Admin');
+      if (updated) {
+        toast.success(`✅ प्रमाण पत्र ${cert.id} पुनः बहाल व सक्रिय किया गया!`);
+        await loadAnalyticsData(false);
+        if (selectedCertDetail && selectedCertDetail.id === cert.id) {
+          setSelectedCertDetail(updated);
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'त्रुटि हुई');
+    } finally {
+      setActionProcessingId(null);
+    }
+  };
+
+  // Admin Deletion Action: Permanently delete certificate from database
+  const handleDeleteCertificate = (cert: RegisteredCertificateItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setDeleteModalCert(cert);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteModalCert) return;
+    const cert = deleteModalCert;
     setActionProcessingId(cert.id);
     try {
       const ok = await deleteCertificateFromRegistry(cert.id);
       if (ok) {
-        toast.success(`प्रमाण पत्र ${cert.id} सफलतापूर्वक डिलीट कर दिया गया।`);
+        toast.success(`🗑️ प्रमाण पत्र ${cert.id} डेटाबेस से स्थायी रूप से हटा दिया गया।`);
         await loadAnalyticsData(false);
         if (selectedCertDetail && selectedCertDetail.id === cert.id) {
           setSelectedCertDetail(null);
@@ -283,6 +343,7 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
       toast.error(err.message || 'हटाने में त्रुटि');
     } finally {
       setActionProcessingId(null);
+      setDeleteModalCert(null);
     }
   };
 
@@ -1070,6 +1131,7 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
                 {filteredCertificates.map((cert) => {
                   const badge = getCategoryBadge(cert.type);
                   const isFestival = cert.type === 'festival_greeting';
+                  const isCancelled = cert.status === 'cancelled' || cert.status === 'revoked' || cert.approvalStatus === 'cancelled';
                   const effectiveApproval = isFestival ? 'approved' : (cert.approvalStatus || 'pending');
                   const isProcessing = actionProcessingId === cert.id;
 
@@ -1168,11 +1230,11 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
                         )}
                       </td>
 
-                      {/* Actions: Approve / Reject / Delete */}
+                      {/* Actions: Approve / Cancel / Reactivate / Delete */}
                       <td className="px-4 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                          {/* Approve Button */}
-                          {!isFestival && effectiveApproval !== 'approved' && (
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                          {/* Approve Button (for pending/rejected) */}
+                          {!isFestival && effectiveApproval !== 'approved' && !isCancelled && (
                             <button
                               type="button"
                               disabled={isProcessing}
@@ -1185,8 +1247,8 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
                             </button>
                           )}
 
-                          {/* WhatsApp Resend if already approved */}
-                          {effectiveApproval === 'approved' && (
+                          {/* WhatsApp Resend if approved */}
+                          {effectiveApproval === 'approved' && !isCancelled && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1195,14 +1257,45 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
                                 window.open(url, '_blank');
                               }}
                               className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-lg transition cursor-pointer"
-                              title="पंजीकृत नंबर पर WhatsApp स्वीकृति डाउनलोड लिंक पुनः भेजें"
+                              title="पंजीकृत नंबर पर WhatsApp स्वीकृति डाउनलोड लिंक भेजें"
                             >
                               <Share2 className="w-3.5 h-3.5 text-emerald-600" />
                             </button>
                           )}
 
-                          {/* Reject Button */}
-                          {!isFestival && effectiveApproval !== 'rejected' && (
+                          {/* Cancel / Revoke Button (for issued/approved certs) */}
+                          {effectiveApproval === 'approved' && !isCancelled && (
+                            <button
+                              type="button"
+                              disabled={isProcessing}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCancelModalCert(cert);
+                              }}
+                              className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg font-bold text-[11px] flex items-center gap-1 transition cursor-pointer disabled:opacity-50"
+                              title="जारी प्रमाण पत्र को निरस्त / रद्द करें (Cancel / Revoke)"
+                            >
+                              <Ban className="w-3 h-3 text-amber-700" />
+                              <span>निरस्त करें</span>
+                            </button>
+                          )}
+
+                          {/* Reactivate Button (if already cancelled or rejected) */}
+                          {(isCancelled || effectiveApproval === 'rejected') && (
+                            <button
+                              type="button"
+                              disabled={isProcessing}
+                              onClick={(e) => handleReactivateCertificate(cert, e)}
+                              className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 rounded-lg font-bold text-[11px] flex items-center gap-1 transition cursor-pointer disabled:opacity-50"
+                              title="निरस्त प्रमाण पत्र को पुनः बहाल व सक्रिय करें"
+                            >
+                              <RotateCcw className="w-3 h-3 text-blue-600" />
+                              <span>पुनः बहाल</span>
+                            </button>
+                          )}
+
+                          {/* Reject Button (if pending) */}
+                          {!isFestival && effectiveApproval === 'pending' && !isCancelled && (
                             <button
                               type="button"
                               disabled={isProcessing}
@@ -1220,7 +1313,7 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
                             type="button"
                             disabled={isProcessing}
                             onClick={(e) => handleDeleteCertificate(cert, e)}
-                            className="p-1.5 bg-slate-50 hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-200 hover:border-rose-600 rounded-lg transition cursor-pointer disabled:opacity-50"
+                            className="p-1.5 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 hover:border-rose-600 rounded-lg transition cursor-pointer disabled:opacity-50"
                             title="डेटाबेस से स्थायी रूप से हटाएं (Delete)"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -1339,8 +1432,9 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
 
             {/* Modal Actions */}
             <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
-              <div className="flex items-center gap-2">
-                {selectedCertDetail.type !== 'festival_greeting' && selectedCertDetail.approvalStatus !== 'approved' && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Approve Button (if not approved and not festival) */}
+                {selectedCertDetail.type !== 'festival_greeting' && selectedCertDetail.approvalStatus !== 'approved' && selectedCertDetail.status !== 'cancelled' && (
                   <button
                     type="button"
                     disabled={actionProcessingId === selectedCertDetail.id}
@@ -1356,7 +1450,41 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
                   </button>
                 )}
 
-                {selectedCertDetail.type !== 'festival_greeting' && selectedCertDetail.approvalStatus !== 'rejected' && (
+                {/* Cancel / Revoke Button (if approved) */}
+                {selectedCertDetail.approvalStatus === 'approved' && selectedCertDetail.status !== 'cancelled' && (
+                  <button
+                    type="button"
+                    disabled={actionProcessingId === selectedCertDetail.id}
+                    onClick={() => {
+                      setCancelModalCert(selectedCertDetail);
+                    }}
+                    className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="प्रमाण पत्र निरस्त / रद्द करें"
+                  >
+                    <Ban className="w-3.5 h-3.5 text-amber-700" />
+                    <span>निरस्त करें (Cancel)</span>
+                  </button>
+                )}
+
+                {/* Reactivate Button (if cancelled or rejected) */}
+                {(selectedCertDetail.status === 'cancelled' || selectedCertDetail.approvalStatus === 'rejected') && (
+                  <button
+                    type="button"
+                    disabled={actionProcessingId === selectedCertDetail.id}
+                    onClick={async (e) => {
+                      const cert = selectedCertDetail;
+                      await handleReactivateCertificate(cert, e);
+                      setSelectedCertDetail({ ...cert, status: 'active', approvalStatus: 'approved' });
+                    }}
+                    className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-blue-600" />
+                    <span>पुनः बहाल करें (Reactivate)</span>
+                  </button>
+                )}
+
+                {/* Reject Button (if pending) */}
+                {selectedCertDetail.type !== 'festival_greeting' && selectedCertDetail.approvalStatus === 'pending' && selectedCertDetail.status !== 'cancelled' && (
                   <button
                     type="button"
                     disabled={actionProcessingId === selectedCertDetail.id}
@@ -1372,16 +1500,15 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
                   </button>
                 )}
 
+                {/* Delete Button */}
                 <button
                   type="button"
                   disabled={actionProcessingId === selectedCertDetail.id}
-                  onClick={async (e) => {
-                    const cert = selectedCertDetail;
-                    await handleDeleteCertificate(cert, e);
-                    setSelectedCertDetail(null);
+                  onClick={(e) => {
+                    handleDeleteCertificate(selectedCertDetail, e);
                   }}
-                  className="px-3 py-2 bg-slate-50 hover:bg-rose-600 text-slate-500 hover:text-white border border-slate-200 font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  title="स्थायी रूप से हटाएं"
+                  className="px-3 py-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white border border-rose-200 font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition"
+                  title="डेटाबेस से स्थायी रूप से हटाएं"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>हटाएं (Delete)</span>
@@ -1409,6 +1536,185 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. CERTIFICATE CANCELLATION / REVOCATION DIALOG MODAL */}
+      {cancelModalCert && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5 my-auto border-2 border-amber-300">
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                  <Ban className="w-6 h-6 text-amber-700" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900 leading-tight">
+                    प्रमाण पत्र निरस्त / रद्द करें
+                  </h3>
+                  <span className="text-xs text-amber-800 font-bold block mt-0.5">
+                    Certificate Cancellation & Revocation
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setCancelModalCert(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Target Certificate Info */}
+            <div className="bg-amber-50/80 rounded-2xl p-4 border border-amber-200/80 space-y-2 text-xs">
+              <div className="flex justify-between items-center border-b border-amber-200/60 pb-2">
+                <span className="font-bold text-slate-600">प्रमाण पत्र संख्या:</span>
+                <span className="font-mono font-black text-amber-900 text-sm">{cancelModalCert.id}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-amber-200/60 pb-2">
+                <span className="font-bold text-slate-600">प्राप्तकर्ता का नाम:</span>
+                <span className="font-black text-slate-900">{cancelModalCert.recipientName}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-amber-200/60 pb-2">
+                <span className="font-bold text-slate-600">पंजीकृत मोबाइल:</span>
+                <span className="font-mono font-bold text-slate-800">+91 {cancelModalCert.phone}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-slate-600">प्रमाण पत्र श्रेणी:</span>
+                <span className="font-bold text-slate-800">{cancelModalCert.titleHindi}</span>
+              </div>
+            </div>
+
+            {/* Cancellation Reason Selection */}
+            <div className="space-y-2">
+              <label className="block text-xs font-black text-slate-800">
+                निरस्तीकरण का कारण चुनें अथवा लिखें (Reason for Revocation):
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {[
+                  'प्रशासनिक समीक्षा के उपरांत निरस्त',
+                  'गलत प्रविष्टि अथवा डुप्लीकेट रिकॉर्ड',
+                  'सेवा / संबद्धता समाप्ति उपरांत निरस्त',
+                  'अनुशासनात्मक प्रशासनिक आदेश'
+                ].map((reason) => (
+                  <button
+                    key={reason}
+                    type="button"
+                    onClick={() => setCancellationReason(reason)}
+                    className={`p-2.5 rounded-xl border text-left font-medium transition cursor-pointer text-[11px] ${
+                      cancellationReason === reason
+                        ? 'bg-amber-100 border-amber-400 text-amber-950 font-bold shadow-2xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {reason}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                placeholder="विस्तृत निरस्तीकरण टिप्पणी लिखें..."
+                rows={2}
+                className="w-full mt-2 p-3 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setCancelModalCert(null)}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                रद्द न करें (Cancel)
+              </button>
+              <button
+                type="button"
+                disabled={actionProcessingId === cancelModalCert.id}
+                onClick={handleConfirmCancel}
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Ban className="w-4 h-4 text-white" />
+                <span>हाँ, निरस्त करें (Revoke Certificate)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. PERMANENT DELETE CERTIFICATE CONFIRMATION MODAL */}
+      {deleteModalCert && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-5 my-auto border-2 border-rose-300">
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-6 h-6 text-rose-700" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900 leading-tight">
+                    प्रमाण पत्र स्थायी रूप से हटाएं
+                  </h3>
+                  <span className="text-xs text-rose-700 font-bold block mt-0.5">
+                    Permanent Deletion from Database
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setDeleteModalCert(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Target info */}
+            <div className="bg-rose-50/80 rounded-2xl p-4 border border-rose-200 space-y-2 text-xs">
+              <div className="flex justify-between items-center border-b border-rose-200/60 pb-2">
+                <span className="font-bold text-slate-600">आईडी (ID):</span>
+                <span className="font-mono font-black text-rose-900">{deleteModalCert.id}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-rose-200/60 pb-2">
+                <span className="font-bold text-slate-600">नाम:</span>
+                <span className="font-black text-slate-900">{deleteModalCert.recipientName}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-slate-600">मोबाइल:</span>
+                <span className="font-mono font-bold text-slate-800">+91 {deleteModalCert.phone}</span>
+              </div>
+            </div>
+
+            {/* Critical Warning */}
+            <div className="p-3 bg-red-50 border border-red-300 rounded-xl text-xs text-red-900 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-700 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <strong>चेतावनी:</strong> यह रिकॉर्ड रजिस्ट्री, Firestore एवं ऑफ़लाइन कैशे से स्थायी रूप से हटा दिया जाएगा। सत्यापन पोर्टल पर यह प्रमाण पत्र अमान्य घोषित हो जाएगा।
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setDeleteModalCert(null)}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                रद्द करें (Cancel)
+              </button>
+              <button
+                type="button"
+                disabled={actionProcessingId === deleteModalCert.id}
+                onClick={handleConfirmDelete}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4 text-white" />
+                <span>हाँ, स्थायी रूप से हटाएं</span>
+              </button>
             </div>
           </div>
         </div>
