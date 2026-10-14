@@ -1,32 +1,39 @@
 // ============================================================================
-// JEEVAN JYOTI FOUNDATION - SERVICE WORKER (OFFLINE CERTIFICATES & ASSET CACHE)
+// JEEVAN JYOTI FOUNDATION - SERVICE WORKER (LIVE SYNC & AUTO-UPDATE V9)
+// Network-First for HTML/App Bundles so GitHub pushes reflect immediately on live links
+// Offline Cache Fallback for Certificates, Official Seal, and Static Assets
 // ============================================================================
 
-const CACHE_NAME = 'jeevan-jyoti-v7-pwa';
+const CACHE_NAME = 'jeevan-jyoti-v9-live-sync';
+
+// Static branding assets to pre-cache for offline availability
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/favicon.svg',
   '/logo.png',
+  '/official-seal.png',
   '/apple-touch-icon.png',
   '/pwa-icon-192.png',
   '/pwa-icon-512.png',
   '/pwa-icon-maskable-192.png',
   '/pwa-icon-maskable-512.png',
   '/signature-shailesh-overlay.png',
-  '/signature-shailesh-royalblue.png',
-  '/signature-shailesh-overlay.svg',
-  '/signature-shailesh-royalblue.svg'
+  '/signature-shailesh-royalblue.png'
 ];
 
 let dynamicCustomThumbnail = '';
 
-// Message Listener: Receive live thumbnail updates from client
+// Message Listener: Immediate Skip-Waiting & Live Thumbnail Updates
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'UPDATE_APP_THUMBNAIL') {
+  if (!event.data) return;
+
+  if (event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+
+  if (event.data.type === 'UPDATE_APP_THUMBNAIL') {
     const newThumb = event.data.thumbnailUrl;
-    dynamicCustomThumbnail = (typeof newThumb === 'string') ? newThumb.trim() : '';
+    dynamicCustomThumbnail = typeof newThumb === 'string' ? newThumb.trim() : '';
     if (dynamicCustomThumbnail && dynamicCustomThumbnail !== '/pwa-icon-512.png') {
       fetch(dynamicCustomThumbnail, { mode: 'cors' })
         .then((resp) => {
@@ -44,41 +51,44 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Install Event: Pre-cache core shell assets
+// Install Event: Activate immediately without waiting for old tabs to close
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE).catch((err) => {
-        console.debug('Service Worker asset pre-caching partial note:', err);
+        console.debug('[SW] Partial pre-cache notice:', err);
       });
     })
   );
+  // Force new service worker to become active immediately
   self.skipWaiting();
 });
 
-// Activate Event: Clean up legacy caches
+// Activate Event: Clean up all legacy caches and claim clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
           if (cache !== CACHE_NAME) {
+            console.log('[SW] Deleting stale cache:', cache);
             return caches.delete(cache);
           }
         })
       );
     })
   );
-  self.clients.claim();
+  // Take control of all open pages immediately
+  return self.clients.claim();
 });
 
-// Fetch Event: Stale-While-Revalidate for app assets & Network-First with Cache Fallback
+// Fetch Event: Smart routing to prevent stale cache while supporting offline mode
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
 
-  // Never intercept Vite development endpoints, HMR, or raw TypeScript/JSX source modules
+  // 1. NEVER INTERCEPT Vite development endpoints, HMR, or raw TypeScript/JSX source modules
   if (
     url.pathname.startsWith('/@') ||
     url.pathname.startsWith('/src/') ||
@@ -88,10 +98,63 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For Web App Manifest, always use Network-First so PWA installs get latest icons
-  if (url.pathname === '/manifest.json') {
+  // 2. NEVER CACHE Service Worker or Version Check: Always fetch fresh from network
+  if (url.pathname === '/sw.js' || url.pathname === '/version.json') {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
+
+  // 3. API Requests: Network-First with offline JSON fallback
+  if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request)
+        .catch(() => {
+          return new Response(
+            JSON.stringify({
+              offline: true,
+              message: 'इंटरनेट कनेक्शन उपलब्ध नहीं है (Device is offline). लोकल सुरक्षित डेटा उपयोग में है।'
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' }
+            }
+          );
+        })
+    );
+    return;
+  }
+
+  // 4. HTML / NAVIGATION REQUESTS (index.html, root /, etc.):
+  // CRITICAL: Always use NETWORK-FIRST so any GitHub update or new deployment reflects IMMEDIATELY!
+  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-cache' })
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return networkResponse;
+        })
+        .catch(async () => {
+          // If offline, serve cached index.html
+          const cached = await caches.match(event.request);
+          if (cached) return cached;
+          const rootCached = await caches.match('/index.html') || await caches.match('/');
+          if (rootCached) return rootCached;
+          return new Response('ऑफलाइन मोड: पेज लोड करने हेतु इंटरनेट कनेक्शन की आवश्यकता है।', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+          });
+        })
+    );
+    return;
+  }
+
+  // 5. Web App Manifest: Network-First
+  if (url.pathname === '/manifest.json') {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-cache' })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const clone = networkResponse.clone();
@@ -104,7 +167,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // If a custom thumbnail is active and default PWA icons are requested, serve the custom thumbnail
+  // 6. Custom App Icon
   if (
     dynamicCustomThumbnail &&
     (url.pathname === '/pwa-icon-512.png' ||
@@ -120,45 +183,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For API requests, use Network-First with JSON fallback if offline
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((networkResponse) => {
-          return networkResponse;
-        })
-        .catch(() => {
-          return new Response(
-            JSON.stringify({
-              offline: true,
-              message: 'इंटरनेट कनेक्शन उपलब्ध नहीं है (Device is currently offline). लोकल कैश डेटा उपयोग में है।'
-            }),
-            {
-              status: 200,
-              headers: { 'Content-Type': 'application/json' }
-            }
-          );
-        })
-    );
-    return;
-  }
-
-  // For images, fonts, and static assets: Cache First, then Network & Cache
+  // 7. Static Assets (CSS, JS, Fonts, Images)
+  // Vite bundles in /assets/* contain unique hashes (e.g. index-xxxx.js)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Fetch in background to update cache (Stale-While-Revalidate)
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, networkResponse);
-              });
-            }
-          })
-          .catch(() => {
-            // Silently ignore background fetch failure when offline
-          });
+        // Revalidate in background for non-hashed assets
+        if (!url.pathname.startsWith('/assets/')) {
+          fetch(event.request)
+            .then((networkResponse) => {
+              if (networkResponse && networkResponse.status === 200) {
+                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
+              }
+            })
+            .catch(() => {});
+        }
         return cachedResponse;
       }
 
@@ -167,7 +206,7 @@ self.addEventListener('fetch', (event) => {
           if (
             networkResponse &&
             networkResponse.status === 200 &&
-            (url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|woff2|woff|ttf)$/) ||
+            (url.pathname.match(/\.(js|css|png|jpg|jpeg|webp|svg|woff2|woff|ttf)$/) ||
               url.origin === location.origin)
           ) {
             const responseToCache = networkResponse.clone();
@@ -178,11 +217,7 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // If offline and request is navigation (HTML page), return cached root index.html
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html') || caches.match('/');
-          }
-          return new Response('Offline asset unavailable', { status: 503, statusText: 'Offline' });
+          return new Response('Asset unavailable offline', { status: 503, statusText: 'Offline' });
         });
     })
   );

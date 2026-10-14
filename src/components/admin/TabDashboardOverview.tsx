@@ -29,13 +29,16 @@ import {
   Database,
   Download,
   Lock,
-  Send
+  Send,
+  RefreshCw,
+  GitBranch
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { useHomeContent } from '../../context/HomeContentContext';
 import { useDonationPaymentSettings } from '../../hooks/useDonationPaymentSettings';
 import { getAllRegisteredCertificates, computeCertificatePipelineStats } from '../../services/certificateRegistryService';
 import { getAllStaffMembers } from '../../services/staffService';
+import { syncCurrentAdminDataToGitHub } from '../../services/adminService';
 import { CertificateAnalyticsWidget } from './CertificateAnalyticsWidget';
 import { AdminTabType } from './AdminLayout';
 import { IdCard } from 'lucide-react';
@@ -57,6 +60,21 @@ export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
   const [certCount, setCertCount] = useState<number>(0);
   const [yearCount, setYearCount] = useState<number>(0);
   const [pendingStaffCount, setPendingStaffCount] = useState<number>(0);
+  const [isSyncingData, setIsSyncingData] = useState<boolean>(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+
+  const handleSyncGitHubData = async () => {
+    setIsSyncingData(true);
+    setSyncStatusMsg(null);
+    try {
+      const res = await syncCurrentAdminDataToGitHub();
+      setSyncStatusMsg(res.message);
+    } catch (err: any) {
+      setSyncStatusMsg(err?.message || 'डेटा सिंक में समस्या आई।');
+    } finally {
+      setIsSyncingData(false);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -253,6 +271,45 @@ export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
         >
           <Download className="w-4 h-4" />
           <span>JSON बैकअप डाउनलोड करें</span>
+        </button>
+      </div>
+
+      {/* GitHub & Live Link Data Sync Banner */}
+      <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-emerald-700/50">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-400/40">
+            <RefreshCw className={`w-6 h-6 ${isSyncingData ? 'animate-spin' : ''}`} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] bg-emerald-400/20 text-emerald-300 border border-emerald-400/40 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                GITHUB & LIVE LINK AUTO-SYNC
+              </span>
+              <span className="text-xs text-emerald-200">
+                1-क्लिक डेटा सिंक
+              </span>
+            </div>
+            <h2 className="text-base font-black text-white mt-0.5">
+              गिटहब व लाइव लिंक डेटा सिंक (Sync Data for GitHub Push)
+            </h2>
+            <p className="text-xs text-slate-300">
+              एडमिन में किए गए सभी बदलावों को तुरंत गिटहब फ़ाइल (`synced_app_data.json`) में सुरक्षित करें, ताकि GitHub में Push करने पर लाइव ऐप और लिंक पर नया डेटा तुरंत अपडेट हो जाए।
+            </p>
+            {syncStatusMsg && (
+              <div className="mt-2 text-xs font-bold text-emerald-300 bg-emerald-900/50 border border-emerald-500/50 px-3 py-1.5 rounded-xl">
+                {syncStatusMsg}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <button
+          onClick={handleSyncGitHubData}
+          disabled={isSyncingData}
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black text-xs rounded-xl shadow-md transition cursor-pointer shrink-0 disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${isSyncingData ? 'animate-spin' : ''}`} />
+          <span>{isSyncingData ? 'सिंक हो रहा है...' : 'डेटा सिंक करें (Sync for GitHub)'}</span>
         </button>
       </div>
 

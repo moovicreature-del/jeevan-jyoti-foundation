@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "generate:sitemap": "node scripts/generate_sitemap.js",
-    "build": "node scripts/generate_official_logo.cjs && node scripts/generate_sitemap.js && vite build && node scripts/generate_official_logo.cjs",
+    "build": "node scripts/generate_official_logo.cjs && node scripts/generate_sitemap.js && node scripts/generate_build_version.js && vite build && node scripts/generate_official_logo.cjs && node scripts/generate_build_version.js",
     "start": "node server.ts",
     "lint": "tsc --noEmit"
   },

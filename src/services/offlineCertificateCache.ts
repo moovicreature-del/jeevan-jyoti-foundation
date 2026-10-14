@@ -382,6 +382,17 @@ export function registerCertificateServiceWorker(): void {
     return;
   }
 
+  let isReloading = false;
+
+  // When a new Service Worker takes control, reload immediately so latest functions and bundles run
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!isReloading) {
+      isReloading = true;
+      console.log('🚀 [Auto-Update] New app version activated! Reloading to apply latest functions...');
+      window.location.reload();
+    }
+  });
+
   const register = () => {
     // Register clean /sw.js with root scope
     const swUrl = '/sw.js';
@@ -390,10 +401,51 @@ export function registerCertificateServiceWorker(): void {
       .register(swUrl, { scope: '/' })
       .then((registration) => {
         console.log('Jeevan Jyoti PWA Service Worker active with scope:', registration.scope);
-        // Force check for updates in background
+
+        // Check for updates when a new worker is found
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('✨ [Auto-Update] New app update downloaded from GitHub/Server! Activating immediately...');
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+
+        // If there is already a waiting worker, activate it right away
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+
+        // Force check for updates immediately
         try {
           registration.update();
         } catch {}
+
+        // Check for updates on window focus and visibility change
+        window.addEventListener('focus', () => {
+          try {
+            registration.update();
+          } catch {}
+        });
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            try {
+              registration.update();
+            } catch {}
+          }
+        });
+
+        // Periodic background update check every 3 minutes
+        setInterval(() => {
+          try {
+            registration.update();
+          } catch {}
+        }, 3 * 60 * 1000);
 
         // Notify app that Service Worker is registered
         window.dispatchEvent(new CustomEvent('jjf-sw-ready', { detail: { scope: registration.scope } }));

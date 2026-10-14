@@ -340,6 +340,37 @@ app.post('/api/purge-all-branding', (_req, res) => {
     success: true,
     message: 'सभी लोगो, आधिकारिक मुहर एवं थंबनेल सर्वर व स्टोरेज से स्थायी रूप से हटा दिए गए हैं।'
   });
+// GitHub Data Sync Endpoint: Writes latest admin content to public/data/synced_app_data.json
+app.post('/api/admin/sync-github-data', (req, res) => {
+  try {
+    const payload = req.body || {};
+    const publicDataDir = path.join(__dirname, 'public/data');
+    if (!fs.existsSync(publicDataDir)) {
+      fs.mkdirSync(publicDataDir, { recursive: true });
+    }
+    const syncedData = {
+      ...payload,
+      syncedAt: new Date().toISOString(),
+      version: '1.0.' + Math.floor(Date.now() / 1000)
+    };
+    fs.writeFileSync(path.join(publicDataDir, 'synced_app_data.json'), JSON.stringify(syncedData, null, 2), 'utf-8');
+
+    // Also write to dist/data if dist exists
+    const distDataDir = path.join(__dirname, 'dist/data');
+    if (fs.existsSync(distDataDir)) {
+      fs.writeFileSync(path.join(distDataDir, 'synced_app_data.json'), JSON.stringify(syncedData, null, 2), 'utf-8');
+    }
+
+    return res.json({
+      success: true,
+      message: 'डेटा सफलतापूर्वक फाइलों में सिंक हो गया है। अब GitHub में push करने पर यह लाइव लिंक पर तुरंत दिखेगा!',
+      syncedAt: syncedData.syncedAt,
+      version: syncedData.version
+    });
+  } catch (err: any) {
+    console.error('[SyncGitHubDataError]:', err);
+    return res.status(500).json({ success: false, message: err?.message || 'सिंक त्रुटि' });
+  }
 });
 
 // Dynamic Favicon Redirects if custom thumbnail is active
@@ -2488,11 +2519,45 @@ app.get('/robots.txt', (_req, res) => {
   return res.send(robots);
 });
 
-// Serve static assets in production
-app.use(express.static(path.join(__dirname, 'dist')));
+// Explicit no-cache handler for Service Worker so browsers always check for updates
+app.get('/sw.js', (_req, res) => {
+  res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.header('Pragma', 'no-cache');
+  res.header('Expires', '0');
+  res.header('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, 'dist', 'sw.js'));
+});
 
-// Fallback for SPA routing
+// Explicit no-cache handler for Version check
+app.get('/version.json', (_req, res) => {
+  res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.header('Pragma', 'no-cache');
+  res.header('Expires', '0');
+  res.sendFile(path.join(__dirname, 'dist', 'version.json'), (err) => {
+    if (err) {
+      res.json({ version: '1.0.0', timestamp: Date.now() });
+    }
+  });
+});
+
+// Serve static assets in production with immutable cache for hashed assets
+app.use(express.static(path.join(__dirname, 'dist'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.includes('/assets/')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (filePath.endsWith('.html') || filePath.endsWith('/sw.js') || filePath.endsWith('/version.json')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
+
+// Fallback for SPA routing with strict no-cache on index.html
 app.get('*', (_req, res) => {
+  res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.header('Pragma', 'no-cache');
+  res.header('Expires', '0');
   const indexPath = path.join(__dirname, 'dist', 'index.html');
   res.sendFile(indexPath, (err) => {
     if (err) {

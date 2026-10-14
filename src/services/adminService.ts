@@ -2310,11 +2310,105 @@ export async function getHomeContent(): Promise<AppHomeContent> {
       return DEFAULT_HOME_CONTENT;
     } catch (error) {
       console.warn('Notice fetching home content from firestore (using local default):', error);
-      return DEFAULT_HOME_CONTENT;
     }
   }
 
+  // 3. Fallback to bundled synced JSON file (from GitHub commits)
+  try {
+    const res = await fetch('/data/synced_app_data.json');
+    if (res.ok) {
+      const synced = await res.json();
+      if (synced && synced.homeContent) {
+        const data = sanitizeContentData(synced.homeContent);
+        try {
+          localStorage.setItem('jjf_home_content', JSON.stringify(data));
+        } catch {}
+        return data;
+      }
+    }
+  } catch {}
+
   return DEFAULT_HOME_CONTENT;
+}
+
+/**
+ * एडमिन डेटा को गिटहब फाइलों (synced_app_data.json) में सिंक करें
+ * Ensures all customizations made in AI Studio are bundled in repository for GitHub push
+ */
+export async function syncCurrentAdminDataToGitHub(): Promise<{ success: boolean; message: string }> {
+  try {
+    let homeContent: any = null;
+    let paymentSettings: any = null;
+    let staffMembers: any = null;
+    let notices: any = null;
+
+    try {
+      const h = localStorage.getItem('jjf_home_content');
+      if (h) homeContent = JSON.parse(h);
+    } catch {}
+
+    try {
+      const p = localStorage.getItem('jjf_donation_payment_settings');
+      if (p) paymentSettings = JSON.parse(p);
+    } catch {}
+
+    try {
+      const s = localStorage.getItem('jjf_staff_registry_v3');
+      if (s) staffMembers = JSON.parse(s);
+    } catch {}
+
+    try {
+      const n = localStorage.getItem('jjf_notices');
+      if (n) notices = JSON.parse(n);
+    } catch {}
+
+    const payload = {
+      syncedAt: new Date().toISOString(),
+      homeContent,
+      paymentSettings,
+      staffMembers,
+      notices
+    };
+
+    // Try sending to local/server sync endpoint
+    try {
+      const res = await fetch('/api/admin/sync-github-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return {
+          success: true,
+          message: json.message || 'डेटा सफलतापूर्वक फाइलों में सिंक हो गया है!'
+        };
+      }
+    } catch (e) {
+      console.warn('API sync endpoint notice:', e);
+    }
+
+    // Fallback: If running in client-only or static preview, trigger download of synced_app_data.json
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'synced_app_data.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    return {
+      success: true,
+      message: 'डेटा फ़ाइल (synced_app_data.json) डाउनलोड हो गई है! इसे public/data/ में रखकर GitHub पर push करें।'
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err?.message || 'डेटा सिंक में त्रुटि आई'
+    };
+  }
 }
 
 /**

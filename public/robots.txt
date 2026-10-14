@@ -1,16 +1,6 @@
-# Robots.txt for Jeevan Jyoti Foundation Ghazipur
-# Reg. No: GAZ/03373 | NITI Aayog: UP/2018/0207700
-# Official Website: https://jeevanjyotifoundation.org
-
 User-agent: *
 Allow: /
-Allow: /#*
-Allow: /?*
-Allow: /api/certificates/*
-Allow: /api/verify/*
+Disallow: /admin
+Disallow: /superadmin
 
-# Disallow internal admin actions
-Disallow: /api/admin/
-
-# Sitemap location
-Sitemap: https://jeevanjyotifoundation.org/sitemap.xml
+Sitemap: https://jeevanjyotifoundationghazipur.org/sitemap.xml
