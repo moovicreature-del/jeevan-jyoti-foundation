@@ -137,7 +137,7 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
     setDownloading('png');
     try {
       const fileName = `${greeting.recipientName.replace(/\s+/g, '_')}_${greeting.festivalId}_Greeting_Certificate`;
-      await exportElementAsPng(certificateRef.current, fileName, { backgroundColor: '#FFFFFF', pixelRatio: 2 });
+      await exportElementAsPng(certificateRef.current, fileName, { backgroundColor: '#FFFFFF', pixelRatio: 3.5 });
     } catch (err) {
       console.error('Error downloading certificate:', err);
     } finally {

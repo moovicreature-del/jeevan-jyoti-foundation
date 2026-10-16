@@ -2342,6 +2342,8 @@ export async function syncCurrentAdminDataToGitHub(): Promise<{ success: boolean
     let staffMembers: any = null;
     let notices: any = null;
 
+    let certificates: any = null;
+
     try {
       const h = localStorage.getItem('jjf_home_content');
       if (h) homeContent = JSON.parse(h);
@@ -2362,12 +2364,18 @@ export async function syncCurrentAdminDataToGitHub(): Promise<{ success: boolean
       if (n) notices = JSON.parse(n);
     } catch {}
 
+    try {
+      const c = localStorage.getItem('jjf_registered_certificates_registry_v2');
+      if (c) certificates = JSON.parse(c);
+    } catch {}
+
     const payload = {
       syncedAt: new Date().toISOString(),
       homeContent,
       paymentSettings,
       staffMembers,
-      notices
+      notices,
+      certificates
     };
 
     // Try sending to local/server sync endpoint
@@ -2412,6 +2420,52 @@ export async function syncCurrentAdminDataToGitHub(): Promise<{ success: boolean
 }
 
 /**
+ * Automatically fetches /data/synced_app_data.json and hydrates client cache if GitHub push contains newer data.
+ * Ensures that changes made in AI Studio and pushed to GitHub automatically appear on the live link.
+ */
+export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  try {
+    const res = await fetch(`/data/synced_app_data.json?t=${Date.now()}`, { cache: 'no-cache' });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data || !data.syncedAt) return false;
+
+    const incomingTime = new Date(data.syncedAt).getTime();
+    const lastHydratedTime = Number(localStorage.getItem('jjf_last_github_hydrated_time') || 0);
+
+    // If incoming data is newer than what was previously hydrated, or if local caches are empty
+    if (incomingTime > lastHydratedTime || !localStorage.getItem('jjf_home_content')) {
+      if (data.homeContent) {
+        localStorage.setItem('jjf_home_content', JSON.stringify(sanitizeContentData(data.homeContent)));
+        window.dispatchEvent(new CustomEvent('jjf-content-updated', { detail: data.homeContent }));
+      }
+      if (data.staffMembers && Array.isArray(data.staffMembers)) {
+        localStorage.setItem('jjf_staff_registry_v3', JSON.stringify(data.staffMembers));
+        window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
+      }
+      if (data.notices && Array.isArray(data.notices)) {
+        localStorage.setItem('jjf_notices', JSON.stringify(data.notices));
+        window.dispatchEvent(new CustomEvent('jjf-notices-updated'));
+      }
+      if (data.paymentSettings) {
+        localStorage.setItem('jjf_donation_payment_settings', JSON.stringify(data.paymentSettings));
+      }
+      if (data.certificates && Array.isArray(data.certificates)) {
+        localStorage.setItem('jjf_registered_certificates_registry_v2', JSON.stringify(data.certificates));
+        window.dispatchEvent(new CustomEvent('jjf-certificates-updated'));
+      }
+
+      localStorage.setItem('jjf_last_github_hydrated_time', String(incomingTime));
+      return true;
+    }
+  } catch (err) {
+    console.debug('[AutoHydrate] Notice fetching synced_app_data:', err);
+  }
+  return false;
+}
+
+/**
  * रियल-टाइम होम पेज कंटेंट लिसनर (Realtime Subscription)
  */
 export function subscribeToHomeContent(callback: (content: AppHomeContent) => void): () => void {
@@ -2425,6 +2479,18 @@ export function subscribeToHomeContent(callback: (content: AppHomeContent) => vo
     }
   } catch {
     callback(DEFAULT_HOME_CONTENT);
+  }
+
+  // Also check synced_app_data.json in background so GitHub push updates immediately display
+  if (typeof window !== 'undefined') {
+    autoHydrateFromGitHubSyncedData()
+      .then((updated) => {
+        if (updated) {
+          const local = localStorage.getItem('jjf_home_content');
+          if (local) callback(sanitizeContentData(JSON.parse(local)));
+        }
+      })
+      .catch(() => {});
   }
 
   if (isMockFirebase) {
@@ -2620,6 +2686,9 @@ export async function saveHomeContent(
     action: 'CONTENT_UPDATED',
     details: `होम पेज सामग्री अपडेट की गई (${adminName} द्वारा)`
   }).catch(() => {});
+
+  // Fire-and-forget background sync to public/data/synced_app_data.json so GitHub pushes automatically contain latest changes
+  syncCurrentAdminDataToGitHub().catch(() => {});
 }
 
 // ----------------------------------------------------------------------------

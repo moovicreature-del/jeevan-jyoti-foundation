@@ -16,6 +16,7 @@ import { saveCertificateToRegistry } from '../services/certificateRegistryServic
 import { CertificateLanguage, getIdCardMatter } from '../utils/certificateLanguageUtils';
 import { CertificateLanguageToggle } from './common/CertificateLanguageToggle';
 import { OfficialVerifiedBadge } from './common/OfficialVerifiedBadge';
+import { AppointmentLetterModal } from './common/AppointmentLetterModal';
 
 interface Props {
   volunteer?: Partial<Volunteer> | null;
@@ -48,6 +49,7 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
   const [cardJoinDate, setCardJoinDate] = useState(initialCardDate);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareModalTab, setShareModalTab] = useState<'whatsapp' | 'email'>('whatsapp');
+  const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const cardMatter = getIdCardMatter(certLanguage);
 
   const [address, setAddress] = useState<StructuredAddress>({
@@ -154,7 +156,7 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
     setDownloading('jpg');
     try {
       const fileName = `ID_Card_${(cardName || 'Volunteer').replace(/\s+/g, '_')}`;
-      await exportElementAsJpg(cardRef.current, fileName, { quality: 0.98 });
+      await exportElementAsJpg(cardRef.current, fileName, { pixelRatio: 3.5, quality: 0.98, backgroundColor: '#FFFFFF' });
     } finally {
       setDownloading(null);
     }
@@ -165,7 +167,7 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
     setDownloading('png');
     try {
       const fileName = `ID_Card_${(cardName || 'Volunteer').replace(/\s+/g, '_')}`;
-      await exportElementAsPng(cardRef.current, fileName, { backgroundColor: '#FFFFFF' });
+      await exportElementAsPng(cardRef.current, fileName, { pixelRatio: 3.5, backgroundColor: '#FFFFFF' });
     } finally {
       setDownloading(null);
     }
@@ -176,7 +178,7 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
     setDownloading('pdf');
     try {
       const fileName = `ID_Card_${(cardName || 'Volunteer').replace(/\s+/g, '_')}`;
-      await exportElementAsPdf(cardRef.current, fileName, { orientation: 'portrait' });
+      await exportElementAsPdf(cardRef.current, fileName, { orientation: 'portrait', isIdCard: true });
     } finally {
       setDownloading(null);
     }
@@ -288,6 +290,18 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
                 <FileText className="w-3.5 h-3.5" />
                 <span>{downloading === 'pdf' ? 'PDF...' : 'PDF'}</span>
               </button>
+
+              {/* 📜 NEW: Swayam Sewak Appointment Letter on Letterhead */}
+              <button
+                type="button"
+                onClick={() => setAppointmentModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white rounded-lg text-xs font-black cursor-pointer shadow-md border border-amber-300 transition-all hover:scale-102"
+                title="संस्था के अधिकृत लेटरहेड पर स्वयंसेवक नियुक्ति पत्र (Appointment Letter) खोलें व डाउनलोड करें"
+              >
+                <FileText className="w-3.5 h-3.5 text-yellow-200" />
+                <span>📜 नियुक्ति पत्र</span>
+              </button>
+
               <button
                 type="button"
                 onClick={onClose}
@@ -301,12 +315,12 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
 
           {/* Top Quick Links & Toggle Bar */}
           <div className="pt-2 flex flex-wrap items-center justify-between gap-2 no-print border-b border-gray-100 pb-2">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] font-bold text-gray-600">मोड:</span>
               <button
                 type="button"
                 onClick={() => setShowFullFormEdit(false)}
-                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                   !showFullFormEdit ? 'bg-amber-600 text-white shadow-xs' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -315,11 +329,20 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
               <button
                 type="button"
                 onClick={() => setShowFullFormEdit(true)}
-                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                   showFullFormEdit ? 'bg-green-700 text-white shadow-xs' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 📝 विवरण फॉर्म भरें
+              </button>
+              <button
+                type="button"
+                onClick={() => setAppointmentModalOpen(true)}
+                className="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                title="संस्था लेटरहेड नियुक्ति पत्र देखें व डाउनलोड करें"
+              >
+                <FileText className="w-3.5 h-3.5 text-[#8B0000]" />
+                <span>📜 नियुक्ति पत्र (Letterhead)</span>
               </button>
             </div>
 
@@ -572,42 +595,85 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
         <div className="py-4 flex justify-center">
           <div
             ref={cardRef}
-            className="printable-certificate w-[340px] bg-white border-4 border-[#8B0000] rounded-2xl shadow-xl overflow-hidden text-center relative select-none"
+            id="swayam-sewak-id-card"
+            className="printable-certificate w-[360px] sm:w-[370px] bg-white border-2 border-amber-400 rounded-2xl shadow-2xl overflow-hidden relative select-none text-left"
+            style={{
+              boxShadow: '0 20px 45px -12px rgba(0,0,0,0.35)',
+              fontFamily: "'Inter', sans-serif"
+            }}
           >
-            {/* Watermark in background using BrandLogo */}
+            {/* Background Watermark Pattern */}
             <div
               id="swayam-card-watermark"
               className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden select-none z-0"
             >
-              <BrandLogo size={220} watermark opacity={0.08} />
+              <BrandLogo size={210} watermark opacity={0.06} />
             </div>
 
-            {/* Top Bar */}
-            <div className="bg-[#8B0000] text-white py-2 px-3 flex items-center justify-center gap-2.5 relative z-10">
-              <BrandLogo size={36} className="shrink-0 drop-shadow-xs" id="swayam-card-top-logo" />
-              <div className="text-left">
-                <div className="text-[11px] font-black uppercase tracking-wider font-['Cinzel'] leading-tight">
-                  {certLanguage === 'hi' ? FOUNDATION_INFO.nameHindi : FOUNDATION_INFO.nameEnglish}
+            {/* Top Lanyard Clip Indicator Slot */}
+            <div className="w-14 h-2 bg-gray-300 rounded-full border border-gray-400 mx-auto mt-1.5 mb-1 shadow-inner relative z-10" />
+
+            {/* Top Header: Gradient Banner with Organization Title */}
+            <div className="relative bg-gradient-to-b from-[#8B0000] via-[#750000] to-[#500000] text-white pt-2.5 pb-2.5 px-3 text-center border-b-2 border-amber-400 shadow-md z-10">
+              {/* Holographic Seal Indicator in Corner */}
+              <div className="absolute top-2 right-2.5 flex flex-col items-center">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-300 via-yellow-100 to-amber-500 border border-amber-200 flex items-center justify-center shadow-xs">
+                  <ShieldCheck className="w-3 h-3 text-[#8B0000]" />
                 </div>
-                {certLanguage !== 'hi' && (
-                  <div className="text-[9.5px] font-bold text-amber-200 leading-tight">
+                <span className="text-[6.5px] text-amber-200 font-bold tracking-tighter mt-0.5">ORIGINAL</span>
+              </div>
+
+              {/* Foundation Emblem & Name */}
+              <div className="flex items-center justify-center gap-2.5 mb-1">
+                <div className="p-0.5 bg-white rounded-full shadow-md shrink-0 border border-amber-300">
+                  <BrandLogo size={34} id="swayam-card-top-logo" />
+                </div>
+                <div className="text-center">
+                  <h1 className="font-black text-[14px] leading-tight text-white tracking-tight font-serif drop-shadow-xs">
                     {FOUNDATION_INFO.nameHindi}
+                  </h1>
+                  <div className="text-[9.5px] font-bold text-amber-300 tracking-wider uppercase mt-0.5 font-sans">
+                    {FOUNDATION_INFO.nameEnglish}
                   </div>
-                )}
+                </div>
+              </div>
+
+              {/* Official NGO Contact Pill */}
+              <div className="inline-flex items-center justify-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-300/60 backdrop-blur-xs text-amber-200 shadow-2xs mb-1">
+                <span className="text-[8.5px] font-black font-mono tracking-wider text-amber-100">
+                  हेल्पलाइन: (+91) 8052361666 • www.jeevanjyotifoundation.org
+                </span>
+              </div>
+
+              {/* Registration & Accreditation sub-banner */}
+              <div className="text-[8px] font-semibold text-amber-100/90 tracking-tight flex items-center justify-center gap-1.5 flex-wrap">
+                <span>पंजीकरण: <strong>UP/2018/0207700</strong></span>
+                <span>•</span>
+                <span>नीति आयोग: <strong>UP/2021/0285918</strong></span>
+              </div>
+
+              {/* Golden Badge Header Strip */}
+              <div className="mt-1.5 py-0.5 bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-400 rounded-full text-[#8B0000] font-black text-[9.5px] tracking-wider uppercase shadow-xs flex items-center justify-center gap-1.5">
+                <ShieldCheck className="w-3 h-3 text-[#8B0000]" />
+                <span>
+                  {certLanguage === 'hi'
+                    ? 'आधिकारिक स्वयंसेवक पहचान पत्र'
+                    : 'SWAYAM SEWAK OFFICIAL IDENTITY CARD'}
+                </span>
               </div>
             </div>
 
             {/* Content Body */}
-            <div className="p-4 space-y-3 bg-[#FFFDF9]">
-              {/* Photo & Role with Click-to-Upload */}
-              <div className="flex flex-col items-center justify-center">
+            <div className="p-3.5 space-y-2.5 bg-[#FFFDF9] relative z-10">
+              {/* Photo & Identity Section */}
+              <div className="flex flex-col items-center justify-center text-center">
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   title={certLanguage === 'hi' ? 'फोटो अपलोड/बदलने के लिए क्लिक करें' : 'Click to upload/change photo'}
-                  className={`relative w-20 h-24 border-2 rounded-lg flex items-center justify-center shadow-xs cursor-pointer group overflow-hidden ${
+                  className={`relative w-22 h-26 rounded-xl p-1 bg-gradient-to-b from-amber-400 via-yellow-200 to-amber-500 shadow-md border border-amber-300 flex items-center justify-center cursor-pointer group overflow-hidden ${
                     photoUrl
-                      ? 'border-[#008000] hover:ring-2 hover:ring-emerald-500'
-                      : 'border-dashed border-red-400 bg-red-50/50 hover:bg-red-50 hover:border-red-600'
+                      ? 'hover:ring-2 hover:ring-emerald-500'
+                      : 'hover:border-red-500'
                   }`}
                 >
                   {photoUrl ? (
@@ -616,83 +682,140 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
                         src={photoUrl}
                         alt={cardName || 'Volunteer'}
                         crossOrigin="anonymous"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover rounded-lg"
                       />
-                      <div className="absolute top-0.5 right-0.5 bg-emerald-600 text-white rounded-full p-0.5 shadow-md">
+                      <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md border border-white">
                         <Check className="w-2.5 h-2.5 stroke-[3]" />
                       </div>
-                      <div className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity rounded no-print">
-                        <Camera className="w-3.5 h-3.5 mb-0.5" />
-                        <span className="text-[6.5pt] font-black">{certLanguage === 'hi' ? 'बदलें' : 'Change'}</span>
+                      <div className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity rounded-lg no-print">
+                        <Camera className="w-4 h-4 mb-0.5" />
+                        <span className="text-[7pt] font-black">{certLanguage === 'hi' ? 'बदलें' : 'Change'}</span>
                       </div>
                     </>
                   ) : (
-                    <div className="flex flex-col items-center">
+                    <div className="flex flex-col items-center p-2 text-center bg-red-50/80 w-full h-full rounded-lg justify-center">
                       <Camera className="w-6 h-6 text-red-600 mb-1 group-hover:scale-110 transition-transform" />
                       <span className="text-[7pt] font-black text-red-700 uppercase">
-                        {certLanguage === 'hi' ? 'फोटो *' : 'PHOTO *'}
+                        {certLanguage === 'hi' ? 'फोटो अनिवार्य' : 'PHOTO *'}
                       </span>
                     </div>
                   )}
                 </div>
 
-                <span className={`text-[7pt] font-black uppercase tracking-wider mt-1 px-1.5 py-0.5 rounded ${
-                  photoUrl ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700 animate-pulse'
-                }`}>
-                  {photoUrl
-                    ? (certLanguage === 'hi' ? '✓ सत्यापित स्वयंसेवक' : certLanguage === 'en' ? '✓ VERIFIED VOLUNTEER' : '✓ VERIFIED VOLUNTEER')
-                    : (certLanguage === 'hi' ? '⚠️ फोटो अनिवार्य' : '⚠️ PHOTO REQUIRED')}
-                </span>
+                {/* Verified Pill */}
+                <div className="mt-1.5 flex items-center justify-center gap-1">
+                  <span className={`text-[7.5pt] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border shadow-2xs ${
+                    photoUrl ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-red-100 text-red-700 border-red-300 animate-pulse'
+                  }`}>
+                    {photoUrl ? '✓ सत्यापित स्वयंसेवक (VERIFIED)' : '⚠️ फोटो अपलोड करें'}
+                  </span>
+                  {cardBloodGroup && (
+                    <span className="text-[7.5pt] font-black text-red-800 bg-red-100 border border-red-300 px-1.5 py-0.5 rounded-full">
+                      {cardBloodGroup}
+                    </span>
+                  )}
+                </div>
 
-                <h4 className="text-base font-black text-black mt-1">
+                <h4 className="text-base font-black text-slate-900 mt-1 leading-snug">
                   {cardName}
                 </h4>
-                <div className="text-xs font-bold text-[#8B0000]">
+                <div className="inline-block px-3 py-0.5 bg-gradient-to-r from-[#8B0000] to-red-800 text-yellow-300 text-[10px] font-black uppercase tracking-wider rounded-full shadow-xs mt-0.5">
                   {cardRole}
                 </div>
               </div>
 
-              {/* Details table */}
-              <div className="text-[10px] text-black font-extrabold text-left bg-[#FFFDE7] p-2.5 rounded-lg border border-yellow-300 space-y-1">
-                <div><span className="text-[#8B0000]">{cardMatter.idNoLabel}</span> {cardId}</div>
-                <div>
-                  <span className="text-[#8B0000]">
-                    {cardRelationType === 'Husband'
-                      ? (certLanguage === 'hi' ? 'पति (Husband):' : certLanguage === 'en' ? 'Husband:' : 'Husband / पति:')
-                      : cardRelationType === 'Guardian'
-                      ? (certLanguage === 'hi' ? 'अभिभावक (Guardian):' : certLanguage === 'en' ? 'Guardian:' : 'Guardian / अभिभावक:')
-                      : (certLanguage === 'hi' ? 'पिता (Father):' : certLanguage === 'en' ? 'Father:' : 'Father / पिता:')}
-                  </span>{' '}
-                  {cardFatherName}
-                </div>
-                {cardBloodGroup && (
-                  <div><span className="text-[#8B0000]">{cardMatter.bloodGroupLabel}</span> {cardBloodGroup}</div>
-                )}
-                <div>
-                  <span className="text-[#8B0000]">{cardMatter.addressLabel}</span>{' '}
-                  <span className="text-gray-900 font-black">
-                    {address.wardOrVillage ? `${address.wardOrVillage}, ` : ''}
-                    {address.block ? `${address.block}, ` : ''}
-                    {address.district ? `${address.district}` : (certLanguage === 'hi' ? 'गाज़ीपुर' : 'Ghazipur')}
-                    {address.state ? `, ${address.state}` : ''}
-                    {address.country ? ` (${address.country})` : ''}
+              {/* Details Key-Value Table (Clean Professional Alignment) */}
+              <div className="bg-amber-50/80 rounded-xl p-3 border border-amber-200/90 shadow-2xs space-y-1.5 text-[10px]">
+                {/* Row 1: ID No */}
+                <div className="flex items-center justify-between border-b border-amber-200/60 pb-1">
+                  <span className="text-[#8B0000] font-black flex items-center gap-1">
+                    <span>🆔</span>
+                    <span>{cardMatter.idNoLabel || 'पहचान पत्र क्रमांक:'}</span>
+                  </span>
+                  <span className="font-mono font-black text-slate-900 bg-white px-2 py-0.5 rounded border border-amber-300 shadow-2xs">
+                    {cardId}
                   </span>
                 </div>
-                <div><span className="text-[#8B0000]">{cardMatter.areaLabel}</span> <span className="text-[#008000] font-black">{cardArea}</span></div>
-                <div><span className="text-[#8B0000]">{certLanguage === 'hi' ? 'जारी दिनांक:' : certLanguage === 'en' ? 'Issued Date:' : 'Issued Date / जारी दिनांक:'}</span> {cardJoinDate}</div>
+
+                {/* Row 2: Relation / Father Name */}
+                <div className="flex items-center justify-between border-b border-amber-200/60 pb-1">
+                  <span className="text-slate-600 font-bold">
+                    {cardRelationType === 'Husband'
+                      ? 'पति (Husband):'
+                      : cardRelationType === 'Guardian'
+                      ? 'अभिभावक (Guardian):'
+                      : 'पिता (Father):'}
+                  </span>
+                  <span className="font-black text-slate-900 text-right">
+                    {cardFatherName}
+                  </span>
+                </div>
+
+                {/* Row 3: Mobile Phone */}
+                <div className="flex items-center justify-between border-b border-amber-200/60 pb-1">
+                  <span className="text-slate-600 font-bold">मोबाइल (Mobile):</span>
+                  <span className="font-mono font-black text-slate-900 text-right">
+                    +91-{volunteerPhone.replace(/[^0-9]/g, '').slice(-10)}
+                  </span>
+                </div>
+
+                {/* Row 4: Service Area */}
+                <div className="flex items-center justify-between border-b border-amber-200/60 pb-1">
+                  <span className="text-slate-600 font-bold">{cardMatter.areaLabel || 'सेवा क्षेत्र:'}</span>
+                  <span className="font-black text-emerald-800 text-right max-w-[210px] truncate">
+                    {cardArea}
+                  </span>
+                </div>
+
+                {/* Row 5: Postal Address */}
+                <div className="flex items-start justify-between border-b border-amber-200/60 pb-1">
+                  <span className="text-slate-600 font-bold shrink-0">{cardMatter.addressLabel || 'डाक पता:'}</span>
+                  <span className="font-bold text-slate-800 text-right max-w-[210px] leading-tight">
+                    {address.wardOrVillage ? `${address.wardOrVillage}, ` : ''}
+                    {address.block ? `${address.block}, ` : ''}
+                    {address.district || 'गाज़ीपुर'} ({address.state || 'उ.प्र.'})
+                  </span>
+                </div>
+
+                {/* Row 6: Issue Date */}
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600 font-bold">
+                    {certLanguage === 'hi' ? 'जारी दिनांक:' : 'Issue Date:'}
+                  </span>
+                  <span className="font-black text-slate-700">
+                    {cardJoinDate}
+                  </span>
+                </div>
               </div>
 
-              {/* Verification & Seals */}
-              <div className="flex items-center justify-between pt-2 border-t border-gray-300 gap-1.5">
-                <CertificateVerificationQR certificateId={cardId} size="auto" subText={cardMatter.qrInstruction} />
-                <NgoRoundSeal size="auto" className="max-w-[70px] shrink-0" />
-                <div className="text-right flex flex-col items-end shrink-0 max-w-[120px]">
-                  <ShaileshPradhanSignature size="auto" className="w-full max-w-[110px]" />
-                  <div className="text-[8px] font-semibold text-[#1E40AF] mt-0.5 border-t border-[#1E40AF]/30 pt-0.5 w-full">
-                    {certLanguage === 'hi' ? 'शैलेश प्रधान' : 'Shailesh Pradhan'}
-                  </div>
-                  <div className="text-[6.5px] text-gray-600 font-medium">
-                    {certLanguage === 'hi' ? 'प्रबंधक एवं सचिव' : 'Manager / Secretary'}
+              {/* Bottom Security, Seal & Signature Block (3-Column Balanced Alignment) */}
+              <div className="pt-2 border-t-2 border-amber-300 grid grid-cols-3 items-end gap-1">
+                {/* Left: QR Verification */}
+                <div className="text-center flex flex-col items-center">
+                  <CertificateVerificationQR certificateId={cardId} size="auto" />
+                  <span className="text-[7.5px] font-bold text-slate-600 block mt-0.5">
+                    स्कैन सत्यापन
+                  </span>
+                </div>
+
+                {/* Center: Official NGO Round Seal */}
+                <div className="text-center flex flex-col items-center justify-center">
+                  <NgoRoundSeal size="auto" className="max-w-[62px]" />
+                  <span className="text-[7px] font-black text-[#8B0000] uppercase tracking-wider block mt-0.5">
+                    आधिकारिक मुहर
+                  </span>
+                </div>
+
+                {/* Right: Authorized Signature */}
+                <div className="text-center flex flex-col items-center">
+                  <ShaileshPradhanSignature size="auto" className="w-full max-w-[95px]" />
+                  <div className="border-t border-[#8B0000]/40 pt-0.5 w-full text-center">
+                    <div className="text-[8.5px] font-black text-slate-900 leading-tight">
+                      शैलेश प्रधान
+                    </div>
+                    <div className="text-[7px] font-bold text-[#8B0000] leading-tight">
+                      प्रबंधक एवं सचिव
+                    </div>
                   </div>
                 </div>
               </div>
@@ -710,8 +833,12 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
             </div>
 
             {/* Bottom Strip */}
-            <div className="bg-amber-900 text-white text-[8px] py-1 font-bold">
-              Reg. No: {FOUNDATION_INFO.regNo} | Ghazipur, Uttar Pradesh, India - 233303 (DIGIPIN 2J6T226CL2)
+            <div className="bg-slate-950 text-white text-center py-1.5 text-[8px] font-bold tracking-wider border-t border-amber-400 flex items-center justify-around px-3 z-10 relative">
+              <span>सेवा • शिक्षा • स्वास्थ्य • स्वावलम्बन</span>
+              <span>•</span>
+              <span className="font-mono text-amber-300">Reg: UP/2018/0207700</span>
+              <span>•</span>
+              <span>DIGIPIN: 2J6T226CL2</span>
             </div>
           </div>
         </div>
@@ -748,6 +875,27 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
               area: cardArea,
               address: `${address.wardOrVillage || ''}, ${address.block || ''}, ${address.district || ''}`,
               photoUrl: photoUrl || undefined
+            }}
+          />
+        )}
+
+        {/* 📜 Official Swayam Sewak Appointment Letter Modal */}
+        {appointmentModalOpen && (
+          <AppointmentLetterModal
+            isOpen={appointmentModalOpen}
+            onClose={() => setAppointmentModalOpen(false)}
+            type="volunteer"
+            volunteerData={{
+              id: cardId,
+              name: cardName,
+              fatherName: cardFatherName,
+              relationType: cardRelationType,
+              role: cardRole,
+              area: cardArea,
+              phone: volunteerPhone,
+              photoUrl: photoUrl || safeVol.photoUrl,
+              address: `${address.wardOrVillage || ''}, ब्लॉक ${address.block || ''}, जनपद ${address.district || ''}, ${address.state || ''} - 233303`,
+              issueDate: cardJoinDate
             }}
           />
         )}

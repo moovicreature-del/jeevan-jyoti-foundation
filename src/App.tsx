@@ -37,6 +37,7 @@ import { MotivationalQuotesPosterStudio } from './components/quotes/Motivational
 import { Volunteer, TaskRecord, DonationRecord, FestivalGreetingRecord } from './types';
 import { INITIAL_VOLUNTEERS } from './data/taskData';
 import { initAutomatedPublicArchiveBackgroundSync } from './services/publicVerifiedArchiveService';
+import { autoHydrateFromGitHubSyncedData } from './services/adminService';
 import { useHomeContent } from './context/HomeContentContext';
 import { GlobalSkeletonLoader } from './components/common/GlobalSkeletonLoader';
 
@@ -132,6 +133,9 @@ export function App() {
 
     // Automated background service: Archive all issued certificates to Firestore 'public_verified_archive'
     initAutomatedPublicArchiveBackgroundSync().catch(() => {});
+
+    // Automatically hydrate newest data pushed to GitHub so live link immediately updates
+    autoHydrateFromGitHubSyncedData().catch(() => {});
 
     // Listen for Staff Modal Custom Events
     const handleOpenStaffEvent = (e: any) => {

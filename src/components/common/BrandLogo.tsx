@@ -134,13 +134,16 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
     return (
       <img
-        id={id}
+        id={id || 'jjf-official-brand-logo'}
+        data-official-logo="true"
         src={logoSourceUrl}
         alt={alt}
+        crossOrigin="anonymous"
         className={`object-contain rounded-full inline-block shrink-0 ${className} ${watermark ? 'pointer-events-none select-none' : ''}`}
         style={{
           ...dimensionStyle,
           opacity: finalOpacity,
+          imageRendering: 'auto',
           ...(watermark ? { filter: 'contrast(1.05)' } : {}),
           ...style
         }}

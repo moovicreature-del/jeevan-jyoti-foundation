@@ -632,7 +632,64 @@ export function getCertificatesByPhone(phone: string): RegisteredCertificateItem
     return cPhone === clean;
   });
 
-  return matched;
+  // Helper to accurately classify volunteer cert vs volunteer ID
+  const isVolCertItem = (c: RegisteredCertificateItem) =>
+    c.type === 'volunteer_cert' ||
+    (Boolean(c.titleHindi?.includes('प्रमाण पत्र')) && !c.titleHindi?.includes('पहचान पत्र') && !c.titleHindi?.includes('कार्ड'));
+
+  const isVolIdItem = (c: RegisteredCertificateItem) =>
+    c.type === 'volunteer_id' ||
+    Boolean(c.titleHindi?.includes('पहचान पत्र')) ||
+    Boolean(c.titleHindi?.includes('आई कार्ड')) ||
+    Boolean(c.titleHindi?.includes('ID कार्ड')) ||
+    c.id.includes('/ID/') ||
+    c.id.includes('-ID-');
+
+  // Ensure pairing: If a volunteer record has volunteer_id or volunteer_cert, ensure both are available
+  const result: RegisteredCertificateItem[] = [...matched];
+  const hasVolCert = matched.some(isVolCertItem);
+  const hasVolId = matched.some(isVolIdItem);
+
+  const existingVol = matched.find(
+    (c) => c.type === 'volunteer_id' || c.type === 'volunteer_cert' || c.rawVolunteer
+  );
+
+  if (existingVol) {
+    if (!hasVolCert) {
+      // Synthesize companion official volunteer certificate
+      const rawId = existingVol.id;
+      const certId = rawId.includes('ID') ? rawId.replace(/\/ID\//, '/VOL/').replace(/-ID-/, '-VOL-') : (rawId.includes('VOL') ? rawId : `JJF-VOL-2026-${rawId.replace(/\D/g, '').slice(-4) || '101'}`);
+      result.unshift({
+        ...existingVol,
+        id: certId,
+        type: 'volunteer_cert',
+        titleHindi: 'आधिकारिक स्वयंसेवक सेवा सम्मान प्रमाण पत्र',
+        titleEnglish: 'Official Volunteer Certificate',
+        categoryOrPurpose: existingVol.categoryOrPurpose || 'शिक्षा एवं निःशुल्क पाठशाला (Shiksha)',
+        details: `सेवा योगदान: ${existingVol.categoryOrPurpose || 'समाज सेवा व शिक्षा'}`,
+        status: 'verified',
+        approvalStatus: existingVol.approvalStatus || 'approved'
+      });
+    }
+    if (!hasVolId) {
+      // Synthesize companion official volunteer ID card
+      const rawId = existingVol.id;
+      const cardId = rawId.includes('VOL') ? rawId.replace(/\/VOL\//, '/ID/').replace(/-VOL-/, '-ID-') : (rawId.includes('ID') ? rawId : `JJF-ID-2026-${rawId.replace(/\D/g, '').slice(-4) || '101'}`);
+      result.push({
+        ...existingVol,
+        id: cardId,
+        type: 'volunteer_id',
+        titleHindi: 'स्वयंसेवक डिजिटल पहचान पत्र',
+        titleEnglish: 'Swayam Sewak Digital ID Card',
+        categoryOrPurpose: existingVol.categoryOrPurpose || 'Dedicated Swayam Sewak',
+        details: `अधिकृत स्वयंसेवक पहचान पत्र`,
+        status: 'active',
+        approvalStatus: existingVol.approvalStatus || 'approved'
+      });
+    }
+  }
+
+  return result;
 }
 
 /**

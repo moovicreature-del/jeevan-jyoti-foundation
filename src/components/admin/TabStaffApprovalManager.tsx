@@ -53,6 +53,8 @@ import {
 import { StaffIdCard } from '../staff/StaffIdCard';
 import { exportElementsAsMultiPagePdf, directPrintElement } from '../../utils/exportImage';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import { AppointmentLetterModal } from '../common/AppointmentLetterModal';
+import { FOUNDATION_INFO } from '../../data/foundationData';
 
 export const TabStaffApprovalManager: React.FC = () => {
   const { adminProfile } = useAdminAuth();
@@ -68,6 +70,7 @@ export const TabStaffApprovalManager: React.FC = () => {
   const [previewTheme, setPreviewTheme] = useState<StaffCardTheme>('maroon_gold');
   const [previewLang, setPreviewLang] = useState<StaffCardLanguage>('bilingual');
   const [isExporting, setIsExporting] = useState(false);
+  const [adminAppointmentStaff, setAdminAppointmentStaff] = useState<StaffMember | null>(null);
 
   // WhatsApp Dialog Modal
   const [whatsappModalData, setWhatsappModalData] = useState<{
@@ -1729,6 +1732,16 @@ export const TabStaffApprovalManager: React.FC = () => {
                     <Printer className="w-4 h-4" />
                     <span>सीधा प्रिंट करें</span>
                   </button>
+
+                  {/* 📜 Staff Appointment Letter on Official Letterhead */}
+                  <button
+                    onClick={() => setAdminAppointmentStaff(previewStaff)}
+                    className="w-full py-2.5 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white font-black text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer border border-amber-300 transition-all hover:scale-101"
+                    title="संस्था के अधिकृत लेटरहेड पर स्टाफ नियुक्ति पत्र देखें व A4 PDF डाउनलोड करें"
+                  >
+                    <FileText className="w-4 h-4 text-yellow-200" />
+                    <span>📜 स्टाफ नियुक्ति पत्र देखें (Letterhead)</span>
+                  </button>
                 </div>
 
                 {/* Administrative Decision Buttons (Approve / Cancel / Reactivate / Reject / Delete) */}
@@ -1812,6 +1825,31 @@ export const TabStaffApprovalManager: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 📜 Staff Appointment Letter Modal (Letterhead Format) for Admin */}
+      {adminAppointmentStaff && (
+        <AppointmentLetterModal
+          isOpen={!!adminAppointmentStaff}
+          onClose={() => setAdminAppointmentStaff(null)}
+          type="staff"
+          staffData={{
+            id: adminAppointmentStaff.id,
+            fullName: adminAppointmentStaff.fullName,
+            fatherOrHusbandName: adminAppointmentStaff.fatherOrHusbandName,
+            relationType: adminAppointmentStaff.relationType,
+            designation: adminAppointmentStaff.designation,
+            department: adminAppointmentStaff.department,
+            dutyLocation: adminAppointmentStaff.dutyLocation,
+            mobile: adminAppointmentStaff.mobile,
+            email: adminAppointmentStaff.email,
+            photoUrl: adminAppointmentStaff.photoUrl,
+            bloodGroup: adminAppointmentStaff.bloodGroup,
+            qualification: 'Graduate',
+            dateOfJoining: adminAppointmentStaff.dateOfJoining,
+            address: adminAppointmentStaff.address || FOUNDATION_INFO.address
+          }}
+        />
       )}
     </div>
   );

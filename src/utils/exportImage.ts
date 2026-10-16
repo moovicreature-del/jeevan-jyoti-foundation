@@ -8,6 +8,7 @@ export interface ExportOptions {
   quality?: number;
   pixelRatio?: number;
   orientation?: 'portrait' | 'landscape' | 'auto';
+  isIdCard?: boolean;
 }
 
 /**
@@ -144,7 +145,6 @@ export async function captureElementToImageData(
   const quality = options?.quality ?? 1.0;
   const format = options?.format ?? 'png';
   const bg = options?.backgroundColor ?? '#FFFFFF';
-
   let cleanup: (() => void) | null = null;
 
   // 1. Force resolve public image assets & ensure CORS accessibility
@@ -154,7 +154,62 @@ export async function captureElementToImageData(
     console.warn('Asset resolution warning:', err);
   }
 
-  // 2. Primary Strategy: html-to-image (Native browser rendering, natively supports oklab/oklch colors)
+  // 2. PRIMARY STRATEGY: html2canvas with 350+ DPI Canvas and ultra-HD bicubic image smoothing
+  // Directly paints from decoded 1200x1193 master seal and 800x800 logo bitmaps to scaled Canvas.
+  // Avoids browser SVG foreignObject downsampling bugs that pixelated/blurred images in html-to-image.
+  try {
+    const canvas = await html2canvas(element, {
+      scale: scale,
+      backgroundColor: bg,
+      useCORS: true,
+      allowTaint: false,
+      scrollX: 0,
+      scrollY: 0,
+      logging: false,
+      imageTimeout: 25000,
+      onclone: (_clonedDoc, clonedElement) => {
+        // Anti-aliasing and font smoothing on root cloned element
+        (clonedElement.style as any).webkitFontSmoothing = 'antialiased';
+        (clonedElement.style as any).fontSmooth = 'always';
+
+        // Process all cloned images: remove raster filters, ensure smooth interpolation and full clarity
+        const clonedImgs = clonedElement.querySelectorAll('img');
+        clonedImgs.forEach((img) => {
+          img.style.imageRendering = 'auto';
+          (img.style as any).webkitOptimizeContrast = '';
+          // Remove drop-shadow filter which creates blurry edges during canvas rasterization
+          if (img.style.filter && img.style.filter.includes('drop-shadow')) {
+            img.style.filter = 'none';
+          }
+          img.setAttribute('crossorigin', 'anonymous');
+        });
+      },
+      ignoreElements: (node) => {
+        if (node instanceof HTMLElement && (node.classList.contains('no-print') || node.classList.contains('no-export'))) {
+          return true;
+        }
+        return false;
+      }
+    });
+
+    // Ensure Canvas 2D context smoothing is enabled with highest quality
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
+
+    const dataUrl = canvas.toDataURL(format === 'png' ? 'image/png' : 'image/jpeg', quality);
+    return {
+      dataUrl,
+      width: canvas.width,
+      height: canvas.height
+    };
+  } catch (canvasErr) {
+    console.warn('html2canvas primary capture notice, attempting html-to-image fallback:', canvasErr);
+  }
+
+  // 3. SECONDARY STRATEGY: html-to-image fallback
   try {
     const config = {
       quality: quality,
@@ -182,51 +237,7 @@ export async function captureElementToImageData(
       height: dims.height
     };
   } catch (h2iErr) {
-    console.warn('html-to-image capture warning, attempting html2canvas fallback:', h2iErr);
-  }
-
-  // 3. Secondary Strategy: html2canvas fallback with 350+ DPI Canvas and high-fidelity smoothing
-  try {
-    const canvas = await html2canvas(element, {
-      scale: scale,
-      backgroundColor: bg,
-      useCORS: true,
-      allowTaint: false,
-      scrollX: 0,
-      scrollY: 0,
-      logging: false,
-      imageTimeout: 15000,
-      onclone: (_clonedDoc, clonedElement) => {
-        // Ensure all images in cloned document use high quality smooth filtering instead of pixelated nearest-neighbor
-        const clonedImgs = clonedElement.querySelectorAll('img');
-        clonedImgs.forEach((img) => {
-          img.style.imageRendering = 'auto';
-          (img.style as any).webkitOptimizeContrast = '';
-        });
-      },
-      ignoreElements: (node) => {
-        if (node instanceof HTMLElement && (node.classList.contains('no-print') || node.classList.contains('no-export'))) {
-          return true;
-        }
-        return false;
-      }
-    });
-
-    // Ensure 2D context smoothing
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-    }
-
-    const dataUrl = canvas.toDataURL(format === 'png' ? 'image/png' : 'image/jpeg', quality);
-    return {
-      dataUrl,
-      width: canvas.width,
-      height: canvas.height
-    };
-  } catch (canvasErr) {
-    console.error('All image capture methods failed for element:', canvasErr);
+    console.error('All image capture methods failed for element:', h2iErr);
     return null;
   } finally {
     if (cleanup) cleanup();
@@ -348,7 +359,15 @@ export async function exportElementAsPdf(
     let offsetX = margin;
     let offsetY = margin + ((usableHeight - renderHeight) / 2);
 
-    if (renderHeight > usableHeight) {
+    // Smart Badge Sizing: If it's an ID Card (narrow portrait aspect ratio), render at standard pocket badge width (~92mm) centered on A4
+    const isIdCardDoc = options?.isIdCard || (orientation === 'portrait' && elemAspect < 0.72);
+
+    if (isIdCardDoc) {
+      renderWidth = Math.min(usableWidth, 92);
+      renderHeight = renderWidth / elemAspect;
+      offsetX = margin + ((usableWidth - renderWidth) / 2);
+      offsetY = margin + ((usableHeight - renderHeight) / 2);
+    } else if (renderHeight > usableHeight) {
       renderHeight = usableHeight;
       renderWidth = usableHeight * elemAspect;
       offsetX = margin + ((usableWidth - renderWidth) / 2);

@@ -210,6 +210,10 @@
   #festival-certificate-card *,
   #annual-report-card-capture,
   #annual-report-card-capture *,
+  #appointment-letter-a4,
+  #appointment-letter-a4 *,
+  .printable-appointment-letter,
+  .printable-appointment-letter *,
   .printable-id-card,
   .printable-id-card * {
     visibility: visible !important;
@@ -222,6 +226,8 @@
   #a4-donation-receipt,
   #festival-certificate-card,
   #annual-report-card-capture,
+  #appointment-letter-a4,
+  .printable-appointment-letter,
   .printable-id-card {
     position: relative !important;
     display: block !important;
@@ -242,7 +248,26 @@
     box-decoration-break: clone !important;
   }
 
-  /* A4 Portrait Documents (e.g. Donation Receipts & Annual Report Cards) */
+  /* Swayam Sewak & Staff Official Identity Cards (Standard Pocket Badge Size: ~88mm width, centered on A4) */
+  #swayam-sewak-id-card,
+  #hidden-id-card,
+  .printable-id-card {
+    width: 88mm !important;
+    max-width: 88mm !important;
+    margin: 12mm auto !important;
+    border: 2px solid #8B0000 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    box-sizing: border-box !important;
+  }
+
+  /* A4 Portrait Documents (e.g. Appointment Letters, Donation Receipts & Annual Report Cards) */
+  #appointment-letter-a4,
+  .printable-appointment-letter,
   #a4-donation-receipt,
   #annual-report-card-capture {
     width: 100% !important;

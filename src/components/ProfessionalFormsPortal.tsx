@@ -45,6 +45,7 @@ import {
   notifyNewVolunteerRegistration,
   notifyNewCertificateRequest
 } from '../services/adminBotNotificationService';
+import { saveCertificateToRegistry } from '../services/certificateRegistryService';
 
 interface Props {
   selectedTab?: FormTab | null;
@@ -150,6 +151,7 @@ export const ProfessionalFormsPortal: React.FC<Props> = ({
   const [volDeclaration, setVolDeclaration] = useState(false);
   const [volError, setVolError] = useState<string | null>(null);
   const [volSuccess, setVolSuccess] = useState(false);
+  const [volTargetDoc, setVolTargetDoc] = useState<'id_card' | 'cert'>('id_card');
 
   // ==========================================
   // 3. FESTIVAL WISHES FORM STATE (No prefilled details)
@@ -407,6 +409,52 @@ export const ProfessionalFormsPortal: React.FC<Props> = ({
 
     setVolSuccess(true);
 
+    const certId = formatCertificateNumber('VOL', volJoinDate || new Date());
+    const cardId = certId.includes('VOL') ? certId.replace('VOL', 'ID') : `JJF-ID-${certId}`;
+    const cleanPhone = volMobile.trim().replace(/\D/g, '').slice(-10);
+
+    // Save Volunteer Certificate to registry
+    saveCertificateToRegistry({
+      id: certId,
+      type: 'volunteer_cert',
+      titleHindi: 'आधिकारिक स्वयंसेवक सेवा सम्मान प्रमाण पत्र',
+      titleEnglish: 'Official Volunteer Certificate',
+      recipientName: newVolunteer.name,
+      fatherOrHusbandName: newVolunteer.fatherName,
+      phone: cleanPhone,
+      issueDate: newVolunteer.joinDate,
+      categoryOrPurpose: `${newVolunteer.areaHindi || newVolunteer.area}`,
+      photoUrl: volPhoto,
+      details: `सेवा योगदान: समाज सेवा व शिक्षा`,
+      status: 'verified',
+      approvalStatus: 'approved',
+      rawVolunteer: {
+        ...newVolunteer,
+        id: certId
+      }
+    });
+
+    // Save Volunteer ID Card to registry
+    saveCertificateToRegistry({
+      id: cardId,
+      type: 'volunteer_id',
+      titleHindi: 'स्वयंसेवक डिजिटल पहचान पत्र',
+      titleEnglish: 'Swayam Sewak Digital ID Card',
+      recipientName: newVolunteer.name,
+      fatherOrHusbandName: newVolunteer.fatherName,
+      phone: cleanPhone,
+      issueDate: newVolunteer.joinDate,
+      categoryOrPurpose: `${newVolunteer.role} • ${newVolunteer.areaHindi || newVolunteer.area}`,
+      photoUrl: volPhoto,
+      details: `अधिकृत स्वयंसेवक पहचान पत्र`,
+      status: 'active',
+      approvalStatus: 'approved',
+      rawVolunteer: {
+        ...newVolunteer,
+        id: cardId
+      }
+    });
+
     // Real-time Telegram/Slack bot notification for Admin
     notifyNewVolunteerRegistration({
       id: newVolunteer.id,
@@ -419,7 +467,17 @@ export const ProfessionalFormsPortal: React.FC<Props> = ({
     }).catch(err => console.debug('Bot volunteer alert note:', err));
 
     setTimeout(() => {
-      onOpenVolunteerCard(newVolunteer);
+      if (volTargetDoc === 'cert') {
+        onOpenVolunteerCert({
+          ...newVolunteer,
+          id: certId
+        });
+      } else {
+        onOpenVolunteerCard({
+          ...newVolunteer,
+          id: cardId
+        });
+      }
     }, 600);
   };
 
@@ -1833,19 +1891,28 @@ export const ProfessionalFormsPortal: React.FC<Props> = ({
               <div className="pt-2 flex flex-col sm:flex-row gap-3">
                 <button
                   type="submit"
-                  className="flex-1 py-4 rounded-2xl bg-gradient-to-r from-green-600 via-emerald-600 to-teal-700 hover:from-green-700 hover:to-teal-800 text-white font-black text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  onClick={() => setVolTargetDoc('id_card')}
+                  className="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-sm sm:text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <UserCheck className="w-5 h-5" />
-                  <span>स्वयंसेवक ID कार्ड के लिए अप्लाई करें (Volunteer ID ke liye Apply Karein)</span>
+                  <UserCheck className="w-5 h-5 text-emerald-200" />
+                  <span>🪪 स्वयंसेवक ID कार्ड प्राप्त करें</span>
+                </button>
+                <button
+                  type="submit"
+                  onClick={() => setVolTargetDoc('cert')}
+                  className="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-600 to-[#8B0000] hover:from-amber-700 hover:to-[#700000] text-white font-black text-sm sm:text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Award className="w-5 h-5 text-yellow-300" />
+                  <span>🎖️ स्वयंसेवक प्रमाण पत्र प्राप्त करें</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleTabSelect(null)}
-                  className="py-4 px-6 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-slate-300"
+                  className="py-3.5 px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-slate-300 shrink-0"
                   title="यह फॉर्म बंद करें"
                 >
                   <span className="text-base font-bold">✕</span>
-                  <span>{isHindi ? 'फॉर्म बंद करें' : 'Close Form'}</span>
+                  <span>{isHindi ? 'बंद करें' : 'Close'}</span>
                 </button>
               </div>
             </form>

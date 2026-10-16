@@ -97,33 +97,38 @@ export async function forceResolvePublicAssets(element: HTMLElement): Promise<()
     let targetSrc = origSrc;
     const isSealImg =
       img.hasAttribute('data-official-seal') ||
+      img.id?.toLowerCase().includes('seal') ||
       img.alt?.toLowerCase().includes('seal') ||
       img.alt?.includes('मुहर') ||
       origSrc?.toLowerCase().includes('seal');
 
     const isLogoImg =
-      img.id?.includes('logo') ||
+      img.hasAttribute('data-official-logo') ||
+      img.id?.toLowerCase().includes('logo') ||
       img.alt?.toLowerCase().includes('logo') ||
       img.alt?.includes('लोगो') ||
       origSrc?.toLowerCase().includes('logo');
 
     if (isSealImg) {
-      if (origSrc && !origSrc.includes('old') && !origSrc.includes('76347e15')) {
-        targetSrc = origSrc;
+      // Strip any cache-busting query parameter (?t=...) to access the pristine 1200x1193 master asset
+      const cleanSrc = origSrc ? origSrc.split('?')[0] : '';
+      if (cleanSrc && !cleanSrc.includes('old') && !cleanSrc.includes('76347e15')) {
+        targetSrc = cleanSrc;
       } else {
         const activeSeal = getActiveOfficialSealUrl();
-        targetSrc = activeSeal || '/uploads/official_seal.png';
+        targetSrc = activeSeal ? activeSeal.split('?')[0] : '/uploads/official_seal.png';
       }
-      if (targetSrc) {
-        img.src = targetSrc;
+      if (!targetSrc || targetSrc === '/uploads/official_seal.png') {
+        targetSrc = '/uploads/official_seal.png';
       }
+      img.src = targetSrc;
     } else if (isLogoImg) {
-      // Strip low-res query params like ?w=150 or &quality=80 for full-resolution capture
-      if (origSrc && origSrc.includes('?')) {
-        targetSrc = origSrc.split('?')[0];
-      } else if (!origSrc) {
-        targetSrc = PUBLIC_LOGO_URL;
+      // Strip low-res query params like ?w=150 or &quality=80 for full 800x800 resolution capture
+      let cleanSrc = origSrc ? origSrc.split('?')[0] : '';
+      if (!cleanSrc || cleanSrc.includes('placeholder')) {
+        cleanSrc = PUBLIC_LOGO_URL;
       }
+      targetSrc = cleanSrc;
       img.src = targetSrc;
     } else if (!targetSrc && PUBLIC_LOGO_URL) {
       targetSrc = PUBLIC_LOGO_URL;

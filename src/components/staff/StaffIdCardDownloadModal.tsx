@@ -34,6 +34,8 @@ import { getAllStaffMembers, findStaffMember, findStaffByMobile } from '../../se
 import { StaffIdCard } from './StaffIdCard';
 import { exportElementAsPng, exportElementsAsMultiPagePdf, directPrintElement } from '../../utils/exportImage';
 import { OtpVerificationModal } from '../OtpVerificationModal';
+import { AppointmentLetterModal } from '../common/AppointmentLetterModal';
+import { FOUNDATION_INFO } from '../../data/foundationData';
 
 interface StaffIdCardDownloadModalProps {
   initialStaff?: StaffMember | null;
@@ -61,6 +63,7 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
   const [cardTheme, setCardTheme] = useState<StaffCardTheme>('maroon_gold');
   const [cardLanguage, setCardLanguage] = useState<StaffCardLanguage>('hi');
   const [isExporting, setIsExporting] = useState<string | null>(null);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
 
   // OTP Verification States for I-Card Download
   const [isOtpOpen, setIsOtpOpen] = useState(false);
@@ -775,6 +778,38 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
                       </div>
                     </button>
 
+                    {/* 📜 NEW: STAFF APPOINTMENT LETTER DOWNLOAD (SEPARATE OPTION ON LETTERHEAD) */}
+                    <div className="p-3.5 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 rounded-2xl border-2 border-amber-300 shadow-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-[#8B0000] text-white flex items-center justify-center shadow-xs">
+                            <FileText className="w-4 h-4 text-amber-300" />
+                          </div>
+                          <div>
+                            <h5 className="text-xs font-black text-gray-900 font-['Cinzel',serif]">
+                              स्टाफ नियुक्ति पत्र (Staff Appointment Letter)
+                            </h5>
+                            <p className="text-[10px] text-amber-900 font-medium">
+                              संस्था के अधिकृत लेटरहेड पर डिजिटल हस्ताक्षरित एवं सील सहित A4 300 DPI
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[9.5px] font-black px-2 py-0.5 rounded-full bg-emerald-700 text-white uppercase tracking-tight shadow-2xs">
+                          Letterhead
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowAppointmentModal(true)}
+                        className="w-full py-2.5 px-3 bg-gradient-to-r from-[#8B0000] via-red-800 to-amber-700 hover:from-red-900 hover:to-amber-800 text-white text-xs font-black rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border border-amber-300"
+                        title="संस्था के अधिकृत लेटरहेड पर स्टाफ नियुक्ति पत्र डाउनलोड करें"
+                      >
+                        <FileText className="w-4 h-4 text-amber-300" />
+                        <span>📜 स्टाफ नियुक्ति पत्र देखें व डाउनलोड करें (Download Appointment Letter)</span>
+                      </button>
+                    </div>
+
                     {/* 2. Hindi Download Button */}
                     <button
                       type="button"
@@ -889,6 +924,31 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
             recipientName={selectedStaff.fullName}
             certificateId={selectedStaff.id}
             onSuccess={handleOtpSuccess}
+          />
+        )}
+
+        {/* 📜 Official Staff Appointment Letter Modal (Letterhead Format) */}
+        {showAppointmentModal && selectedStaff && (
+          <AppointmentLetterModal
+            isOpen={showAppointmentModal}
+            onClose={() => setShowAppointmentModal(false)}
+            type="staff"
+            staffData={{
+              id: selectedStaff.id,
+              fullName: selectedStaff.fullName,
+              fatherOrHusbandName: selectedStaff.fatherOrHusbandName,
+              relationType: selectedStaff.relationType,
+              designation: selectedStaff.designation,
+              department: selectedStaff.department,
+              dutyLocation: selectedStaff.dutyLocation,
+              mobile: selectedStaff.mobile,
+              email: selectedStaff.email,
+              photoUrl: selectedStaff.photoUrl,
+              bloodGroup: selectedStaff.bloodGroup,
+              qualification: 'Graduate',
+              dateOfJoining: selectedStaff.dateOfJoining,
+              address: selectedStaff.address || FOUNDATION_INFO.address
+            }}
           />
         )}
       </div>

@@ -186,8 +186,11 @@ export const StaffHubModal: React.FC<StaffHubModalProps> = ({
                 <span className="text-[10.5px] font-bold bg-indigo-100 text-indigo-900 px-2 py-0.5 rounded-md">
                   🪪 2-Page प्रिंट-रेडी कार्ड
                 </span>
+                <span className="text-[10.5px] font-bold bg-amber-100 text-amber-950 px-2 py-0.5 rounded-md border border-amber-300">
+                  📜 संस्था लेटरहेड नियुक्ति पत्र (Appointment Letter)
+                </span>
                 <span className="text-[10.5px] font-bold bg-purple-100 text-purple-900 px-2 py-0.5 rounded-md">
-                  📥 हिन्दी व English दोनों भाषाओं में डाउनलोड
+                  📥 हिन्दी व English में डाउनलोड
                 </span>
                 <span className="text-[10.5px] font-bold bg-gray-100 text-gray-800 px-2 py-0.5 rounded-md">
                   🖨️ डायरेक्ट प्रिंट

@@ -219,11 +219,13 @@ export const RoyalCertificateSeal: React.FC<RoyalCertificateSealProps> = ({
       >
         <div className="relative w-full h-full p-0.5 flex items-center justify-center bg-white rounded-full overflow-hidden">
           <img
+            id="official-royal-seal-img"
             data-official-seal="true"
             src={getCacheBustedImageUrl(hasCustomUploadedSeal ? activeSealUrl : '/uploads/official_seal.png', cacheBustTimestamp)}
-            alt="Official Certificate Seal"
-            crossOrigin={activeSealUrl.startsWith('data:') || activeSealUrl.startsWith('blob:') ? undefined : 'anonymous'}
-            className="w-full h-full object-contain pointer-events-none drop-shadow-xs"
+            alt="Official Certificate Seal / संस्था आधिकारिक मुहर"
+            crossOrigin="anonymous"
+            style={{ imageRendering: 'auto' }}
+            className="w-full h-full object-contain pointer-events-none"
             onError={(e) => {
               const target = e.currentTarget;
               if (!target.src.includes('official-seal.png')) {

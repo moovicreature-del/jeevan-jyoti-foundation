@@ -554,6 +554,45 @@ function apiDevServerPlugin(): Plugin {
           });
         }
 
+        // GitHub Data Sync Endpoint: Writes latest admin content to public/data/synced_app_data.json
+        if (req.url === '/api/admin/sync-github-data' && req.method === 'POST') {
+          try {
+            const body = await getBody();
+            const payload = body || {};
+            const publicDataDir = path.resolve(__dirname, 'public/data');
+            if (!fs.existsSync(publicDataDir)) {
+              fs.mkdirSync(publicDataDir, { recursive: true });
+            }
+            const syncedData = {
+              ...payload,
+              syncedAt: new Date().toISOString(),
+              version: '1.0.' + Math.floor(Date.now() / 1000)
+            };
+            fs.writeFileSync(path.join(publicDataDir, 'synced_app_data.json'), JSON.stringify(syncedData, null, 2), 'utf-8');
+
+            // Also write to dist/data if dist exists
+            const distDataDir = path.resolve(__dirname, 'dist/data');
+            if (fs.existsSync(distDataDir)) {
+              try {
+                if (!fs.existsSync(distDataDir)) {
+                  fs.mkdirSync(distDataDir, { recursive: true });
+                }
+                fs.writeFileSync(path.join(distDataDir, 'synced_app_data.json'), JSON.stringify(syncedData, null, 2), 'utf-8');
+              } catch {}
+            }
+
+            return sendJson(200, {
+              success: true,
+              message: 'डेटा सफलतापूर्वक फाइलों में सिंक हो गया है। अब GitHub में push करने पर यह लाइव लिंक पर तुरंत दिखेगा!',
+              syncedAt: syncedData.syncedAt,
+              version: syncedData.version
+            });
+          } catch (err: any) {
+            console.error('[ViteSyncGitHubDataError]:', err);
+            return sendJson(500, { success: false, message: err?.message || 'सिंक त्रुटि' });
+          }
+        }
+
         // 1. POST /api/send-otp-sms
         if (req.url === '/api/send-otp-sms' && req.method === 'POST') {
           try {
@@ -1181,6 +1220,7 @@ function apiDevServerPlugin(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: process.env.VITE_BASE_PATH || './',
   plugins: [react(), tailwindcss(), apiDevServerPlugin()],
   resolve: {
     alias: {

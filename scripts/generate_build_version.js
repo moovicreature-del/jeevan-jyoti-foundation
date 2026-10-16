@@ -32,6 +32,16 @@ fs.writeFileSync(path.join(publicDir, 'version.json'), jsonString, 'utf-8');
 const distDir = path.join(rootDir, 'dist');
 if (fs.existsSync(distDir)) {
   fs.writeFileSync(path.join(distDir, 'version.json'), jsonString, 'utf-8');
+
+  // Also ensure public/data/synced_app_data.json is mirrored into dist/data/
+  const publicSynced = path.join(rootDir, 'public/data/synced_app_data.json');
+  const distDataDir = path.join(distDir, 'data');
+  if (fs.existsSync(publicSynced)) {
+    if (!fs.existsSync(distDataDir)) {
+      fs.mkdirSync(distDataDir, { recursive: true });
+    }
+    fs.copyFileSync(publicSynced, path.join(distDataDir, 'synced_app_data.json'));
+  }
 }
 
 console.log('✅ Generated version.json:', versionData.version, 'at', versionData.builtAt);

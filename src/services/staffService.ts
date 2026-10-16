@@ -14,6 +14,17 @@ import {
 const STAFF_STORAGE_KEY = 'jjf_staff_registry_v3';
 
 /**
+ * Trigger background file sync so GitHub push automatically has the latest staff registry
+ */
+function triggerBackgroundDataSync() {
+  if (typeof window !== 'undefined') {
+    import('./adminService')
+      .then((m) => m.syncCurrentAdminDataToGitHub())
+      .catch(() => {});
+  }
+}
+
+/**
  * Get all registered staff members
  */
 export function getAllStaffMembers(): StaffMember[] {
@@ -136,6 +147,8 @@ export function registerNewStaffMember(
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
     }
+    // Auto-sync to repository JSON payload for seamless GitHub push
+    triggerBackgroundDataSync();
   } catch (err) {
     console.error('Failed to persist new staff:', err);
   }
@@ -214,6 +227,7 @@ export function approveStaffMember(
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
     }
+    triggerBackgroundDataSync();
   } catch (err) {
     console.error('Failed to update staff approval:', err);
   }
@@ -249,6 +263,7 @@ export function rejectStaffMember(
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
     }
+    triggerBackgroundDataSync();
   } catch (err) {
     console.error('Failed to reject staff:', err);
   }
@@ -312,6 +327,7 @@ export function cancelStaffMember(
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
     }
+    triggerBackgroundDataSync();
   } catch (err) {
     console.error('Failed to cancel staff card:', err);
   }
@@ -335,6 +351,7 @@ export function deleteStaffMember(id: string): boolean {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
     }
+    triggerBackgroundDataSync();
     return true;
   } catch (err) {
     console.error('Failed to delete staff:', err);

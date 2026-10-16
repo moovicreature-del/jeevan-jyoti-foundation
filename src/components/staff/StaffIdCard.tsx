@@ -580,7 +580,7 @@ export const StaffIdCard: React.FC<StaffIdCardProps> = ({
           </div>
 
           {/* Official Round Stamp in Middle */}
-          <div className="flex flex-col items-center justify-center opacity-85 scale-90">
+          <div className="flex flex-col items-center justify-center opacity-100 scale-95">
             <NgoRoundSeal size="sm" />
           </div>
 
