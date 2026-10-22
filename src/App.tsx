@@ -77,7 +77,33 @@ export function App() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showAnnualReportCardModal, setShowAnnualReportCardModal] = useState(false);
   const [showMyDonationsModal, setShowMyDonationsModal] = useState(false);
-  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasAdminParam = urlParams.get('admin') === 'true' || window.location.hash === '#admin';
+      const wasOpen = sessionStorage.getItem('jjf_admin_portal_open') === 'true';
+      const hasActiveSession = Boolean(
+        sessionStorage.getItem('jjf_demo_admin') || localStorage.getItem('jjf_active_admin_session')
+      );
+      return (hasAdminParam || wasOpen) && hasActiveSession;
+    }
+    return false;
+  });
+
+  const handleOpenAdminModal = () => {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('jjf_admin_portal_open', 'true');
+    }
+    setShowAdminLoginModal(true);
+  };
+
+  const handleCloseAdminModal = () => {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('jjf_admin_portal_open');
+    }
+    setShowAdminLoginModal(false);
+  };
+
   const [showQrScannerModal, setShowQrScannerModal] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [showFirebasePhoneModal, setShowFirebasePhoneModal] = useState(false);
@@ -276,13 +302,13 @@ export function App() {
       <PwaInstallBanner />
 
       {/* Dynamic Home Notice Board Banner from Firestore (Tab 2) */}
-      <HomeNoticeBanner onOpenAdmin={() => setShowAdminLoginModal(true)} />
+      <HomeNoticeBanner onOpenAdmin={handleOpenAdminModal} />
 
       {/* Header Navigation */}
       <Navbar
         onOpenDonate={() => setShowDonateModal(true)}
         onOpenReport={() => setShowReportModal(true)}
-        onOpenAdmin={() => setShowAdminLoginModal(true)}
+        onOpenAdmin={handleOpenAdminModal}
         onOpenGoogleDrive={() => setShowGoogleDriveModal(true)}
         onOpenStaff={(tab) => {
           setStaffModalTab(tab || 'options');
@@ -295,7 +321,7 @@ export function App() {
         <HeroSection
           onOpenDonate={() => handleOpenFormTab('donation')}
           onOpenVolunteerPortal={() => handleOpenFormTab('volunteer')}
-          onOpenAdmin={() => setShowAdminLoginModal(true)}
+          onOpenAdmin={handleOpenAdminModal}
           onOpenStaff={(tab) => {
             setStaffModalTab(tab || 'options');
             setShowStaffModal(true);
@@ -338,7 +364,7 @@ export function App() {
               </div>
 
               <button
-                onClick={() => setShowAdminLoginModal(true)}
+                onClick={handleOpenAdminModal}
                 className="text-xs font-bold text-[#8B0000] hover:text-[#5a0000] underline self-start sm:self-auto cursor-pointer flex items-center gap-1"
                 title="एडमिन पोर्टल से फ़ोटो जोड़ें / बदलें"
               >
@@ -349,7 +375,7 @@ export function App() {
 
             {/* Main Interactive Clear Slideshow (Lazy Loaded) */}
             <React.Suspense fallback={<CampaignGallerySliderSkeleton />}>
-              <CampaignGallerySlider onOpenAdmin={() => setShowAdminLoginModal(true)} />
+              <CampaignGallerySlider onOpenAdmin={handleOpenAdminModal} />
             </React.Suspense>
           </div>
         </section>
@@ -397,11 +423,11 @@ export function App() {
 
         {/* Recent Field Events & Ground News (Lazy Loaded) */}
         <React.Suspense fallback={<RecentEventsCarouselSkeleton />}>
-          <RecentEventsCarousel onOpenAdmin={() => setShowAdminLoginModal(true)} />
+          <RecentEventsCarousel onOpenAdmin={handleOpenAdminModal} />
         </React.Suspense>
 
         {/* Documentary Video & Rural Work Photo Showcase */}
-        <VideoShowcase onOpenAdmin={() => setShowAdminLoginModal(true)} />
+        <VideoShowcase onOpenAdmin={handleOpenAdminModal} />
 
         {/* Donors Wall of Fame */}
         <DonationWallOfFame
@@ -430,7 +456,7 @@ export function App() {
       </main>
 
       {/* Footer */}
-      <Footer onOpenAdmin={() => setShowAdminLoginModal(true)} />
+      <Footer onOpenAdmin={handleOpenAdminModal} />
 
       {/* Interactive AI Chatbot */}
       <JyotiBot />
@@ -459,7 +485,7 @@ export function App() {
               }}
               onOpenAdminSettings={() => {
                 setShowQuickDonateModal(false);
-                setShowAdminLoginModal(true);
+                handleOpenAdminModal();
               }}
             />
           )}
@@ -551,9 +577,9 @@ export function App() {
           {showAdminLoginModal && (
             <SuperAdminPortal
               isOpen={showAdminLoginModal}
-              onClose={() => setShowAdminLoginModal(false)}
+              onClose={handleCloseAdminModal}
               onOpenVerificationPortal={(certId) => {
-                setShowAdminLoginModal(false);
+                handleCloseAdminModal();
                 setVerifyRouteId(certId);
               }}
             />

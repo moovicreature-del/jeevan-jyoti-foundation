@@ -46,6 +46,7 @@ import {
   notifyNewCertificateRequest
 } from '../services/adminBotNotificationService';
 import { saveCertificateToRegistry } from '../services/certificateRegistryService';
+import { registerNewVolunteer } from '../services/volunteerService';
 
 interface Props {
   selectedTab?: FormTab | null;
@@ -413,57 +414,36 @@ export const ProfessionalFormsPortal: React.FC<Props> = ({
     const cardId = certId.includes('VOL') ? certId.replace('VOL', 'ID') : `JJF-ID-${certId}`;
     const cleanPhone = volMobile.trim().replace(/\D/g, '').slice(-10);
 
-    // Save Volunteer Certificate to registry
-    saveCertificateToRegistry({
+    // Register volunteer into persistent database & central registry awaiting Admin approval
+    const registered = registerNewVolunteer({
       id: certId,
-      type: 'volunteer_cert',
-      titleHindi: 'आधिकारिक स्वयंसेवक सेवा सम्मान प्रमाण पत्र',
-      titleEnglish: 'Official Volunteer Certificate',
-      recipientName: newVolunteer.name,
-      fatherOrHusbandName: newVolunteer.fatherName,
-      phone: cleanPhone,
-      issueDate: newVolunteer.joinDate,
-      categoryOrPurpose: `${newVolunteer.areaHindi || newVolunteer.area}`,
-      photoUrl: volPhoto,
-      details: `सेवा योगदान: समाज सेवा व शिक्षा`,
-      status: 'verified',
-      approvalStatus: 'approved',
-      rawVolunteer: {
-        ...newVolunteer,
-        id: certId
-      }
-    });
-
-    // Save Volunteer ID Card to registry
-    saveCertificateToRegistry({
-      id: cardId,
-      type: 'volunteer_id',
-      titleHindi: 'स्वयंसेवक डिजिटल पहचान पत्र',
-      titleEnglish: 'Swayam Sewak Digital ID Card',
-      recipientName: newVolunteer.name,
-      fatherOrHusbandName: newVolunteer.fatherName,
-      phone: cleanPhone,
-      issueDate: newVolunteer.joinDate,
-      categoryOrPurpose: `${newVolunteer.role} • ${newVolunteer.areaHindi || newVolunteer.area}`,
-      photoUrl: volPhoto,
-      details: `अधिकृत स्वयंसेवक पहचान पत्र`,
-      status: 'active',
-      approvalStatus: 'approved',
-      rawVolunteer: {
-        ...newVolunteer,
-        id: cardId
-      }
-    });
-
-    // Real-time Telegram/Slack bot notification for Admin
-    notifyNewVolunteerRegistration({
-      id: newVolunteer.id,
       name: newVolunteer.name,
       fatherName: newVolunteer.fatherName,
       relationType: newVolunteer.relationType,
-      phone: newVolunteer.phone || '',
-      area: newVolunteer.areaHindi || newVolunteer.area,
-      location: `${newVolunteer.district || 'Ghazipur'}, ${newVolunteer.state || 'Uttar Pradesh'}`
+      phone: cleanPhone ? `+91-${cleanPhone}` : undefined,
+      role: newVolunteer.role,
+      area: newVolunteer.area,
+      areaHindi: newVolunteer.areaHindi,
+      joinDate: newVolunteer.joinDate,
+      photoUrl: volPhoto,
+      bloodGroup: newVolunteer.bloodGroup,
+      country: newVolunteer.country,
+      state: newVolunteer.state,
+      district: newVolunteer.district,
+      block: newVolunteer.block,
+      wardOrVillage: newVolunteer.wardOrVillage,
+      whatsappConsent: newVolunteer.whatsappConsent
+    }, 'pending');
+
+    // Real-time Telegram/Slack bot notification for Admin
+    notifyNewVolunteerRegistration({
+      id: registered.id,
+      name: registered.name,
+      fatherName: registered.fatherName,
+      relationType: registered.relationType,
+      phone: registered.phone || '',
+      area: registered.areaHindi || registered.area,
+      location: `${registered.district || 'Ghazipur'}, ${registered.state || 'Uttar Pradesh'}`
     }).catch(err => console.debug('Bot volunteer alert note:', err));
 
     setTimeout(() => {

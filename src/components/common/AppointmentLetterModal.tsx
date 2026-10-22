@@ -30,6 +30,7 @@ import { BrandLogo } from './BrandLogo';
 import { ShaileshPradhanSignature, NgoRoundSeal } from '../DigitalSignature';
 import { QRCodeSVG } from 'qrcode.react';
 import { exportElementAsPdf, exportElementAsPng, exportElementAsJpg, directPrintElement } from '../../utils/exportImage';
+import { OfficialLetterheadA4 } from './OfficialLetterheadA4';
 import toast from 'react-hot-toast';
 
 export interface VolunteerAppointmentData {
@@ -70,6 +71,7 @@ interface AppointmentLetterDocumentProps {
   type: AppointmentLetterType;
   volunteerData?: VolunteerAppointmentData;
   staffData?: StaffAppointmentData;
+  hideLetterheadBackground?: boolean;
 }
 
 /**
@@ -79,7 +81,8 @@ export const AppointmentLetterDocument: React.FC<AppointmentLetterDocumentProps>
   id = 'appointment-letter-a4',
   type,
   volunteerData,
-  staffData
+  staffData,
+  hideLetterheadBackground = false
 }) => {
   const isVolunteer = type === 'volunteer';
 
@@ -117,344 +120,271 @@ export const AppointmentLetterDocument: React.FC<AppointmentLetterDocumentProps>
     ? `JJF/APPT-VOL/2026/${candidateId.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '101'}`
     : `JJF/APPT-STF/2026/${candidateId.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '101'}`;
 
+  // Subject line
+  const subject = isVolunteer
+    ? 'संस्था के अधिकृत मानद स्वयंसेवक (Social Service Volunteer) पद पर नियुक्ति एवं दायित्व पत्र'
+    : `संस्था में आधिकारिक स्टाफ नियुक्ति आदेश (Staff Appointment Letter) — ${staffData?.designation || 'स्टाफ सदस्य'}`;
+
   // Verification URL
   const verifyUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/?verify=${encodeURIComponent(candidateId)}`
     : `https://jeevanjyotifoundation.org/?verify=${encodeURIComponent(candidateId)}`;
 
   return (
-    <div
+    <OfficialLetterheadA4
       id={id}
-      className="printable-appointment-letter w-full max-w-[794px] mx-auto bg-[#FCFBF7] text-slate-900 rounded-none shadow-2xl relative select-none print:shadow-none print:m-0 print:w-full print:max-w-none box-border"
-      style={{
-        minHeight: '1120px',
-        padding: '28px 36px',
-        border: '3px solid #8B0000',
-        outline: '1.5px solid #D4AF37',
-        outlineOffset: '-6px',
-        fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-      }}
+      refNo={refNo}
+      dateStr={issueDate}
+      subject={subject}
+      hideLetterheadBackground={hideLetterheadBackground}
+      className="printable-appointment-letter shadow-2xl"
     >
-      {/* Background Watermark */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 opacity-[0.04]">
-        <BrandLogo size={420} watermark />
-      </div>
-
-      <div className="relative z-10 flex flex-col justify-between" style={{ minHeight: '1060px' }}>
-        {/* =================================================================== */}
-        {/* 1. OFFICIAL LETTERHEAD HEADER                                      */}
-        {/* =================================================================== */}
-        <div>
-          {/* Sanskrit Shloka Mantra Top Ribbon */}
-          <div className="text-center pb-1">
-            <span className="text-[11px] font-bold text-[#8B0000] tracking-widest uppercase font-serif">
-              ॥ सर्वे भवन्तु सुखिनः सर्वे सन्तु निरामयाः ॥
+      {/* 1. APPOINTEE PROFILE CARD WITH PHOTO & QR CODE SIDE-BY-SIDE */}
+      <div className="p-2.5 bg-amber-50/70 rounded-xl border border-amber-300 shadow-2xs mb-2 flex items-center justify-between gap-3">
+        {/* Left: Appointee Data */}
+        <div className="flex-1 space-y-1 text-slate-800 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">सेवा में / To:</span>
+            <span className="text-[13px] font-black text-slate-950 truncate">{recipientName}</span>
+            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+              {isVolunteer ? '✓ अधिकृत स्वयंसेवक' : '✓ अधिकृत स्टाफ सदस्य'}
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-4 pb-2 border-b-2 border-[#8B0000]">
-            {/* Left: Foundation Emblem Logo */}
-            <div className="shrink-0 flex flex-col items-center">
-              <BrandLogo size={80} className="drop-shadow-xs" />
-              <span className="text-[8.5px] font-black uppercase text-[#8B0000] tracking-wider mt-0.5">
-                ESTD. 2018
-              </span>
-            </div>
-
-            {/* Center: Main Letterhead Typography */}
-            <div className="flex-1 text-center px-1">
-              <h1 className="text-xl sm:text-2xl font-black tracking-wide text-[#8B0000] uppercase font-serif leading-tight">
-                {FOUNDATION_INFO.nameEnglish}
-              </h1>
-              <h2 className="text-base sm:text-lg font-black text-amber-900 tracking-wide leading-tight mt-0.5">
-                {FOUNDATION_INFO.nameHindi}
-              </h2>
-              <p className="text-[10px] font-bold text-emerald-800 tracking-widest uppercase mt-0.5">
-                सेवा • शिक्षा • स्वास्थ्य • पर्यावरण • स्वावलंबन • ग्रामोत्थान
-              </p>
-
-              {/* Legal Registration Tags */}
-              <div className="flex flex-wrap items-center justify-center gap-1.5 mt-1 text-[9px] font-bold text-slate-700">
-                <span className="bg-amber-100 text-[#8B0000] px-1.5 py-0.5 rounded border border-amber-300">
-                  पंजीकरण सं: {FOUNDATION_INFO.regNo} (उ.प्र. शासन)
-                </span>
-                <span className="bg-blue-50 text-blue-900 px-1.5 py-0.5 rounded border border-blue-200">
-                  नीति आयोग UID: {FOUNDATION_INFO.nitiAayogUid}
-                </span>
-                <span className="bg-emerald-50 text-emerald-900 px-1.5 py-0.5 rounded border border-emerald-200">
-                  12A / 10A URN: {FOUNDATION_INFO.urn10A}
-                </span>
-                <span className="bg-purple-50 text-purple-900 px-1.5 py-0.5 rounded border border-purple-200">
-                  PAN: {FOUNDATION_INFO.pan}
-                </span>
-              </div>
-
-              {/* Head Office Address */}
-              <p className="text-[9.5px] text-slate-700 font-medium leading-snug mt-1">
-                <strong>केंद्रीय कार्यालय:</strong> {FOUNDATION_INFO.fullAddressHindi}
-              </p>
-              <p className="text-[9px] text-slate-600 font-medium mt-0.5">
-                <strong>Helpline:</strong> {FOUNDATION_INFO.phone} | <strong>Email:</strong> {FOUNDATION_INFO.email} | <strong>Web:</strong> www.jeevanjyotifoundation.org
-              </p>
-            </div>
-
-            {/* Right: Verification QR & Verified Badge */}
-            <div className="shrink-0 flex flex-col items-center text-center">
-              <div className="p-1 bg-white border border-amber-300 rounded-lg shadow-2xs">
-                <QRCodeSVG value={verifyUrl} size={64} level="M" />
-              </div>
-              <span className="text-[7.5px] font-bold text-slate-600 mt-1 uppercase tracking-tight">
-                Scan to Verify
-              </span>
-              <span className="text-[7.5px] font-mono font-black text-[#8B0000] leading-none">
-                {candidateId}
-              </span>
-            </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10.5px]">
+            <div><strong>पिता/पति:</strong> {fatherOrHusband}</div>
+            <div><strong>पहचान संख्या:</strong> <span className="font-mono font-black text-blue-900">{candidateId}</span></div>
+            <div><strong>पदनाम (Role):</strong> {isVolunteer ? (volunteerData?.role || 'Dedicated Swayam Sewak') : staffData?.designation}</div>
+            <div><strong>विभाग (Dept):</strong> {isVolunteer ? (volunteerData?.area || 'शिक्षा एवं सामाजिक सेवा') : staffData?.department}</div>
+            <div><strong>रजिस्टर्ड मोबाइल:</strong> +91 {candidatePhone}</div>
+            <div><strong>कार्यक्षेत्र (Duty):</strong> {isVolunteer ? 'जनपद ग़ाज़ीपुर एवं ग्रामीण क्षेत्र' : (staffData?.dutyLocation || 'ग़ाज़ीपुर एवं पूर्वांचल')}</div>
           </div>
 
-          {/* Letterhead Accent Stripe (Gold & Maroon) */}
-          <div className="h-1 bg-gradient-to-r from-[#8B0000] via-[#D4AF37] to-[#8B0000] w-full mb-3" />
-
-          {/* =================================================================== */}
-          {/* 2. DISPATCH REFERENCE & DATE METADATA ROW                          */}
-          {/* =================================================================== */}
-          <div className="flex items-center justify-between text-xs font-bold text-slate-800 bg-amber-50/70 px-3 py-1.5 rounded-lg border border-amber-200 mb-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#8B0000]">पत्रांक संख्या (Ref. No.):</span>
-              <span className="font-mono text-slate-900">{refNo}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#8B0000]">दिनांक (Date of Issue):</span>
-              <span className="text-slate-900 font-semibold">{issueDate}</span>
-            </div>
+          <div className="text-[10px] text-slate-700 truncate">
+            <strong>पंजीकृत पता (Postal Address):</strong> {candidateAddress}
           </div>
+        </div>
 
-          {/* =================================================================== */}
-          {/* 3. RECIPIENT & APPOINTEE PROFILE CARD                              */}
-          {/* =================================================================== */}
-          <div className="p-3 bg-white rounded-xl border border-slate-300 shadow-2xs mb-3 flex items-start justify-between gap-4">
-            <div className="space-y-1 text-xs text-slate-800 flex-1">
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                सेवा में / To,
-              </div>
-              <div className="text-sm font-black text-slate-950 flex items-center gap-2">
-                <span>{recipientName}</span>
-                <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  {isVolunteer ? 'अधिकृत स्वयंसेवक' : 'अधिकृत स्टाफ सदस्य'}
-                </span>
-              </div>
-              <div className="text-[11.5px] text-slate-700">
-                <strong>पिता / अभिभावक:</strong> {fatherOrHusband}
-              </div>
-              <div className="text-[11.5px] text-slate-700">
-                <strong>पहचान संख्या ({isVolunteer ? 'Volunteer ID' : 'Staff ID'}):</strong>{' '}
-                <span className="font-mono font-black text-[#8B0000]">{candidateId}</span>
-              </div>
-              <div className="text-[11.5px] text-slate-700">
-                <strong>रजिस्टर्ड मोबाइल:</strong> +91 {candidatePhone}
-              </div>
-              <div className="text-[11px] text-slate-600 leading-tight">
-                <strong>पता (Address):</strong> {candidateAddress}
-              </div>
-            </div>
-
-            {/* Candidate Photo Box with Stamp */}
-            <div className="shrink-0 flex flex-col items-center">
-              <div className="relative">
+        {/* Right: Candidate Photo + Verification QR Code Side-by-Side */}
+        <div className="shrink-0 flex items-center gap-3 bg-white p-2 rounded-xl border-2 border-amber-300 shadow-xs overflow-visible">
+          {/* Candidate Photo with Uncut Official Rubber Stamp Overlay */}
+          <div className="flex flex-col items-center">
+            {/* Outer relative container with overflow-visible so the stamp bleeds cleanly on left, right, and bottom without getting cut */}
+            <div className="relative w-[66px] h-[78px] flex items-center justify-center">
+              {/* Photo Box with rounded corners and border */}
+              <div className="w-[62px] h-[76px] rounded-lg border-2 border-amber-500 overflow-hidden shadow-2xs bg-slate-100">
                 <img
                   src={candidatePhoto}
                   alt={recipientName}
-                  className="w-20 h-24 object-cover rounded-lg border-2 border-[#8B0000] shadow-xs bg-white"
+                  className="w-full h-full object-cover"
                   crossOrigin="anonymous"
                 />
-                <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white rounded-full p-0.5 border border-white">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                </div>
               </div>
-              <span className="text-[7.5px] font-black text-slate-600 uppercase mt-1">
-                सत्यापित छायाचित्र
-              </span>
-            </div>
-          </div>
 
-          {/* =================================================================== */}
-          {/* 4. SUBJECT BANNER                                                  */}
-          {/* =================================================================== */}
-          <div className="bg-gradient-to-r from-[#8B0000] via-[#A00000] to-[#8B0000] text-white py-2 px-4 rounded-lg shadow-xs mb-3 text-center border border-amber-300">
-            <h3 className="text-xs sm:text-sm font-black tracking-wide">
-              {isVolunteer ? (
-                <span>विषय: संस्था के अधिकृत मानद स्वयंसेवक (Social Service Volunteer) पद पर नियुक्ति एवं दायित्व पत्र</span>
-              ) : (
-                <span>विषय: संस्था में आधिकारिक स्टाफ नियुक्ति आदेश (Official Staff Appointment Letter) — {staffData?.designation || 'स्टाफ'}</span>
-              )}
-            </h3>
-          </div>
-
-          {/* =================================================================== */}
-          {/* 5. FORMAL BODY CONTENT & APPOINTMENT CLAUSES                        */}
-          {/* =================================================================== */}
-          <div className="space-y-2.5 text-xs text-slate-800 leading-relaxed">
-            <p className="font-medium text-[12px]">
-              महोदय / महोदया,
-            </p>
-
-            {isVolunteer ? (
-              // VOLUNTEER APPOINTMENT LETTER BODY
-              <>
-                <p className="text-justify text-[11.5px] leading-relaxed">
-                  जीवन ज्योति फाउंडेशन प्रबंध समिति आपके समाज सेवा, शिक्षा प्रसार, स्वास्थ्य कल्याण एवं दीन-दुखियों की सहायता के प्रति समर्पण एवं निस्वार्थ सेवा भावना की सराहना करती है। आपकी निष्ठा एवं मानवीय मूल्यों को दृष्टिगत रखते हुए आपको संस्था के <strong>'मानद स्वयंसेवक (Honorary Social Service Volunteer)'</strong> के रूप में सहर्ष नियुक्त एवं अधिकृत किया जाता है।
-                </p>
-
-                {/* Key Roles Table / Box */}
-                <div className="p-2.5 bg-amber-50/50 rounded-lg border border-amber-200 text-[11px] space-y-1">
-                  <div className="font-bold text-[#8B0000] flex items-center gap-1.5">
-                    <Award className="w-3.5 h-3.5" />
-                    <span>नियुक्ति विवरण (Volunteer Deputation Particulars):</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-0.5">
-                    <div>• <strong>नियुक्त पद:</strong> {volunteerData?.role || 'Dedicated Swayam Sewak'}</div>
-                    <div>• <strong>कार्य प्रकल्प:</strong> {volunteerData?.area || 'शिक्षा एवं सामाजिक सेवा'}</div>
-                    <div>• <strong>कार्यक्षेत्र:</strong> जनपद ग़ाज़ीपुर एवं आसपास के ग्रामीण क्षेत्र</div>
-                    <div>• <strong>नियुक्ति स्वरूप:</strong> पूर्णतः मानद एवं स्वैच्छिक समाज सेवा</div>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 pt-1 text-[11px]">
-                  <div className="font-bold text-slate-900">
-                    दायित्व एवं आचार संहिता (Terms & Code of Conduct):
-                  </div>
-                  <ul className="list-decimal pl-4 space-y-1 text-slate-700 text-justify">
-                    <li>
-                      <strong>सामाजिक सेवा में सहभागिता:</strong> आप संस्था के शिक्षा प्रकल्प (निःशुल्क पाठशाला), स्वास्थ्य शिविर, अन्नदान, रक्तदान एवं वृक्षारोपण अभियानों में पूर्ण निष्ठा से सहयोग करेंगे।
-                    </li>
-                    <li>
-                      <strong>पहचान पत्र की अनिवार्यता:</strong> संस्था द्वारा जारी डिजिटल पहचान पत्र (Volunteer ID Card) कार्यक्षेत्र में अपने पास रखना अनिवार्य होगा।
-                    </li>
-                    <li>
-                      <strong>संवैधानिक मर्यादा व अनुशासन:</strong> सेवा प्रकल्पों के क्रियान्वयन के दौरान संस्था की प्रतिष्ठा, सामाजिक समरसता एवं सरकारी नियमों का पूर्ण सम्मान सुनिश्चित करेंगे।
-                    </li>
-                    <li>
-                      <strong>डिजिटल सत्यापन:</strong> यह नियुक्ति पत्र जीवन ज्योति फाउंडेशन के केंद्रीय सर्वर में सुरक्षित रूप से दर्ज है तथा क्यूआर कोड के माध्यम से कभी भी ऑनलाइन सत्यापित किया जा सकता है।
-                    </li>
-                  </ul>
-                </div>
-              </>
-            ) : (
-              // STAFF APPOINTMENT LETTER BODY
-              <>
-                <p className="text-justify text-[11.5px] leading-relaxed">
-                  जीवन ज्योति फाउंडेशन प्रबंध समिति के निर्णय, आपकी शैक्षणिक योग्यता, अनुभव एवं चयन प्रक्रिया के आधार पर आपको संस्था में <strong>'{staffData?.designation || 'स्टाफ सदस्य'}'</strong> के पद पर <strong>'{staffData?.department || 'प्रशासन'}'</strong> विभाग में नियुक्त किया जाता है।
-                </p>
-
-                {/* Staff Particulars Table */}
-                <div className="overflow-hidden rounded-lg border border-slate-300 text-[11px]">
-                  <table className="w-full text-left border-collapse">
-                    <tbody>
-                      <tr className="bg-amber-50/70 border-b border-slate-200">
-                        <td className="py-1.5 px-3 font-bold text-slate-700 w-1/3">पदनाम (Designation):</td>
-                        <td className="py-1.5 px-3 font-black text-[#8B0000]">{staffData?.designation}</td>
-                        <td className="py-1.5 px-3 font-bold text-slate-700">विभाग (Department):</td>
-                        <td className="py-1.5 px-3 font-bold text-slate-900">{staffData?.department}</td>
-                      </tr>
-                      <tr className="bg-white border-b border-slate-200">
-                        <td className="py-1.5 px-3 font-bold text-slate-700">कार्यक्षेत्र (Duty Location):</td>
-                        <td className="py-1.5 px-3 font-semibold text-slate-900">{staffData?.dutyLocation}</td>
-                        <td className="py-1.5 px-3 font-bold text-slate-700">रक्त समूह (Blood Group):</td>
-                        <td className="py-1.5 px-3 font-bold text-red-600">{staffData?.bloodGroup || 'N/A'}</td>
-                      </tr>
-                      <tr className="bg-amber-50/40">
-                        <td className="py-1.5 px-3 font-bold text-slate-700">योग्यता (Qualification):</td>
-                        <td className="py-1.5 px-3 font-medium text-slate-800">{staffData?.qualification || 'Graduate'}</td>
-                        <td className="py-1.5 px-3 font-bold text-slate-700">प्रभावी तिथि (Effective Date):</td>
-                        <td className="py-1.5 px-3 font-bold text-slate-900">{issueDate}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="space-y-1.5 pt-1 text-[11px]">
-                  <div className="font-bold text-slate-900">
-                    नियम, शर्तें एवं कर्तव्य (Terms & Conditions of Service):
-                  </div>
-                  <ul className="list-decimal pl-4 space-y-1 text-slate-700 text-justify">
-                    <li>
-                      <strong>दायित्व निर्वहन:</strong> आप अपने आवंटित कार्यक्षेत्र एवं विभाग में संस्था के विकास कार्यों, अभिलेख संधारण, परियोजना निगरानी एवं प्रशासनिक कार्यों का संपादन निर्धारित समय-सारणी के अनुरूप करेंगे।
-                    </li>
-                    <li>
-                      <strong>आधिकारिक पहचान पत्र:</strong> ड्यूटी के दौरान संस्था द्वारा प्रदत्त 2-Page स्टाफ पहचान पत्र (Staff Identity Card) धारण करना अनिवार्य होगा।
-                    </li>
-                    <li>
-                      <strong>गोपनीयता व अनुशासन:</strong> संस्था की नीतियों, वित्तीय पारदर्शिता, समयबद्धता एवं सेवा आचार संहिता का पूर्ण निष्ठा से पालन करना अनिवार्य है।
-                    </li>
-                    <li>
-                      <strong>समीक्षा एवं पुष्टि:</strong> कार्य निष्पादन, त्रैमासिक समीक्षा एवं संस्था के सेवा नियमावली के अंतर्गत सेवा शर्तों का संचालन होगा।
-                    </li>
-                  </ul>
-                </div>
-              </>
-            )}
-
-            <p className="text-[11px] font-semibold text-emerald-900 pt-1 text-center">
-              संस्था आपके उज्ज्वल भविष्य एवं संस्था के साथ सफल, फलदायी समाज-कल्याण यात्रा की कामना करती है।
-            </p>
-          </div>
-        </div>
-
-        {/* =================================================================== */}
-        {/* 6. SIGNATORIES & VALIDATION FOOTER                                 */}
-        {/* =================================================================== */}
-        <div className="pt-3 border-t-2 border-slate-300">
-          <div className="grid grid-cols-3 items-end gap-2 text-center pb-2">
-            {/* Left: Security QR & Central Registry Seal */}
-            <div className="flex flex-col items-center justify-center">
-              <div className="p-1 bg-white border border-slate-300 rounded shadow-2xs">
-                <QRCodeSVG value={verifyUrl} size={62} level="M" />
+              {/* Verified check badge at top-right of photo */}
+              <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 border border-white z-20 shadow-xs">
+                <Check className="w-2.5 h-2.5 stroke-[3]" />
               </div>
-              <span className="text-[7.5px] font-bold text-slate-600 mt-1 uppercase tracking-wider">
-                केंद्रीय डेटाबेस सत्यापित
-              </span>
-              <span className="text-[7.5px] font-mono text-emerald-800 font-bold">
-                Status: ACTIVE & VERIFIED
-              </span>
-            </div>
 
-            {/* Center: Official Round Seal Stamp */}
-            <div className="flex flex-col items-center justify-center">
-              <NgoRoundSeal size="md" />
-            </div>
-
-            {/* Right: Authorized Signatory Block */}
-            <div className="flex flex-col items-center justify-center text-center">
-              <ShaileshPradhanSignature width={135} />
-              <div className="border-t border-[#8B0000] pt-0.5 mt-0.5 w-full max-w-[155px]">
-                <div className="text-[10px] font-black text-[#8B0000] tracking-wide">
-                  शैलेश प्रधान (Shailesh Pradhan)
-                </div>
-                <div className="text-[8.5px] font-bold text-slate-800">
-                  प्रबंधक / सचिव (Manager / Secretary)
-                </div>
-                <div className="text-[7.5px] font-semibold text-slate-600 uppercase">
-                  जीवन ज्योति फाउंडेशन
-                </div>
+              {/* Official Attestation Cross Stamp - 100% Complete & Uncut across photo, left, right, and bottom */}
+              <div
+                className="absolute -bottom-2.5 -left-3.5 -right-3.5 pointer-events-none select-none z-30 flex items-center justify-center"
+                style={{
+                  transform: 'rotate(-9deg)',
+                  transformOrigin: 'center center'
+                }}
+              >
+                <img
+                  src="/assets/aistudio/IMG_20261020_133052_0b52a993.png"
+                  onError={(e) => {
+                    if (e.currentTarget.src !== '/uploads/official_stamp.png') {
+                      e.currentTarget.src = '/uploads/official_stamp.png';
+                    }
+                  }}
+                  alt="Official Seal"
+                  className="w-[94px] max-w-none h-auto max-h-12 object-contain filter contrast-160 brightness-95 mix-blend-multiply drop-shadow-[0_1px_2px_rgba(20,40,100,0.3)]"
+                />
               </div>
             </div>
-          </div>
-
-          {/* Bottom Letterhead Legal Notice Footer */}
-          <div className="border-t border-amber-300 pt-1.5 flex flex-wrap items-center justify-between text-[8px] font-semibold text-slate-600">
-            <span>
-              मानव सेवा ही ईश्वर सेवा है • Dedicated to Healthcare, Education & Rural Empowerment
+            <span className="text-[7.5px] font-black text-slate-700 uppercase mt-0.5 tracking-tight">
+              सत्यापित फोटो
             </span>
-            <span className="text-[#8B0000] font-bold">
-              पंजीकृत संस्था (Reg: GAZ/03373) • गाजीपुर, उत्तर प्रदेश, भारत
-            </span>
-            <span>
-              पृष्ठ 1 / 1 (आधिकारिक नियुक्ति दस्तावेज)
+          </div>
+
+          {/* QR Code */}
+          <div className="flex flex-col items-center">
+            <div className="p-1 bg-white border border-slate-300 rounded-lg shadow-2xs">
+              <QRCodeSVG value={verifyUrl} size={62} level="M" />
+            </div>
+            <span className="text-[7.5px] font-black text-emerald-800 uppercase mt-0.5 tracking-tight">
+              Scan to Verify ✓
             </span>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* 2. FORMAL APPOINTMENT CLAUSES & POLICIES */}
+      <div className="space-y-1.5 text-xs text-slate-800 leading-snug flex-1 flex flex-col justify-between">
+        <p className="font-semibold text-[11px] text-slate-900">
+          महोदय / महोदया,
+        </p>
+
+        {isVolunteer ? (
+          // VOLUNTEER APPOINTMENT LETTER BODY
+          <>
+            <p className="text-justify text-[11px] text-slate-800 leading-relaxed">
+              जीवन ज्योति फाउंडेशन प्रबंध समिति आपके समाज सेवा, शिक्षा प्रसार, स्वास्थ्य कल्याण एवं दीन-दुखियों की सहायता के प्रति समर्पण एवं निस्वार्थ सेवा भावना की सराहना करती है। आपकी निष्ठा एवं मानवीय मूल्यों को दृष्टिगत रखते हुए आपको संस्था के <strong>'मानद स्वयंसेवक (Honorary Social Service Volunteer)'</strong> के रूप में सहर्ष नियुक्त एवं अधिकृत किया जाता है।
+            </p>
+
+            {/* Key Particulars Box */}
+            <div className="p-2 bg-amber-50/60 rounded-lg border border-amber-200 text-[10.5px] space-y-0.5">
+              <div className="font-bold text-[#8B0000] flex items-center gap-1">
+                <Award className="w-3.5 h-3.5" />
+                <span>नियुक्ति विवरण (Volunteer Deputation Particulars):</span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 pt-0.5">
+                <div>• <strong>नियुक्त पद:</strong> {volunteerData?.role || 'Dedicated Swayam Sewak'}</div>
+                <div>• <strong>कार्य प्रकल्प:</strong> {volunteerData?.area || 'शिक्षा एवं सामाजिक सेवा'}</div>
+                <div>• <strong>कार्यक्षेत्र:</strong> जनपद ग़ाज़ीपुर एवं आसपास के ग्रामीण क्षेत्र</div>
+                <div>• <strong>नियुक्ति स्वरूप:</strong> पूर्णतः मानद एवं स्वैच्छिक समाज सेवा</div>
+              </div>
+            </div>
+
+            <div className="space-y-1 text-[10.5px]">
+              <div className="font-bold text-slate-900">
+                दायित्व एवं आचार संहिता (Terms & Code of Conduct):
+              </div>
+              <ul className="list-decimal pl-4 space-y-0.5 text-slate-700 text-justify">
+                <li>
+                  <strong>सामाजिक सेवा में सहभागिता:</strong> आप संस्था के शिक्षा प्रकल्प (निःशुल्क पाठशाला), स्वास्थ्य शिविर, अन्नदान, रक्तदान एवं वृक्षारोपण अभियानों में पूर्ण निष्ठा से सहयोग करेंगे।
+                </li>
+                <li>
+                  <strong>पहचान पत्र की अनिवार्यता:</strong> संस्था द्वारा जारी डिजिटल पहचान पत्र (Volunteer ID Card) कार्यक्षेत्र में अपने पास रखना अनिवार्य होगा।
+                </li>
+                <li>
+                  <strong>संवैधानिक मर्यादा व अनुशासन:</strong> सेवा प्रकल्पों के क्रियान्वयन के दौरान संस्था की प्रतिष्ठा, सामाजिक समरसता एवं सरकारी नियमों का पूर्ण सम्मान सुनिश्चित करेंगे।
+                </li>
+                <li>
+                  <strong>डिजिटल सत्यापन:</strong> यह नियुक्ति पत्र जीवन ज्योति फाउंडेशन के केंद्रीय सर्वर में सुरक्षित रूप से दर्ज है तथा क्यूआर कोड के माध्यम से कभी भी ऑनलाइन सत्यापित किया जा सकता है।
+                </li>
+              </ul>
+            </div>
+          </>
+        ) : (
+          // STAFF APPOINTMENT LETTER BODY
+          <>
+            <p className="text-justify text-[11px] text-slate-800 leading-relaxed">
+              जीवन ज्योति फाउंडेशन प्रबंध समिति के निर्णय, आपकी शैक्षणिक योग्यता, अनुभव एवं चयन प्रक्रिया के आधार पर आपको संस्था में <strong>'{staffData?.designation || 'स्टाफ सदस्य'}'</strong> के पद पर <strong>'{staffData?.department || 'प्रशासन'}'</strong> विभाग में नियुक्त किया जाता है।
+            </p>
+
+            {/* Staff Particulars Table */}
+            <div className="overflow-hidden rounded-lg border border-slate-300 text-[10.5px]">
+              <table className="w-full text-left border-collapse">
+                <tbody>
+                  <tr className="bg-amber-50/70 border-b border-slate-200">
+                    <td className="py-1 px-2.5 font-bold text-slate-700 w-1/4">पदनाम (Designation):</td>
+                    <td className="py-1 px-2.5 font-black text-[#8B0000]">{staffData?.designation}</td>
+                    <td className="py-1 px-2.5 font-bold text-slate-700 w-1/4">विभाग (Department):</td>
+                    <td className="py-1 px-2.5 font-bold text-slate-900">{staffData?.department}</td>
+                  </tr>
+                  <tr className="bg-white border-b border-slate-200">
+                    <td className="py-1 px-2.5 font-bold text-slate-700">कार्यक्षेत्र (Location):</td>
+                    <td className="py-1 px-2.5 font-semibold text-slate-900">{staffData?.dutyLocation}</td>
+                    <td className="py-1 px-2.5 font-bold text-slate-700">रक्त समूह (Blood):</td>
+                    <td className="py-1 px-2.5 font-bold text-red-600">{staffData?.bloodGroup || 'N/A'}</td>
+                  </tr>
+                  <tr className="bg-amber-50/40">
+                    <td className="py-1 px-2.5 font-bold text-slate-700">योग्यता (Qualification):</td>
+                    <td className="py-1 px-2.5 font-medium text-slate-800">{staffData?.qualification || 'Graduate'}</td>
+                    <td className="py-1 px-2.5 font-bold text-slate-700">प्रभावी तिथि (Date):</td>
+                    <td className="py-1 px-2.5 font-bold text-slate-900">{issueDate}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-1 text-[10.5px]">
+              <div className="font-bold text-slate-900">
+                नियम, शर्तें एवं कर्तव्य (Terms & Conditions of Service):
+              </div>
+              <ul className="list-decimal pl-4 space-y-0.5 text-slate-700 text-justify">
+                <li>
+                  <strong>दायित्व निर्वहन:</strong> आप अपने आवंटित कार्यक्षेत्र एवं विभाग में संस्था के विकास कार्यों, अभिलेख संधारण, परियोजना निगरानी एवं प्रशासनिक कार्यों का संपादन निर्धारित समय-सारणी के अनुरूप करेंगे।
+                </li>
+                <li>
+                  <strong>आधिकारिक पहचान पत्र:</strong> ड्यूटी के दौरान संस्था द्वारा प्रदत्त 2-Page स्टाफ पहचान पत्र (Staff Identity Card) धारण करना अनिवार्य होगा।
+                </li>
+                <li>
+                  <strong>गोपनीयता व अनुशासन:</strong> संस्था की नीतियों, वित्तीय पारदर्शिता, समयबद्धता एवं सेवा आचार संहिता का पूर्ण निष्ठा से पालन करना अनिवार्य है।
+                </li>
+                <li>
+                  <strong>समीक्षा एवं पुष्टि:</strong> कार्य निष्पादन, त्रैमासिक समीक्षा एवं संस्था के सेवा नियमावली के अंतर्गत सेवा शर्तों का संचालन होगा।
+                </li>
+              </ul>
+            </div>
+          </>
+        )}
+
+        <p className="text-[10px] font-semibold text-emerald-900 pt-0.5 text-center">
+          संस्था आपके उज्ज्वल भविष्य एवं संस्था के साथ सफल, फलदायी समाज-कल्याण यात्रा की मंगलकामना करती है।
+        </p>
+      </div>
+
+      {/* 3. SIGNATORIES ROW (SEAL + QR VERIFICATION STAMP + SIGNATURE) */}
+      <div className="pt-2 border-t-2 border-slate-300 mt-2">
+        <div className="grid grid-cols-3 items-end gap-2 text-center pb-1">
+          {/* Left: Official Round Seal Image */}
+          <div className="flex flex-col items-center justify-center">
+            <img
+              src="/official-seal.png"
+              alt="Official Foundation Seal"
+              className="w-[66px] h-[66px] object-contain drop-shadow-xs"
+              crossOrigin="anonymous"
+            />
+            <span className="text-[7.5px] font-black uppercase text-[#8B0000] mt-0.5">
+              अधिकृत संस्था सील
+            </span>
+          </div>
+
+          {/* Center: Central Database Verification Stamp */}
+          <div className="flex flex-col items-center justify-center">
+            <div className="px-3 py-1 bg-amber-50 rounded-lg border border-amber-300 shadow-2xs text-center">
+              <div className="text-[8px] font-black text-emerald-900 uppercase tracking-tight flex items-center justify-center gap-1">
+                <span>✓</span>
+                <span>DIGITALLY VERIFIED</span>
+              </div>
+              <div className="text-[7px] font-mono text-slate-600 mt-0.5">
+                UID: {candidateId}
+              </div>
+              <div className="text-[6.5px] text-slate-500 font-medium">
+                ISO 9001:2015 & Govt. Registered
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Authorized Signatory Block */}
+          <div className="flex flex-col items-center justify-center text-center">
+            <img
+              src="/signature-shailesh-royalblue.png"
+              alt="Shailesh Pradhan Signature"
+              className="h-[38px] object-contain"
+              crossOrigin="anonymous"
+            />
+            <div className="border-t border-[#8B0000] pt-0.5 mt-0.5 w-full max-w-[155px]">
+              <div className="text-[10px] font-black text-[#8B0000] tracking-wide leading-tight">
+                शैलेश प्रधान (Shailesh Pradhan)
+              </div>
+              <div className="text-[8.5px] font-bold text-slate-800 leading-tight">
+                प्रबंधक / राष्ट्रीय सचिव
+              </div>
+              <div className="text-[7.5px] font-semibold text-slate-600 uppercase leading-tight">
+                जीवन ज्योति फाउंडेशन
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </OfficialLetterheadA4>
   );
 };
 
@@ -480,6 +410,7 @@ export const AppointmentLetterModal: React.FC<AppointmentLetterModalProps> = ({
   const documentRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [letterheadMode, setLetterheadMode] = useState<'full' | 'stationery'>('full');
 
   if (!isOpen) return null;
 
@@ -505,7 +436,8 @@ export const AppointmentLetterModal: React.FC<AppointmentLetterModalProps> = ({
       const success = await exportElementAsPdf(documentRef.current, fileName, {
         orientation: 'portrait',
         pixelRatio: 3,
-        backgroundColor: '#FCFBF7'
+        backgroundColor: '#FFFFFF',
+        isFullBleedA4: true
       });
 
       if (success) {
@@ -527,7 +459,7 @@ export const AppointmentLetterModal: React.FC<AppointmentLetterModalProps> = ({
     directPrintElement(documentRef.current);
   };
 
-  // Download High-Res JPG
+  // Download High-Res JPG (Portrait 1-Page A4)
   const handleDownloadJpg = async () => {
     if (!documentRef.current) return;
     setIsExporting('jpg');
@@ -535,11 +467,13 @@ export const AppointmentLetterModal: React.FC<AppointmentLetterModalProps> = ({
       const sanitizedName = recipientName.replace(/[^a-zA-Z0-9]/g, '_');
       const fileName = `JJF_Appointment_${candidateId}_${sanitizedName}`;
       await exportElementAsJpg(documentRef.current, fileName, {
-        pixelRatio: 3,
+        pixelRatio: 3.5,
         quality: 0.98,
-        backgroundColor: '#FCFBF7'
+        backgroundColor: '#FFFFFF',
+        orientation: 'portrait',
+        isFullBleedA4: true
       });
-      toast.success('JPG छवि सफलतापूर्वक डाउनलोड हुई!');
+      toast.success('नियुक्ति पत्र JPG छवि (A4 Portrait) सफलतापूर्वक डाउनलोड हुई!');
     } catch (err) {
       console.error('JPG export error:', err);
       toast.error('छवि डाउनलोड में समस्या आई।');
@@ -596,6 +530,34 @@ export const AppointmentLetterModal: React.FC<AppointmentLetterModalProps> = ({
 
           {/* Action Buttons */}
           <div className="flex items-center flex-wrap gap-2">
+            {/* Letterhead Print Mode Toggle */}
+            <div className="flex items-center bg-black/25 p-0.5 rounded-xl border border-white/20 text-xs">
+              <button
+                type="button"
+                onClick={() => setLetterheadMode('full')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+                  letterheadMode === 'full'
+                    ? 'bg-amber-400 text-slate-950 shadow-xs'
+                    : 'text-amber-100 hover:text-white'
+                }`}
+                title="पूरा आधिकारिक लेटरहेड (डिजिटल A4 व सामान्य प्रिंट हेतु)"
+              >
+                🎨 पूरा लेटरहेड
+              </button>
+              <button
+                type="button"
+                onClick={() => setLetterheadMode('stationery')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+                  letterheadMode === 'stationery'
+                    ? 'bg-amber-400 text-slate-950 shadow-xs'
+                    : 'text-amber-100 hover:text-white'
+                }`}
+                title="केवल मैटर प्रिंट करें (संस्था के छपे हुए लेटरहेड पेपर हेतु)"
+              >
+                📄 केवल मैटर
+              </button>
+            </div>
+
             {/* Share WhatsApp */}
             <button
               onClick={handleShareWhatsApp}
@@ -650,14 +612,24 @@ export const AppointmentLetterModal: React.FC<AppointmentLetterModalProps> = ({
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="p-3 sm:p-6 overflow-y-auto flex-1 bg-slate-200/80 print:p-0 print:bg-white">
-          <div className="max-w-[794px] mx-auto overflow-x-auto">
-            <div ref={documentRef}>
+        <div className="p-2 sm:p-6 overflow-y-auto flex-1 bg-slate-200/80 print:p-0 print:bg-white">
+          <div className="max-w-[794px] mx-auto overflow-x-auto pb-4">
+            <div
+              ref={documentRef}
+              id="appointment-letter-export-wrapper"
+              className="w-[794px] min-w-[794px] max-w-[794px] mx-auto bg-white shadow-2xl shrink-0"
+              style={{
+                width: '794px',
+                minWidth: '794px',
+                maxWidth: '794px'
+              }}
+            >
               <AppointmentLetterDocument
                 id="appointment-letter-a4"
                 type={type}
                 volunteerData={volunteerData}
                 staffData={staffData}
+                hideLetterheadBackground={letterheadMode === 'stationery'}
               />
             </div>
           </div>

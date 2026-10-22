@@ -114,10 +114,10 @@
 /* Compatible across Chrome, Safari, Firefox, Edge, iOS & Android Print UI   */
 /* ========================================================================= */
 @media print {
-  /* Page Geometry & Zero Marginal Clippings */
+  /* Page Geometry & Zero Marginal Clippings for A4 Full Bleed Letterheads & Certificates */
   @page {
     size: auto;
-    margin: 8mm 6mm;
+    margin: 0;
   }
 
   /* Universal Color & Background Graphics Preservation */
@@ -214,6 +214,10 @@
   #appointment-letter-a4 *,
   .printable-appointment-letter,
   .printable-appointment-letter *,
+  .official-letterhead-a4,
+  .official-letterhead-a4 *,
+  #printable-80g-receipt,
+  #printable-80g-receipt *,
   .printable-id-card,
   .printable-id-card * {
     visibility: visible !important;
@@ -228,6 +232,8 @@
   #annual-report-card-capture,
   #appointment-letter-a4,
   .printable-appointment-letter,
+  .official-letterhead-a4,
+  #printable-80g-receipt,
   .printable-id-card {
     position: relative !important;
     display: block !important;
@@ -265,16 +271,29 @@
     box-sizing: border-box !important;
   }
 
-  /* A4 Portrait Documents (e.g. Appointment Letters, Donation Receipts & Annual Report Cards) */
+  /* A4 Portrait Documents (e.g. Appointment Letters, Donation Receipts on Official Letterhead) */
   #appointment-letter-a4,
   .printable-appointment-letter,
+  .official-letterhead-a4,
+  #printable-80g-receipt,
   #a4-donation-receipt,
+  #donation-letterhead-print,
+  #donation-letterhead-a4,
+  .donation-letterhead-a4,
   #annual-report-card-capture {
-    width: 100% !important;
-    max-width: 196mm !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    min-height: 297mm !important;
+    height: 297mm !important;
     margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    page-break-after: avoid !important;
+    overflow: hidden !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* A4 Landscape Certificates (e.g. Volunteer, Donation, Festival & Task Appreciation) */
@@ -318,15 +337,25 @@
     display: flex !important;
   }
 
-  /* Official Signature & QR Code Preservation */
-  #receipt-signature-shailesh,
-  #certificate-qr-container,
-  #vol-cert-qr,
-  #don-cert-qr,
-  .official-seal-badge {
-    visibility: visible !important;
-    break-inside: avoid !important;
+  /* Official Letterhead A4 1-Page Exact Print Constraint */
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  .official-letterhead-a4 {
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    min-height: 297mm !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
     page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 

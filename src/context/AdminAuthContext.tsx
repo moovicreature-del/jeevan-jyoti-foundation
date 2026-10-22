@@ -175,10 +175,16 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [adminProfile, setAdminProfile] = useState<AdminUser | null>(() => {
     const startInit = performance.now();
     try {
-      const storedDemo = typeof window !== 'undefined' ? sessionStorage.getItem('jjf_demo_admin') : null;
+      const storedDemo = typeof window !== 'undefined'
+        ? (sessionStorage.getItem('jjf_demo_admin') || localStorage.getItem('jjf_active_admin_session'))
+        : null;
       if (storedDemo) {
         const parsed = JSON.parse(storedDemo);
-        recordAndLogPerf('Initial Session Storage Auth Cache Hit', startInit, {
+        try {
+          sessionStorage.setItem('jjf_demo_admin', JSON.stringify(parsed));
+          localStorage.setItem('jjf_active_admin_session', JSON.stringify(parsed));
+        } catch {}
+        recordAndLogPerf('Initial Auth Cache Hit', startInit, {
           uid: parsed.uid,
           role: parsed.role,
           name: parsed.name
@@ -186,7 +192,7 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
         return parsed;
       }
     } catch (e) {
-      console.warn('[AdminAuth] Session storage initial read note:', e);
+      console.warn('[AdminAuth] Storage initial read note:', e);
     }
     recordAndLogPerf('Initial Auth State (No Active Session)', startInit);
     return null;
@@ -194,7 +200,7 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const [isLoading, setIsLoading] = useState<boolean>(() => {
     try {
-      if (typeof window !== 'undefined' && sessionStorage.getItem('jjf_demo_admin')) {
+      if (typeof window !== 'undefined' && (sessionStorage.getItem('jjf_demo_admin') || localStorage.getItem('jjf_active_admin_session'))) {
         return false;
       }
     } catch {
@@ -261,9 +267,17 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
             }
           } else {
             console.info('%c[AdminAuth] ℹ️ Firebase Auth reported no active session.', 'color: #64748b;');
-            if (!sessionStorage.getItem('jjf_demo_admin')) {
+            const stored = (typeof window !== 'undefined')
+              ? (sessionStorage.getItem('jjf_demo_admin') || localStorage.getItem('jjf_active_admin_session'))
+              : null;
+            if (!stored) {
               setCurrentUser(null);
               setAdminProfile(null);
+            } else {
+              try {
+                const parsed = JSON.parse(stored);
+                setAdminProfile((prev) => prev || parsed);
+              } catch {}
             }
           }
           setIsLoading(false);
@@ -824,7 +838,11 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
 
       if (res.success && res.userProfile) {
         setAdminProfile(res.userProfile);
-        sessionStorage.setItem('jjf_demo_admin', JSON.stringify(res.userProfile));
+        try {
+          sessionStorage.setItem('jjf_demo_admin', JSON.stringify(res.userProfile));
+          sessionStorage.setItem('jjf_admin_portal_open', 'true');
+          localStorage.setItem('jjf_active_admin_session', JSON.stringify(res.userProfile));
+        } catch {}
         toast.success(res.message);
 
         recordAndLogPerf(`Credentials Login Success (${res.role})`, start, {
@@ -862,7 +880,11 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     // Instant synchronous state update
     setAdminProfile(DEFAULT_SUPER_ADMIN_PROFILE);
-    sessionStorage.setItem('jjf_demo_admin', JSON.stringify(DEFAULT_SUPER_ADMIN_PROFILE));
+    try {
+      sessionStorage.setItem('jjf_demo_admin', JSON.stringify(DEFAULT_SUPER_ADMIN_PROFILE));
+      sessionStorage.setItem('jjf_admin_portal_open', 'true');
+      localStorage.setItem('jjf_active_admin_session', JSON.stringify(DEFAULT_SUPER_ADMIN_PROFILE));
+    } catch {}
     setIsLoading(false);
     toast.success('सुपर एडमिन (8052361666 - श्री शैलेश प्रधान जी) के रूप में लॉगिन किया गया!');
 
@@ -889,7 +911,11 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
 
     // Instant synchronous state update
     setAdminProfile(DEFAULT_ADMIN_PROFILE);
-    sessionStorage.setItem('jjf_demo_admin', JSON.stringify(DEFAULT_ADMIN_PROFILE));
+    try {
+      sessionStorage.setItem('jjf_demo_admin', JSON.stringify(DEFAULT_ADMIN_PROFILE));
+      sessionStorage.setItem('jjf_admin_portal_open', 'true');
+      localStorage.setItem('jjf_active_admin_session', JSON.stringify(DEFAULT_ADMIN_PROFILE));
+    } catch {}
     setIsLoading(false);
     toast.success('एडमिन (8948165666 - व्यवस्थापक) के रूप में लॉगिन किया गया!');
 
@@ -924,8 +950,13 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
    */
   const logout = async (): Promise<void> => {
     const logoutStart = performance.now();
-    console.info('%c[AdminAuth] 🚪 Logging out admin session...', 'color: #64748b; font-weight: bold;');
-    sessionStorage.removeItem('jjf_demo_admin');
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('jjf_demo_admin');
+      sessionStorage.removeItem('jjf_admin_portal_open');
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('jjf_active_admin_session');
+    }
     setAdminProfile(null);
     setCurrentUser(null);
     setConfirmationResult(null);

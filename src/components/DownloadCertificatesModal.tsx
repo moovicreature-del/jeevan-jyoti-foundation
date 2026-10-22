@@ -80,6 +80,7 @@ import { RoyalCertificateSeal } from './common/RoyalCertificateSeal';
 import { RoyalFourCorners, RoyalCenterFlourish } from './common/RoyalCertificateBorder';
 import { OfficialVerifiedBadge } from './common/OfficialVerifiedBadge';
 import { AppointmentLetterModal } from './common/AppointmentLetterModal';
+import { DonationLetterheadA4Document } from './common/DonationLetterheadA4Document';
 
 interface DownloadCertificatesModalProps {
   isOpen: boolean;
@@ -527,8 +528,18 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
     }
   };
 
-  // Helper functions to strictly distinguish volunteer certificate vs ID card
+  // Helper functions to strictly distinguish volunteer certificate vs ID card vs staff ID
+  const isStaffIdDoc = (item: RegisteredCertificateItem) => {
+    if (item.type === 'staff_id') return true;
+    if (item.id.includes('STF')) return true;
+    if (item.titleHindi?.includes('स्टाफ पहचान') || item.titleHindi?.includes('Staff ID') || item.titleEnglish?.includes('Staff Identity')) {
+      return true;
+    }
+    return false;
+  };
+
   const isVolCertDoc = (item: RegisteredCertificateItem) => {
+    if (isStaffIdDoc(item)) return false;
     if (item.type === 'volunteer_cert') return true;
     if (item.type === 'volunteer_id') return false;
     if (item.titleHindi?.includes('पहचान पत्र') || item.titleHindi?.includes('आई कार्ड') || item.titleHindi?.includes('ID कार्ड') || item.id.includes('/ID/') || item.id.includes('-ID-')) {
@@ -538,6 +549,7 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
   };
 
   const isVolIdDoc = (item: RegisteredCertificateItem) => {
+    if (isStaffIdDoc(item)) return false;
     if (item.type === 'volunteer_id') return true;
     if (item.type === 'volunteer_cert') return false;
     if (item.titleHindi?.includes('पहचान पत्र') || item.titleHindi?.includes('आई कार्ड') || item.titleHindi?.includes('ID कार्ड') || item.id.includes('/ID/') || item.id.includes('-ID-')) {
@@ -550,11 +562,13 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
   const filteredCertificates = certificates.filter((item) => {
     const isVolCert = isVolCertDoc(item);
     const isVolId = isVolIdDoc(item);
+    const isStaffId = isStaffIdDoc(item);
 
     const matchesFilter =
       selectedFilter === 'all' ||
       (selectedFilter === 'volunteer_cert' && isVolCert) ||
       (selectedFilter === 'volunteer_id' && isVolId) ||
+      (selectedFilter === 'staff_id' && isStaffId) ||
       item.type === selectedFilter;
 
     const matchesSearch =
@@ -659,6 +673,23 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
         photoUrl: item.photoUrl
       };
       onPreviewFestivalCert(fest);
+    } else if (isStaffIdDoc(item) || item.type === 'staff_id') {
+      setAppointmentLetterState({
+        isOpen: true,
+        type: 'staff',
+        staffData: {
+          id: item.id,
+          fullName: item.recipientName,
+          fatherOrHusbandName: item.fatherOrHusbandName || 'श्री अभिभावक',
+          relationType: 'Father',
+          designation: item.categoryOrPurpose?.split('•')[0]?.trim() || 'स्टाफ सदस्य',
+          department: item.categoryOrPurpose?.split('•')[1]?.trim() || 'प्रशासन',
+          dutyLocation: 'जनपद ग़ाज़ीपुर एवं पूर्वांचल',
+          mobile: item.phone,
+          photoUrl: item.photoUrl,
+          dateOfJoining: item.issueDate
+        }
+      });
     }
   };
 
@@ -732,16 +763,18 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
       }
 
       let success = false;
+      const isDonation80G = item.type === 'donation_80g';
       if (format === 'jpg') {
         success = await exportElementAsJpg(targetElem, `${baseFileName}.jpg`, {
           pixelRatio: 3.5,
           quality: 0.98,
-          backgroundColor: '#FFFDF8'
+          backgroundColor: '#FFFFFF'
         });
       } else {
         success = await exportElementAsPdf(targetElem, `${baseFileName}.pdf`, {
-          orientation: shouldExportVolId ? 'portrait' : 'landscape',
-          isIdCard: shouldExportVolId
+          orientation: shouldExportVolId || isDonation80G ? 'portrait' : 'landscape',
+          isIdCard: shouldExportVolId,
+          isFullBleedA4: isDonation80G
         });
       }
 
@@ -846,6 +879,12 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
           icon: <UserCheck className="w-3.5 h-3.5" />,
           color: 'bg-emerald-100 text-emerald-800 border-emerald-200'
         };
+      case 'staff_id':
+        return {
+          label: 'स्टाफ ID कार्ड',
+          icon: <UserCheck className="w-3.5 h-3.5" />,
+          color: 'bg-rose-100 text-rose-800 border-rose-200'
+        };
       case 'donation_80g':
         return {
           label: 'दान रसीद व प्रशस्ति पत्र',
@@ -871,6 +910,7 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
     { key: 'all', label: 'सभी दस्तावेज़ (All)', count: certificates.length },
     { key: 'volunteer_cert', label: '🎖️ स्वयंसेवक प्रमाण पत्र', count: certificates.filter(isVolCertDoc).length },
     { key: 'volunteer_id', label: '🪪 स्वयंसेवक ID कार्ड', count: certificates.filter(isVolIdDoc).length },
+    { key: 'staff_id', label: '👔 स्टाफ ID कार्ड', count: certificates.filter(isStaffIdDoc).length },
     { key: 'donation_80g', label: '📜 दान रसीद', count: certificates.filter((c) => c.type === 'donation_80g').length },
     { key: 'task_appreciation', label: '🌟 कार्य प्रशंसा पत्र', count: certificates.filter((c) => c.type === 'task_appreciation').length },
     { key: 'festival_greeting', label: '🪔 पर्व शुभकामना पत्र', count: certificates.filter((c) => c.type === 'festival_greeting').length }
@@ -1249,23 +1289,83 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
                   </div>
                 </div>
 
-                {/* 📜 NEW: Banner for Swayam Sewak & Staff Appointment Letters in volunteer_id tab */}
+                {/* 📜 NEW: Banner for Swayam Sewak ID Card & Appointment Letter in volunteer_id tab */}
                 {selectedFilter === 'volunteer_id' && (
-                  <div className="p-3 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 rounded-2xl border-2 border-amber-300 shadow-xs flex items-center justify-between gap-3 text-xs">
+                  <div className="p-3 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 rounded-2xl border-2 border-amber-300 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2.5 min-w-[260px]">
+                      <div className="w-8 h-8 rounded-xl bg-[#8B0000] text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <FileText className="w-4 h-4 text-amber-300" />
+                      </div>
+                      <div>
+                        <span className="font-black text-[#8B0000] block text-xs sm:text-sm">
+                          🪪 स्वयंसेवक पहचान पत्र एवं 📜 नियुक्ति पत्र डाउनलोड केंद्र:
+                        </span>
+                        <span className="text-[11px] text-gray-700">
+                          यहाँ केवल आधिकारिक ID कार्ड व A4 लेटरहेड नियुक्ति पत्र डाउनलोड करने के सीधे लिंक उपलब्ध हैं। कोई फॉर्म नहीं खुलेगा।
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const firstVol = filteredCertificates.find((c) => isVolIdDoc(c)) || filteredCertificates[0];
+                          if (firstVol) {
+                            handlePreview(firstVol);
+                          }
+                        }}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs cursor-pointer flex items-center gap-1"
+                        title="स्वयंसेवक ID कार्ड डाउनलोड करें"
+                      >
+                        <span>🪪 I-Card डाउनलोड</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const item = filteredCertificates.find((c) => isVolIdDoc(c)) || filteredCertificates[0];
+                          const vol = item?.rawVolunteer;
+                          setAppointmentLetterState({
+                            isOpen: true,
+                            type: 'volunteer',
+                            volunteerData: {
+                              id: item?.id || 'JJF-VOL-2026-001',
+                              name: item?.recipientName || 'श्री रामेश्वर राय',
+                              fatherName: item?.fatherOrHusbandName || vol?.fatherName || 'श्री समाज सेवी',
+                              role: vol?.role || item?.categoryOrPurpose?.split('•')[0]?.trim() || 'Dedicated Swayam Sewak',
+                              area: vol?.area || item?.categoryOrPurpose?.split('•')[1]?.trim() || 'शिक्षा एवं सामाजिक सेवा',
+                              phone: item?.phone || '8052361666',
+                              photoUrl: item?.photoUrl,
+                              address: vol ? `${vol.wardOrVillage || ''}, ब्लॉक ${vol.block || ''}, जनपद ${vol.district || ''}, ${vol.state || ''} - 233303` : FOUNDATION_INFO.address,
+                              issueDate: item?.issueDate || '2026-01-15'
+                            }
+                          });
+                        }}
+                        className="px-3 py-1.5 bg-gradient-to-r from-amber-700 to-[#8B0000] hover:from-amber-800 hover:to-[#6b0000] text-white rounded-xl font-bold text-xs shadow-xs cursor-pointer flex items-center gap-1 border border-amber-300"
+                        title="संस्था लेटरहेड A4 नियुक्ति पत्र डाउनलोड करें"
+                      >
+                        <span>📜 A4 नियुक्ति पत्र</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 📜 NEW: Banner for Staff Appointment Letter in staff_id tab */}
+                {selectedFilter === 'staff_id' && (
+                  <div className="p-3 bg-gradient-to-r from-rose-50 via-orange-50 to-amber-100 rounded-2xl border-2 border-rose-300 shadow-xs flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-xl bg-[#8B0000] text-white flex items-center justify-center shrink-0 shadow-xs">
                         <FileText className="w-4 h-4 text-amber-300" />
                       </div>
                       <div>
                         <span className="font-black text-[#8B0000] block text-xs sm:text-sm">
-                          📜 स्वयंसेवक एवं स्टाफ नियुक्ति पत्र (Appointment Letter on Official Letterhead):
+                          📜 स्टाफ नियुक्ति पत्र (Official Staff Appointment Letter):
                         </span>
                         <span className="text-[11px] text-gray-700">
-                          संस्था के अधिकृत लेटरहेड पर A4 300 DPI PDF व प्रिंट डाउनलोड करने हेतु नीचे प्रत्येक पहचान पत्र के सामने दिए गए <strong>"📜 नियुक्ति पत्र"</strong> बटन पर क्लिक करें।
+                          संस्था के अधिकृत लेटरहेड पर 300 DPI PDF, प्रिंट व डिजिटल सील सहित डाउनलोड करने हेतु नीचे प्रत्येक स्टाफ पहचान पत्र के सामने दिए गए <strong>"📜 नियुक्ति पत्र"</strong> बटन पर क्लिक करें।
                         </span>
                       </div>
                     </div>
-                    <span className="text-[9.5px] font-black px-2.5 py-1 rounded-full bg-emerald-700 text-white uppercase tracking-tight shadow-2xs shrink-0">
+                    <span className="text-[9.5px] font-black px-2.5 py-1 rounded-full bg-[#8B0000] text-white uppercase tracking-tight shadow-2xs shrink-0">
                       Letterhead A4 PDF
                     </span>
                   </div>
@@ -1572,12 +1672,12 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
                                   </button>
 
                                   {/* 5. 📜 NEW: Appointment Letter on Letterhead Download / View Button */}
-                                  {(isVolIdDoc(item) || item.type === 'volunteer_id' || selectedFilter === 'volunteer_id' || item.id.includes('STF')) && (
+                                  {(isVolIdDoc(item) || isStaffIdDoc(item) || item.type === 'volunteer_id' || item.type === 'staff_id' || selectedFilter === 'volunteer_id' || selectedFilter === 'staff_id' || item.id.includes('STF')) && (
                                     <button
                                       type="button"
                                       disabled={!isApproved}
                                       onClick={() => {
-                                        const isStaff = item.id.includes('STF') || Boolean(item.titleHindi?.includes('स्टाफ')) || Boolean(item.categoryOrPurpose?.includes('स्टाफ'));
+                                        const isStaff = isStaffIdDoc(item) || item.id.includes('STF') || Boolean(item.titleHindi?.includes('स्टाफ')) || Boolean(item.categoryOrPurpose?.includes('स्टाफ')) || selectedFilter === 'staff_id';
                                         if (isStaff) {
                                           setAppointmentLetterState({
                                             isOpen: true,
@@ -1622,7 +1722,11 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
                                       title="संस्था के अधिकृत लेटरहेड पर नियुक्ति पत्र (Appointment Letter) देखें व A4 PDF डाउनलोड करें"
                                     >
                                       <FileText className="w-3.5 h-3.5 text-yellow-200" />
-                                      <span>📜 नियुक्ति पत्र</span>
+                                      <span>
+                                        {isStaffIdDoc(item) || item.id.includes('STF') || selectedFilter === 'staff_id' || item.titleHindi?.includes('स्टाफ')
+                                          ? '📜 स्टाफ नियुक्ति पत्र'
+                                          : '📜 नियुक्ति पत्र'}
+                                      </span>
                                     </button>
                                   )}
 
@@ -2138,15 +2242,37 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
               <div className="p-3.5 space-y-2.5 bg-[#FFFDF9] relative z-10">
                 {/* Photo & Identity Section */}
                 <div className="flex flex-col items-center justify-center text-center">
-                  <div className="relative w-22 h-26 rounded-xl p-1 bg-gradient-to-b from-amber-400 via-yellow-200 to-amber-500 shadow-md border border-amber-300 flex items-center justify-center overflow-hidden">
-                    <img
-                      src={activeExportItem.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
-                      alt={activeExportItem.recipientName}
-                      crossOrigin="anonymous"
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                    <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md border border-white">
-                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                  <div className="relative w-22 h-26 overflow-visible flex items-center justify-center">
+                    <div className="relative w-full h-full rounded-xl p-1 bg-gradient-to-b from-amber-400 via-yellow-200 to-amber-500 shadow-md border border-amber-300 flex items-center justify-center overflow-hidden">
+                      <img
+                        src={activeExportItem.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                        alt={activeExportItem.recipientName}
+                        crossOrigin="anonymous"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md border border-white">
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      </div>
+                    </div>
+
+                    {/* Digitally Attested Official Attached Cross Stamp - 100% Complete & Uncut across photo, left, right, and bottom */}
+                    <div
+                      className="absolute -bottom-3 -left-3.5 -right-3.5 pointer-events-none select-none z-20 flex items-center justify-center"
+                      style={{
+                        transform: 'rotate(-9deg)',
+                        transformOrigin: 'center center'
+                      }}
+                    >
+                      <img
+                        src="/assets/aistudio/IMG_20261020_133052_0b52a993.png"
+                        onError={(e) => {
+                          if (e.currentTarget.src !== '/uploads/official_stamp.png') {
+                            e.currentTarget.src = '/uploads/official_stamp.png';
+                          }
+                        }}
+                        alt="Official Seal"
+                        className="w-[108px] max-w-none h-auto max-h-12 object-contain filter contrast-160 brightness-95 mix-blend-multiply drop-shadow-[0_1px_2px_rgba(20,40,100,0.3)]"
+                      />
                     </div>
                   </div>
 
@@ -2269,82 +2395,32 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
               </div>
             </div>
 
-            {/* 3. Donation Receipt Hidden Render */}
+            {/* 3. Official Donation Receipt on Letterhead Hidden Render */}
             <div
               ref={hiddenDonationCertRef}
               id="hidden-donation-cert"
-              className="w-[1050px] min-h-[740px] bg-[#FFFDF8] p-7 relative text-slate-900 font-serif shadow-2xl"
-              style={{
-                border: '9px solid #8B0000',
-                outline: '2.5px solid #D4AF37',
-                outlineOffset: '-7px'
-              }}
+              className="w-[794px] min-w-[794px] max-w-[794px] bg-white print:m-0 print:shadow-none shadow-2xl"
             >
-              <RoyalFourCorners />
-              <div className="relative z-10 flex flex-col justify-between min-h-[670px]">
-                <div className="flex items-center justify-between border-b-2 border-amber-300 pb-3">
-                  <BrandLogo size="md" />
-                  <div className="text-center flex-1 px-4">
-                    <h2 className="text-2xl font-black text-[#8B0000]">{FOUNDATION_INFO.nameHindi}</h2>
-                    <p className="text-xs text-slate-600">{FOUNDATION_INFO.address}</p>
-                    <p className="text-[11px] font-bold text-emerald-800">
-                      पंजीकरण सं: {FOUNDATION_INFO.regNo} • नीति आयोग UID: {FOUNDATION_INFO.nitiAayogUid} • PAN: {FOUNDATION_INFO.pan}
-                    </p>
-                  </div>
-                  <div className="text-right text-xs font-mono font-bold">
-                    <p>रसीद सं: {activeExportItem.id}</p>
-                    <p>दिनांक: {activeExportItem.issueDate}</p>
-                  </div>
-                </div>
-
-                <div className="text-center my-3">
-                  <span className="px-6 py-1.5 bg-[#8B0000] text-yellow-300 text-base font-black rounded-full shadow-md">
-                    आधिकारिक दान रसीद एवं सम्मान पत्र
-                  </span>
-                </div>
-
-                <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-200 text-sm space-y-2.5 my-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    <p><strong>दानदाता का नाम:</strong> {activeExportItem.recipientName}</p>
-                    <p><strong>पिता/पति का नाम:</strong> {activeExportItem.fatherOrHusbandName || 'दानदाता व शुभचिंतक'}</p>
-                    <p><strong>दान राशि:</strong> <span className="text-lg font-black text-[#8B0000] font-mono">₹{(activeExportItem.amount || 2100).toLocaleString('en-IN')}</span></p>
-                    <p><strong>दान उद्देश्य:</strong> {activeExportItem.categoryOrPurpose || 'गरीब बच्चों की शिक्षा व जन-कल्याण'}</p>
-                  </div>
-                  <p className="text-xs text-slate-600 pt-1 border-t border-amber-200">
-                    यह दान समाज-कल्याण एवं शिक्षा उत्थान हेतु अधिकृत व प्राप्त किया गया है।
-                  </p>
-                </div>
-
-                {/* Seals, Signatures & Bottom Right Official Verified Badge */}
-                <div className="flex items-end justify-between pt-3 border-t-2 border-amber-300 px-6">
-                  <div className="text-center">
-                    <CertificateVerificationQR
-                      certificateId={activeExportItem.id}
-                      size="auto"
-                    />
-                    <p className="text-[9px] font-mono text-slate-500 mt-0.5">Official Verification</p>
-                  </div>
-                  <div className="text-center flex flex-col items-center justify-center">
-                    <RoyalCertificateSeal size="sm" variant="gold-crimson" showRibbons={true} />
-                    <p className="text-[7.5pt] font-extrabold uppercase tracking-widest text-[#8B0000] mt-1 text-center">
-                      ऑफिशियल मुहर / प्रमाणित
-                    </p>
-                  </div>
-                  <div className="text-right flex flex-col items-end space-y-1">
-                    <div className="text-center w-full">
-                      <ShaileshPradhanSignature size="auto" />
-                      <p className="text-xs font-black text-slate-900">शैलेश प्रधान (अध्यक्ष)</p>
-                    </div>
-                    <OfficialVerifiedBadge
-                      certificateId={activeExportItem.id}
-                      verificationDate={activeExportItem.issueDate}
-                      size="sm"
-                      layout="corner"
-                      theme="gold"
-                    />
-                  </div>
-                </div>
-              </div>
+              <DonationLetterheadA4Document
+                id="hidden-donation-letterhead-print"
+                donation={{
+                  id: activeExportItem.id,
+                  donorName: activeExportItem.recipientName,
+                  fatherName: activeExportItem.fatherOrHusbandName,
+                  amount: activeExportItem.amount || 2100,
+                  date: activeExportItem.issueDate,
+                  purpose: activeExportItem.categoryOrPurpose || 'Child Education & Welfare',
+                  purposeHindi: activeExportItem.categoryOrPurpose || 'गरीब बच्चों की शिक्षा व जन-कल्याण',
+                  phone: activeExportItem.phone,
+                  photoUrl: activeExportItem.photoUrl,
+                  panNumber: (activeExportItem.rawDonation as any)?.panNumber || '',
+                  address: (activeExportItem.rawDonation as any)?.address || '',
+                  paymentMode: (activeExportItem.rawDonation as any)?.paymentMode || 'UPI / Bank Transfer',
+                  transactionRef: (activeExportItem.rawDonation as any)?.transactionRef || `UPI/JJF/${activeExportItem.id.replace(/[^0-9]/g, '').slice(-8) || '80523616'}`,
+                  taxExemptEligible: true,
+                  approvalStatus: activeExportItem.approvalStatus === 'cancelled' ? 'rejected' : activeExportItem.approvalStatus
+                }}
+              />
             </div>
 
             {/* 4. Task Appreciation Hidden Render */}

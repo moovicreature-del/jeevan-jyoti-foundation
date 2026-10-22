@@ -70,11 +70,21 @@ export function getAllStaffMembers(): StaffMember[] {
 }
 
 /**
- * Register staff card into central verification registry for instant QR scanning
+ * Register staff card and appointment letter into central verification registry for instant QR scanning and Admin approval tracking
  */
-function registerStaffIntoCentralRegistry(staff: StaffMember): void {
+export function registerStaffIntoCentralRegistry(staff: StaffMember): void {
   try {
     const cleanPhone = (staff.mobile || '').replace(/[^0-9]/g, '').slice(-10);
+    const effectiveApproval =
+      staff.status === 'approved' || staff.status === 'active' || staff.status === 'verified'
+        ? 'approved'
+        : staff.status === 'rejected'
+        ? 'rejected'
+        : staff.status === 'cancelled'
+        ? 'cancelled'
+        : 'pending';
+
+    // 1. Staff Identity Card (I-Card)
     saveCertificateToRegistry({
       id: staff.id,
       type: 'volunteer_id',
@@ -87,7 +97,31 @@ function registerStaffIntoCentralRegistry(staff: StaffMember): void {
       categoryOrPurpose: `${staff.designation} • ${staff.department}`,
       photoUrl: staff.photoUrl,
       details: `स्टाफ आईडी: ${staff.id} • रक्त समूह: ${staff.bloodGroup} • पदनाम: ${staff.designation} • कार्यक्षेत्र: ${staff.dutyLocation}`,
-      status: 'active'
+      status: 'active',
+      approvalStatus: effectiveApproval,
+      approvedAt: staff.approvedAt,
+      approvedBy: staff.approvedBy,
+      rejectionReason: staff.rejectionReason
+    });
+
+    // 2. Staff Official Appointment Letter (नियुक्ति पत्र on Official Letterhead)
+    saveCertificateToRegistry({
+      id: `${staff.id}-APPT`,
+      type: 'task_appreciation',
+      titleHindi: 'स्टाफ आधिकारिक नियुक्ति पत्र',
+      titleEnglish: 'Official Staff Appointment Letter',
+      recipientName: staff.fullName,
+      fatherOrHusbandName: staff.fatherOrHusbandName,
+      phone: cleanPhone,
+      issueDate: staff.dateOfJoining,
+      categoryOrPurpose: `${staff.designation} • ${staff.department}`,
+      photoUrl: staff.photoUrl,
+      details: `स्टाफ नियुक्ति पत्र • पदनाम: ${staff.designation} • विभाग: ${staff.department} • कार्यक्षेत्र: ${staff.dutyLocation}`,
+      status: 'active',
+      approvalStatus: effectiveApproval,
+      approvedAt: staff.approvedAt,
+      approvedBy: staff.approvedBy,
+      rejectionReason: staff.rejectionReason
     });
   } catch (err) {
     console.warn('Failed to sync staff into central verification registry:', err);
@@ -139,18 +173,22 @@ export function registerNewStaffMember(
 
   try {
     localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(updated));
-    // If auto-approved/active, register into central registry right away
-    if (status === 'active' || status === 'approved') {
-      registerStaffIntoCentralRegistry(newStaff);
-    }
+    // Immediately register both Staff I-Card and Appointment Letter into central registry (with approvalStatus: 'pending' or 'approved')
+    registerStaffIntoCentralRegistry(newStaff);
+
     // Notify listeners
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
     }
-    // Auto-sync to repository JSON payload for seamless GitHub push
+    // Auto-sync to repository JSON payload for seamless GitHub push (silent in background)
     triggerBackgroundDataSync();
   } catch (err) {
-    console.error('Failed to persist new staff:', err);
+    console.warn('LocalStorage save staff quota warning, applying safe trim:', err);
+    try {
+      const trimmed = updated.slice(0, 30).map((s, i) => (i > 10 ? { ...s, photoUrl: '' } : s));
+      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(trimmed));
+      registerStaffIntoCentralRegistry(newStaff);
+    } catch {}
   }
 
   return newStaff;
@@ -260,6 +298,9 @@ export function rejectStaffMember(
 
   try {
     localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(current));
+    // Also update rejection in central certificate registry
+    registerStaffIntoCentralRegistry(updatedStaff);
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
     }
@@ -321,8 +362,9 @@ export function cancelStaffMember(
 
   try {
     localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(current));
-    // Also cancel in central certificate registry
+    // Also cancel in central certificate registry for both ID and Appointment letter
     cancelCertificateInRegistry(id, reason, adminName);
+    cancelCertificateInRegistry(`${id}-APPT`, reason, adminName);
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
@@ -347,6 +389,7 @@ export function deleteStaffMember(id: string): boolean {
     localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(filtered));
     // Also expunge from central certificate registry
     deleteCertificateFromRegistry(id).catch((err) => console.debug('Central deletion note:', err));
+    deleteCertificateFromRegistry(`${id}-APPT`).catch((err) => console.debug('Central deletion note:', err));
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('jjf-staff-updated'));

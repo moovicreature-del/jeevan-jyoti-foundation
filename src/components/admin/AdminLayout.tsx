@@ -40,6 +40,7 @@ import { AdminUploadProgressBar } from './AdminUploadProgressBar';
 import { BrandLogo } from '../common/BrandLogo';
 import { DataBackupModal } from './DataBackupModal';
 import { getAllStaffMembers } from '../../services/staffService';
+import { getAllVolunteers } from '../../services/volunteerService';
 
 export type AdminTabType = 'dashboard' | 'certificates' | 'staff_approval' | 'donations' | 'payment' | 'media' | 'notice' | 'text' | 'users' | 'security' | 'bot_notifications';
 
@@ -53,23 +54,27 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ onBackToWebsite, onOpe
   const [activeTab, setActiveTab] = useState<AdminTabType>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
-  const [pendingStaffCount, setPendingStaffCount] = useState<number>(0);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
 
   useEffect(() => {
     const updatePendingCount = () => {
       try {
         const staff = getAllStaffMembers();
-        const pending = staff.filter((s) => s.status === 'pending').length;
-        setPendingStaffCount(pending);
+        const pendingStaff = staff.filter((s) => s.status === 'pending').length;
+        const volunteers = getAllVolunteers();
+        const pendingVolunteers = volunteers.filter((v) => v.approvalStatus === 'pending').length;
+        setPendingApprovalsCount(pendingStaff + pendingVolunteers);
       } catch {
-        setPendingStaffCount(0);
+        setPendingApprovalsCount(0);
       }
     };
 
     updatePendingCount();
     window.addEventListener('jjf-staff-updated', updatePendingCount);
+    window.addEventListener('jjf-volunteer-updated', updatePendingCount);
     return () => {
       window.removeEventListener('jjf-staff-updated', updatePendingCount);
+      window.removeEventListener('jjf-volunteer-updated', updatePendingCount);
     };
   }, []);
 
@@ -84,11 +89,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ onBackToWebsite, onOpe
     },
     {
       id: 'staff_approval' as AdminTabType,
-      label: 'स्टाफ आई-कार्ड अप्रूवल',
-      sublabel: 'स्वीकृति/रिजेक्ट व WhatsApp लिंक',
+      label: 'स्टाफ व स्वयंसेवक अप्रूवल',
+      sublabel: 'आई-कार्ड, नियुक्ति पत्र व प्रमाण पत्र',
       icon: IdCard,
       superAdminOnly: false,
-      badge: pendingStaffCount > 0 ? `${pendingStaffCount} नया` : 'Staff'
+      badge: pendingApprovalsCount > 0 ? `${pendingApprovalsCount} नया` : 'Approvals'
     },
     {
       id: 'certificates' as AdminTabType,

@@ -37,7 +37,8 @@ import {
   Share2,
   AlertCircle,
   Ban,
-  RotateCcw
+  RotateCcw,
+  FileText
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -75,6 +76,12 @@ import {
 import toast from 'react-hot-toast';
 import { CertificateOfficialSealManager } from './CertificateOfficialSealManager';
 import { RoyalCertificateSeal } from '../common/RoyalCertificateSeal';
+import { AppointmentLetterModal } from '../common/AppointmentLetterModal';
+import { SwayamSewakCardModal } from '../SwayamSewakCardModal';
+import { VolunteerCertificateModal } from '../VolunteerCertificateModal';
+import { DonationCertificateModal } from '../DonationCertificateModal';
+import { FOUNDATION_INFO } from '../../data/foundationData';
+import { Volunteer, DonationRecord } from '../../types';
 
 interface TabCertificatePipelineDashboardProps {
   onOpenVerificationPortal?: (certId: string) => void;
@@ -106,6 +113,13 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
 
   // Delete Dialog State
   const [deleteModalCert, setDeleteModalCert] = useState<RegisteredCertificateItem | null>(null);
+
+  // Document Full View / Preview State
+  const [docPreviewItem, setDocPreviewItem] = useState<RegisteredCertificateItem | null>(null);
+
+  const handleOpenDocument = (cert: RegisteredCertificateItem) => {
+    setDocPreviewItem(cert);
+  };
 
   // Month options with bilingual labels
   const monthOptions = [
@@ -1319,6 +1333,17 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
 
+                          {/* Direct Document View / Preview Button */}
+                          <button
+                            type="button"
+                            title="मूल दस्तावेज़ / नियुक्ति पत्र / आई-कार्ड देखें"
+                            onClick={() => handleOpenDocument(cert)}
+                            className="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-amber-700" />
+                            <span>दस्तावेज़</span>
+                          </button>
+
                           {/* View Detail Button */}
                           <button
                             title="विस्तृत विवरण देखें"
@@ -1515,7 +1540,19 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
                 </button>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cert = selectedCertDetail;
+                    setSelectedCertDetail(null);
+                    handleOpenDocument(cert);
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer border border-amber-400"
+                >
+                  <FileText className="w-4 h-4 text-yellow-200" />
+                  <span>दस्तावेज़ / नियुक्ति पत्र खोलें</span>
+                </button>
                 <button
                   onClick={() => setSelectedCertDetail(null)}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
@@ -1718,6 +1755,99 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
             </div>
           </div>
         </div>
+      )}
+      {/* 9. DOCUMENT FULL VIEW / PREVIEW MODALS */}
+      {docPreviewItem && (
+        <>
+          {/* APPOINTMENT LETTER MODAL (Staff or Volunteer) */}
+          {(docPreviewItem.id.endsWith('-APPT') || docPreviewItem.titleHindi?.includes('नियुक्ति') || docPreviewItem.type === 'task_appreciation') && (
+            <AppointmentLetterModal
+              isOpen={!!docPreviewItem}
+              onClose={() => setDocPreviewItem(null)}
+              type={docPreviewItem.id.includes('STF') ? 'staff' : 'volunteer'}
+              staffData={docPreviewItem.id.includes('STF') ? {
+                id: docPreviewItem.id.replace('-APPT', ''),
+                fullName: docPreviewItem.recipientName,
+                fatherOrHusbandName: docPreviewItem.fatherOrHusbandName,
+                designation: docPreviewItem.categoryOrPurpose?.split('•')[0]?.trim() || 'स्टाफ सदस्य',
+                department: docPreviewItem.categoryOrPurpose?.split('•')[1]?.trim() || 'प्रशासन',
+                dutyLocation: 'गाजीपुर शाखा',
+                mobile: docPreviewItem.phone || FOUNDATION_INFO.phone,
+                photoUrl: docPreviewItem.photoUrl,
+                dateOfJoining: docPreviewItem.issueDate
+              } : undefined}
+              volunteerData={!docPreviewItem.id.includes('STF') ? {
+                id: docPreviewItem.id.replace('-APPT', ''),
+                name: docPreviewItem.recipientName,
+                fatherName: docPreviewItem.fatherOrHusbandName,
+                role: 'सक्रिय स्वयंसेवक (Dedicated Swayam Sewak)',
+                area: docPreviewItem.categoryOrPurpose || 'शिक्षा एवं सामाजिक सेवा',
+                phone: docPreviewItem.phone,
+                photoUrl: docPreviewItem.photoUrl,
+                issueDate: docPreviewItem.issueDate
+              } : undefined}
+            />
+          )}
+
+          {/* VOLUNTEER ID CARD MODAL */}
+          {docPreviewItem.type === 'volunteer_id' && (
+            <SwayamSewakCardModal
+              volunteer={docPreviewItem.rawVolunteer || {
+                id: docPreviewItem.id,
+                name: docPreviewItem.recipientName,
+                fatherName: docPreviewItem.fatherOrHusbandName || '',
+                phone: docPreviewItem.phone,
+                photoUrl: docPreviewItem.photoUrl,
+                joinDate: docPreviewItem.issueDate,
+                role: 'Dedicated Swayam Sewak',
+                area: docPreviewItem.categoryOrPurpose || 'समाज सेवा',
+                status: 'certified'
+              }}
+              onClose={() => setDocPreviewItem(null)}
+            />
+          )}
+
+          {/* VOLUNTEER HONORARY CERTIFICATE MODAL */}
+          {docPreviewItem.type === 'volunteer_cert' && (
+            <VolunteerCertificateModal
+              volunteer={docPreviewItem.rawVolunteer || {
+                id: docPreviewItem.id,
+                name: docPreviewItem.recipientName,
+                fatherName: docPreviewItem.fatherOrHusbandName || '',
+                phone: docPreviewItem.phone,
+                photoUrl: docPreviewItem.photoUrl,
+                joinDate: docPreviewItem.issueDate,
+                role: 'Dedicated Swayam Sewak',
+                area: docPreviewItem.categoryOrPurpose || 'समाज सेवा',
+                areaHindi: docPreviewItem.categoryOrPurpose || 'समाज सेवा व निःशुल्क शिक्षा',
+                status: 'certified',
+                hoursContributed: 24,
+                tasksCompleted: 4
+              }}
+              onClose={() => setDocPreviewItem(null)}
+            />
+          )}
+
+          {/* DONATION CERTIFICATE MODAL */}
+          {docPreviewItem.type === 'donation_80g' && (
+            <DonationCertificateModal
+              donation={docPreviewItem.rawDonation || {
+                id: docPreviewItem.id,
+                donorName: docPreviewItem.recipientName,
+                fatherName: docPreviewItem.fatherOrHusbandName,
+                phone: docPreviewItem.phone,
+                amount: docPreviewItem.amount || 1000,
+                date: docPreviewItem.issueDate,
+                purpose: docPreviewItem.categoryOrPurpose || 'General Donation',
+                purposeHindi: docPreviewItem.titleHindi || 'सामान्य सहयोग दान',
+                paymentMode: 'Online UPI',
+                transactionRef: docPreviewItem.id,
+                taxExemptEligible: true
+              }}
+              onClose={() => setDocPreviewItem(null)}
+            />
+          )}
+        </>
       )}
     </div>
   );

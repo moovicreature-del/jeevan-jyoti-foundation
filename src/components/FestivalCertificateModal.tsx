@@ -1,9 +1,15 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Printer, Download, Share2, Sparkles, ShieldCheck, Calendar, CheckCircle2, Camera, AlertCircle, Trash2, UploadCloud, Check, FileText, Mail, Languages } from 'lucide-react';
+import { X, Printer, Download, Share2, Sparkles, ShieldCheck, Calendar, CheckCircle2, Camera, AlertCircle, Trash2, UploadCloud, Check, FileText, Mail, Languages, Palette, ChevronDown } from 'lucide-react';
 import { FestivalGreetingRecord } from '../types';
 import { FOUNDATION_INFO } from '../data/foundationData';
 import { FESTIVALS_LIST, getFestivalsForYear } from '../data/festivalsData';
 import { getPanchangYearMeta } from '../utils/thakurPrasadCalendar';
+import {
+  FESTIVAL_THEME_PRESETS,
+  getThemeForFestival,
+  getFestivalThemeById,
+  FestivalThemeArtwork
+} from '../data/festivalThemesData';
 import { CertificateVerificationQR } from './CertificateVerificationQR';
 import { NgoRoundSeal, ShaileshPradhanSignature } from './DigitalSignature';
 import { RoyalCertificateSeal } from './common/RoyalCertificateSeal';
@@ -35,6 +41,11 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareModalTab, setShareModalTab] = useState<'whatsapp' | 'email'>('whatsapp');
   const [certLanguage, setCertLanguage] = useState<CertificateLanguage>('bilingual');
+  const [activeThemeId, setActiveThemeId] = useState<string>(() => {
+    return greeting.themeId || getThemeForFestival(greeting.festivalId).id;
+  });
+  const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
+  const activeTheme = getFestivalThemeById(activeThemeId);
 
   // Extract year from greeting ID or date, or fallback to current year
   const certYear = (() => {
@@ -196,6 +207,54 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
               onLanguageChange={setCertLanguage}
             />
 
+            {/* Quick Theme Selector Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
+                className="px-3 py-1.5 bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-400/50 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+                title="थीम एवं बैकग्राउंड रंग बदलें"
+              >
+                <Palette className="w-3.5 h-3.5 text-amber-300" />
+                <span className="truncate max-w-[110px]">{activeTheme.nameHindi.split('(')[0]}</span>
+                <ChevronDown className="w-3 h-3 text-amber-300" />
+              </button>
+
+              {isThemeMenuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-64 bg-white text-gray-900 rounded-2xl shadow-2xl border-2 border-amber-300 z-50 p-2 max-h-72 overflow-y-auto">
+                  <div className="text-[10px] font-black uppercase text-amber-900 px-2 py-1 border-b border-amber-100 flex items-center justify-between">
+                    <span>थीम व बैकग्राउंड चुनें</span>
+                    <span className="bg-amber-100 px-1.5 py-0.2 rounded font-bold">12 शैलियां</span>
+                  </div>
+                  <div className="space-y-1 mt-1">
+                    {FESTIVAL_THEME_PRESETS.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveThemeId(t.id);
+                          setIsThemeMenuOpen(false);
+                        }}
+                        className={`w-full text-left p-1.5 rounded-xl text-xs flex items-center gap-2 cursor-pointer transition-all ${
+                          activeThemeId === t.id
+                            ? 'bg-amber-100 font-black text-amber-950 border border-amber-300'
+                            : 'hover:bg-amber-50 text-gray-800'
+                        }`}
+                      >
+                        <span className="text-base">{t.symbolEmoji}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-bold text-[11px]">{t.nameHindi.split('(')[0]}</div>
+                        </div>
+                        <div className="shrink-0 p-0.5 rounded bg-white border border-amber-200">
+                          <FestivalThemeArtwork themeId={t.id} size={18} variant="emblem" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => fileInputRef.current?.click()}
               className={`px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-all border ${
@@ -306,32 +365,38 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
             ref={certificateRef}
             id="festival-certificate-card"
             data-printable="true"
-            className="printable-certificate w-[860px] min-w-[860px] bg-[#FFFDF9] p-6 sm:p-8 rounded-2xl relative overflow-hidden text-gray-900 select-none shadow-2xl"
+            className="printable-certificate w-[860px] min-w-[860px] p-6 sm:p-8 rounded-2xl relative overflow-hidden text-gray-900 select-none shadow-2xl transition-all duration-300"
             style={{
-              border: '9px solid #8B0000',
-              boxShadow: '0 0 0 3px #D4AF37, 0 0 0 6px #700000, 0 12px 35px rgba(139, 0, 0, 0.25)',
-              backgroundColor: '#FFFDF9'
+              border: `9px solid ${activeTheme.outerBorderColor}`,
+              boxShadow: `0 0 0 3px ${activeTheme.innerBorderColor}, 0 0 0 6px ${activeTheme.outerBorderColor}88, 0 16px 45px rgba(0, 0, 0, 0.28)`,
+              background: activeTheme.bgGradient
             }}
           >
             {/* Inner Golden Ornate Border */}
             <div
-              className="absolute inset-2 sm:inset-3 border-2 border-amber-400/90 rounded-xl pointer-events-none"
+              className="absolute inset-2 sm:inset-3 rounded-xl pointer-events-none"
               style={{
-                border: '2.5px double #D4AF37',
-                outline: '1px dashed rgba(212, 175, 55, 0.5)',
+                border: `2.5px double ${activeTheme.innerBorderColor}`,
+                outline: `1px dashed ${activeTheme.innerBorderColor}88`,
                 outlineOffset: '-4px'
               }}
             />
 
             {/* Royal Vector Corner Filigree Ornaments */}
-            <RoyalFourCorners color="#D4AF37" size={56} />
+            <RoyalFourCorners color={activeTheme.innerBorderColor} size={56} />
 
-            {/* Background Watermark using BrandLogo */}
+            {/* Background Watermark using BrandLogo & Theme-Related Picture */}
             <div
               id="fest-cert-watermark"
-              className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden select-none z-0"
+              className="absolute inset-0 flex items-center justify-between px-8 pointer-events-none overflow-hidden select-none z-0"
             >
-              <BrandLogo size={420} watermark opacity={0.07} />
+              <div className="opacity-15">
+                <FestivalThemeArtwork themeId={activeTheme.id} size={280} variant="watermark" />
+              </div>
+              <BrandLogo size={360} watermark opacity={0.06} />
+              <div className="opacity-15 -scale-x-100">
+                <FestivalThemeArtwork themeId={activeTheme.id} size={280} variant="watermark" />
+              </div>
             </div>
 
             {/* Certificate Header Content */}
@@ -351,7 +416,7 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
                 <div className="flex flex-col items-center justify-center text-center flex-1">
                   <BrandLogo size={70} className="mx-auto mb-1 drop-shadow-xs" id="fest-cert-top-logo" />
                   <div className="text-center">
-                    <h1 className="text-xl font-black text-[#8B0000] font-['Cinzel',serif] tracking-tight leading-none">
+                    <h1 className="text-xl font-black font-['Cinzel',serif] tracking-tight leading-none" style={{ color: activeTheme.textColor }}>
                       {certLanguage === 'hi' ? FOUNDATION_INFO.nameHindi : certLanguage === 'en' ? FOUNDATION_INFO.nameEnglish : FOUNDATION_INFO.nameEnglish}
                     </h1>
                     {certLanguage !== 'en' && (
@@ -372,18 +437,28 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
                 </div>
               </div>
 
-              {/* Festive Title Banner & Thakur Prasad Panchang Tag */}
+              {/* Festive Title Banner with Theme-Related Picture & Thakur Prasad Panchang Tag */}
               <div className="pt-1.5 space-y-1">
-                <div className="inline-flex items-center gap-2 px-5 py-1 rounded-full bg-gradient-to-r from-amber-700 via-orange-600 to-amber-700 text-white shadow-sm border border-amber-300">
-                  <span className="text-base">{greeting.symbolEmoji || festivalInfo.symbolEmoji}</span>
-                  <span className="text-xs sm:text-sm font-black tracking-wider uppercase">
+                <div
+                  className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full text-white shadow-md border"
+                  style={{
+                    background: `linear-gradient(to right, ${activeTheme.outerBorderColor}, ${activeTheme.accentColor}, ${activeTheme.outerBorderColor})`,
+                    borderColor: activeTheme.innerBorderColor
+                  }}
+                >
+                  <div className="p-0.5 rounded-full bg-white/90 shadow-xs border border-amber-300 shrink-0">
+                    <FestivalThemeArtwork themeId={activeTheme.id} size={28} variant="emblem" />
+                  </div>
+                  <span className="text-xs sm:text-sm font-black tracking-wider uppercase drop-shadow-xs">
                     {certLanguage === 'hi'
                       ? `${greeting.festivalNameHindi} • पावन शुभकामना संदेश पत्र (${certYear})`
                       : certLanguage === 'en'
                       ? `${greeting.festivalNameEnglish || greeting.festivalNameHindi} • Auspicious Festival Greetings (${certYear})`
                       : `${greeting.festivalNameHindi} • पावन शुभकामना संदेश पत्र (${certYear})`}
                   </span>
-                  <span className="text-base">{greeting.symbolEmoji || festivalInfo.symbolEmoji}</span>
+                  <div className="p-0.5 rounded-full bg-white/90 shadow-xs border border-amber-300 shrink-0">
+                    <FestivalThemeArtwork themeId={activeTheme.id} size={28} variant="emblem" />
+                  </div>
                 </div>
 
                 {/* Thakur Prasad Panchang Certification & Tithi Ribbon */}
@@ -404,8 +479,14 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
                 </div>
               </div>
 
-              {/* Sanskrit Shloka / Vedic Blessing Box */}
-              <div className="bg-[#FFFDE7]/90 border border-amber-300/80 rounded-xl py-1 px-4 max-w-2xl mx-auto shadow-2xs">
+              {/* Sanskrit Shloka / Vedic Blessing Box with Theme Background Color */}
+              <div
+                className="border rounded-xl py-1 px-4 max-w-2xl mx-auto shadow-2xs"
+                style={{
+                  backgroundColor: activeTheme.shlokaBg,
+                  borderColor: `${activeTheme.innerBorderColor}99`
+                }}
+              >
                 <p className="text-[10.5px] font-bold text-amber-950 font-serif italic tracking-wide">
                   {greeting.shloka || festivalInfo.shloka}
                 </p>

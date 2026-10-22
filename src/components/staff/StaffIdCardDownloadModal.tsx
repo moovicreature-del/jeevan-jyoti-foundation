@@ -84,7 +84,7 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
   }, [initialStaff]);
 
   // Handle Search by Registered Mobile Number (or Staff ID)
-  const handleSearchSubmit = (e?: React.FormEvent) => {
+  const handleSearchSubmit = (e?: React.FormEvent, target: 'card' | 'appointment' = 'card') => {
     if (e) e.preventDefault();
     setSearchError(null);
     setSearchSuccessNotice(null);
@@ -109,6 +109,19 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
     if (found) {
       setSelectedStaff(found);
       setSearchError(null);
+      if (target === 'appointment') {
+        const approved =
+          found.status === 'approved' || found.status === 'active' || found.status === 'verified';
+        if (approved) {
+          setShowAppointmentModal(true);
+        } else if (found.status === 'rejected') {
+          setSearchError('यह स्टाफ पंजीकरण अस्वीकृत (Rejected) है, अतः नियुक्ति पत्र उपलब्ध नहीं है।');
+        } else {
+          setSearchError(
+            'यह स्टाफ पंजीकरण अभी एडमिन अप्रूवल हेतु लंबित (Pending) है। एडमिन द्वारा स्वीकृत होने पर ही नियुक्ति पत्र जारी होगा।'
+          );
+        }
+      }
     } else {
       setSelectedStaff(null);
       setSearchError(
@@ -260,7 +273,7 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base sm:text-lg font-black tracking-tight text-white font-['Cinzel',serif]">
-                  स्टाफ पहचान पत्र डाउनलोड व सत्यापन केंद्र
+                  स्टाफ पहचान पत्र एवं नियुक्ति पत्र डाउनलोड केंद्र
                 </h3>
                 <span className="bg-amber-400 text-[#8B0000] text-[10px] font-black px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
                   <ShieldCheck className="w-3 h-3" />
@@ -268,7 +281,7 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
                 </span>
               </div>
               <p className="text-xs text-amber-100 font-medium mt-0.5">
-                Staff Identity Card Portal • रजिस्टर्ड मोबाइल नंबर द्वारा सत्यापन एवं 300 DPI में डाउनलोड
+                Staff Identity Card & Appointment Letter Portal • 2-पेज आई-कार्ड एवं अधिकृत लेटरहेड नियुक्ति पत्र
               </p>
             </div>
           </div>
@@ -294,8 +307,8 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
                 </div>
                 <h4 className="text-sm font-black text-gray-900">
                   {selectedStaff
-                    ? 'रजिस्टर्ड मोबाइल नंबर द्वारा आई-कार्ड सत्यापन'
-                    : 'रजिस्टर्ड मोबाइल नंबर दर्ज करके अपना आई-कार्ड खोलें'}
+                    ? 'रजिस्टर्ड मोबाइल नंबर द्वारा आई-कार्ड व नियुक्ति पत्र सत्यापन'
+                    : 'रजिस्टर्ड मोबाइल नंबर दर्ज करके अपना आई-कार्ड एवं नियुक्ति पत्र खोलें'}
                 </h4>
               </div>
               <span className="text-[11px] text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 font-bold">
@@ -303,8 +316,8 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
               </span>
             </div>
 
-            <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2.5">
-              <div className="relative flex-1">
+            <form onSubmit={(e) => handleSearchSubmit(e, 'card')} className="flex flex-col gap-2.5">
+              <div className="relative w-full">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-gray-500 font-bold text-xs select-none pointer-events-none">
                   <Phone className="w-3.5 h-3.5 text-[#8B0000]" />
                   <span>+91</span>
@@ -323,13 +336,24 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 pt-1">
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-gradient-to-r from-[#8B0000] to-red-700 hover:from-red-800 hover:to-red-900 text-white text-xs sm:text-sm font-black rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                  onClick={(e) => handleSearchSubmit(e, 'card')}
+                  className="flex-1 sm:flex-none px-5 py-2.5 bg-gradient-to-r from-[#8B0000] to-red-700 hover:from-red-800 hover:to-red-900 text-white text-xs sm:text-sm font-black rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
                 >
                   <Search className="w-4 h-4" />
                   <span>आई-कार्ड खोलें (Open Card)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(e) => handleSearchSubmit(e, 'appointment')}
+                  className="flex-1 sm:flex-none px-5 py-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-slate-950 text-xs sm:text-sm font-black rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border-2 border-amber-300 shrink-0"
+                  title="संस्था के अधिकृत लेटरहेड पर नियुक्ति पत्र खोलें व डाउनलोड करें"
+                >
+                  <FileText className="w-4 h-4 text-slate-950" />
+                  <span>📜 नियुक्ति पत्र खोलें (Appointment Letter)</span>
                 </button>
 
                 {selectedStaff && (
@@ -340,7 +364,7 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
                       setMobileQuery('');
                       setSearchError(null);
                     }}
-                    className="px-3.5 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer shrink-0"
+                    className="px-3.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer shrink-0 ml-auto"
                     title="अन्य नंबर से खोजें"
                   >
                     बदलें
@@ -386,41 +410,91 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
           </div>
 
           {/* ========================================================================= */}
-          {/* 2. NO STAFF SELECTED STATE: GUIDE / PROMPT                                */}
+          {/* 2. NO STAFF SELECTED STATE: GUIDE / DUAL DOCUMENT HUB                     */}
           {/* ========================================================================= */}
           {!selectedStaff && !searchError && (
-            <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border-2 border-dashed border-amber-300 space-y-4">
-              <div className="w-16 h-16 bg-amber-50 text-amber-700 rounded-2xl flex items-center justify-center mx-auto shadow-inner border border-amber-200">
-                <Phone className="w-8 h-8 text-[#8B0000]" />
+            <div className="bg-white rounded-3xl p-6 sm:p-8 text-center border-2 border-dashed border-amber-300 space-y-4">
+              <div className="w-14 h-14 bg-gradient-to-tr from-amber-100 to-orange-100 text-amber-800 rounded-2xl flex items-center justify-center mx-auto shadow-inner border border-amber-300">
+                <FileText className="w-7 h-7 text-[#8B0000]" />
               </div>
-              <div className="max-w-md mx-auto space-y-1.5">
+              <div className="max-w-xl mx-auto space-y-1">
                 <h3 className="text-base sm:text-lg font-black text-gray-900 font-['Cinzel',serif]">
                   कृपया अपना पंजीकृत मोबाइल नंबर दर्ज करें
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  स्टाफ रजिस्ट्रेशन फॉर्म भरते समय दिया गया 10 अंकों का मोबाइल नंबर ऊपर बॉक्स में डालकर <strong>"आई-कार्ड खोलें"</strong> पर क्लिक करें।
+                  यहाँ से आप अपना <strong>स्टाफ पहचान पत्र (2-Page ID Card)</strong> एवं <strong>आधिकारिक लेटरहेड नियुक्ति पत्र (Appointment Letter)</strong> दोनों सत्यापित व डाउनलोड कर सकते हैं:
                 </p>
+              </div>
+
+              {/* Two Document Preview Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-w-2xl mx-auto text-left pt-1">
+                {/* Document 1: Staff ID Card */}
+                <div className="p-4 bg-gradient-to-br from-red-50/80 to-amber-50/80 rounded-2xl border-2 border-amber-300 shadow-2xs space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-[#8B0000] text-amber-300 flex items-center justify-center font-bold text-base shadow-xs shrink-0">
+                      🪪
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 font-['Cinzel',serif]">
+                        1. स्टाफ पहचान पत्र (ID Card)
+                      </h4>
+                      <p className="text-[10px] text-amber-900 font-semibold">
+                        2-पेज प्रिंट रेडी फ्रंट व बैक साइड
+                      </p>
+                    </div>
+                  </div>
+                  <ul className="text-[11px] text-slate-700 space-y-1 pl-4 list-disc">
+                    <li>300 DPI में A4 PDF व PNG</li>
+                    <li>फोटो, डिजिटल सील व QR कोड सत्यापन</li>
+                    <li>4 रंगीन थीम व द्विभाषी (हिंदी/Eng) विकल्प</li>
+                  </ul>
+                  <div className="pt-1 text-[10.5px] font-bold text-[#8B0000]">
+                    👉 ऊपर "आई-कार्ड खोलें" पर क्लिक करें
+                  </div>
+                </div>
+
+                {/* Document 2: Official Appointment Letter */}
+                <div className="p-4 bg-gradient-to-br from-amber-50/90 to-orange-50/90 rounded-2xl border-2 border-amber-400 shadow-2xs space-y-2 ring-2 ring-amber-400/20">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-700 text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
+                      📜
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 font-['Cinzel',serif]">
+                        2. स्टाफ नियुक्ति पत्र (Appointment Letter)
+                      </h4>
+                      <p className="text-[10px] text-amber-950 font-semibold">
+                        अधिकृत A4 लेटरहेड फॉर्मेट
+                      </p>
+                    </div>
+                  </div>
+                  <ul className="text-[11px] text-slate-700 space-y-1 pl-4 list-disc">
+                    <li>संस्था के अधिकृत A4 लेटरहेड पर प्रिंट</li>
+                    <li>प्रबंधक/सचिव के हस्ताक्षर व आधिकारिक मुहर</li>
+                    <li>A4 PDF व लेटरहेड स्टेशनरी प्रिंट मोड</li>
+                  </ul>
+                  <div className="pt-1 text-[10.5px] font-black text-amber-900">
+                    👉 ऊपर "नियुक्ति पत्र खोलें" पर क्लिक करें
+                  </div>
+                </div>
               </div>
 
               {/* Security Rule Notice */}
-              <div className="max-w-md mx-auto p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200 text-xs text-amber-950 text-left space-y-1">
-                <div className="font-bold flex items-center gap-1.5 text-[#8B0000]">
-                  <Clock className="w-4 h-4" />
-                  <span>एडमिन अप्रूवल नियम (Admin Approval Rule):</span>
-                </div>
+              <div className="max-w-2xl mx-auto p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200 text-xs text-amber-950 text-left flex items-start gap-2">
+                <Clock className="w-4 h-4 text-[#8B0000] shrink-0 mt-0.5" />
                 <p className="text-[11.5px] leading-relaxed text-gray-700">
-                  यदि आपका आवेदन संस्था प्रशासन द्वारा स्वीकृत (Approved) हो चुका है, तो आपका 2-Page प्रिंट-रेडी पहचान पत्र तुरंत खुल जाएगा। यदि आपका फॉर्म अभी समीक्षाधीन है, तो स्टेटस दिखाई देगा।
+                  <strong>एडमिन अप्रूवल नियम:</strong> आवेदन संस्था प्रशासन (Admin) द्वारा स्वीकृत (Approved) होने के बाद ही दोनों दस्तावेज जारी होते हैं। यदि आवेदन अभी समीक्षाधीन है तो स्थिति (Status) दिखाई देगी।
                 </p>
               </div>
 
-              <div className="pt-2 flex justify-center">
+              <div className="pt-1 flex justify-center">
                 <button
                   type="button"
                   onClick={onOpenRegistrationForm}
                   className="px-5 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4 text-[#8B0000]" />
-                  <span>यदि आपने रजिस्ट्रेशन नहीं किया है, तो यहाँ फॉर्म भरें</span>
+                  <span>यदि आपने रजिस्ट्रेशन नहीं किया है, तो यहाँ नया फॉर्म भरें</span>
                 </button>
               </div>
             </div>
@@ -600,6 +674,37 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
                   className="px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-[11px] font-bold border border-white/30 transition cursor-pointer shrink-0"
                 >
                   🔍 अन्य मोबाइल नंबर खोजें
+                </button>
+              </div>
+
+              {/* 📜 PROMINENT APPOINTMENT LETTER ACTION BANNER */}
+              <div className="p-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-2xl shadow-lg border-2 border-yellow-200 text-slate-950 flex flex-col sm:flex-row items-center justify-between gap-3.5">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-slate-950 text-amber-300 flex items-center justify-center shrink-0 shadow-md border-2 border-amber-300">
+                    <FileText className="w-6 h-6 text-amber-300" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm sm:text-base font-black text-slate-950 tracking-tight font-['Cinzel',serif]">
+                        📜 आधिकारिक स्टाफ नियुक्ति पत्र (Staff Appointment Letter)
+                      </h4>
+                      <span className="bg-slate-950 text-amber-300 text-[9.5px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        A4 Letterhead Ready
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-950 font-bold mt-0.5">
+                      संस्था के अधिकृत A4 लेटरहेड पर प्रबंधक/सचिव के हस्ताक्षर व आधिकारिक मुहर सहित 300 DPI में तैयार
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAppointmentModal(true)}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-slate-950 hover:bg-slate-900 text-amber-300 font-black text-xs sm:text-sm rounded-xl shadow-md hover:shadow-xl transition-all flex items-center justify-center gap-2 border-2 border-amber-300 cursor-pointer shrink-0"
+                >
+                  <FileText className="w-4 h-4 text-amber-300" />
+                  <span>नियुक्ति पत्र खोलें व डाउनलोड करें (Download Appointment Letter)</span>
                 </button>
               </div>
 

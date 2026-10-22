@@ -20,8 +20,15 @@ import {
   ChevronRight,
   Flame,
   Printer,
-  ChevronLeft
+  ChevronLeft,
+  Palette
 } from 'lucide-react';
+import {
+  FESTIVAL_THEME_PRESETS,
+  getThemeForFestival,
+  getFestivalThemeById,
+  FestivalThemeArtwork
+} from '../data/festivalThemesData';
 import {
   getFestivalsForYear,
   AVAILABLE_PANCHANG_YEARS,
@@ -86,6 +93,19 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
   
   const [activeViewTab, setActiveViewTab] = useState<'register' | 'wall' | 'calendar'>('calendar');
 
+  // Theme Selector: Auto-synced with festival or customizable by user
+  const [selectedThemeId, setSelectedThemeId] = useState<string>(() => {
+    const today = getTodayISTDateString();
+    const currentFestivals = getFestivalsForYear(CURRENT_YEAR);
+    const upcoming = currentFestivals.find((f) => !isFestivalExpired(f, today));
+    const initialFest = upcoming || currentFestivals[0];
+    return getThemeForFestival(initialFest?.id).id;
+  });
+
+  const activeTheme = useMemo(() => {
+    return getFestivalThemeById(selectedThemeId);
+  }, [selectedThemeId]);
+
   // Update selected festival whenever year or displayed festivals change
   useEffect(() => {
     const matched = displayFestivals.find((f) => f.id === selectedFestival.id);
@@ -97,6 +117,14 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
       setSelectedFestival(festivalsForSelectedYear[0]);
     }
   }, [selectedYear, displayFestivals, festivalsForSelectedYear]);
+
+  // Automatically update theme whenever selected festival changes
+  useEffect(() => {
+    if (selectedFestival?.id) {
+      const autoTheme = getThemeForFestival(selectedFestival.id);
+      setSelectedThemeId(autoTheme.id);
+    }
+  }, [selectedFestival?.id]);
 
   // Form State (No prefilled details, all empty by default)
   const [recipientPhoto, setRecipientPhoto] = useState<string>('');
@@ -191,7 +219,8 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
       date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       shloka: selectedFestival.shloka,
       category: selectedFestival.category,
-      symbolEmoji: selectedFestival.symbolEmoji
+      symbolEmoji: selectedFestival.symbolEmoji,
+      themeId: selectedThemeId
     };
 
     setTimeout(() => {
@@ -391,23 +420,43 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
                   </div>
                 </div>
 
-                {/* Active Festival Spotlight Card */}
-                <div className="bg-gradient-to-br from-[#8B0000] via-red-900 to-amber-950 text-white rounded-2xl p-5 shadow-lg border-2 border-amber-400 relative overflow-hidden">
-                  <div className="absolute top-2 right-2 text-6xl opacity-15 pointer-events-none">
-                    {selectedFestival.symbolEmoji}
+                {/* Active Festival Spotlight Card with Theme-Related Picture & Color */}
+                <div
+                  className="text-white rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all duration-300"
+                  style={{
+                    background: activeTheme.bgGradient.includes('#8B0000') || activeTheme.bgGradient.includes('#450a0a')
+                      ? activeTheme.bgGradient
+                      : 'linear-gradient(135deg, #7c2d12 0%, #8B0000 40%, #451a03 100%)',
+                    border: `2.5px solid ${activeTheme.innerBorderColor}`,
+                    boxShadow: `0 8px 24px rgba(0, 0, 0, 0.25), inset 0 0 0 1px ${activeTheme.innerBorderColor}66`
+                  }}
+                >
+                  {/* Subtle Theme Watermark in Spotlight Background */}
+                  <div className="absolute -right-4 -bottom-4 pointer-events-none opacity-20">
+                    <FestivalThemeArtwork themeId={activeTheme.id} size={150} variant="watermark" />
                   </div>
+
                   <div className="relative z-10 space-y-2">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-200 text-[10px] font-bold border border-amber-400/30">
-                      <span>चयनित पर्व • {selectedFestival.samvatYearHindi || `संवत ${yearMeta.vikramSamvat}`}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/40 text-amber-200 text-[10px] font-bold border border-amber-400/40">
+                        <span>चयनित पर्व • {selectedFestival.samvatYearHindi || `संवत ${yearMeta.vikramSamvat}`}</span>
+                      </div>
+                      <div className="p-1 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20">
+                        <FestivalThemeArtwork themeId={activeTheme.id} size={38} variant="emblem" />
+                      </div>
                     </div>
+
                     <h3 className="text-xl font-black text-yellow-200 font-serif leading-tight">
                       {selectedFestival.nameHindi}
                     </h3>
-                    <div className="text-xs text-amber-100 font-medium">
-                      📅 {selectedFestival.dateFormattedHindi}
+                    <div className="text-xs text-amber-100 font-medium flex items-center gap-1.5">
+                      <span>📅 {selectedFestival.dateFormattedHindi}</span>
+                      <span className="text-amber-400">•</span>
+                      <span className="text-[11px] font-bold text-yellow-300">थीम: {activeTheme.nameHindi.split('(')[0]}</span>
                     </div>
+
                     {selectedFestival.shubhMuhuratHindi && (
-                      <div className="text-xs text-yellow-300 font-bold flex items-center gap-1 bg-black/30 p-2 rounded-lg border border-amber-500/30">
+                      <div className="text-xs text-yellow-300 font-bold flex items-center gap-1 bg-black/35 p-2 rounded-lg border border-amber-500/30">
                         <Clock className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
                         <span>{selectedFestival.shubhMuhuratHindi}</span>
                       </div>
@@ -415,6 +464,66 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
                     <p className="text-[11px] text-amber-100/90 italic pt-1 border-t border-amber-400/30">
                       "{selectedFestival.shloka}"
                     </p>
+                  </div>
+                </div>
+
+                {/* THEME & BACKGROUND COLOR SELECTOR ("थीम के अनुसार बैकग्राउंड का कलर और उस थीम से रिलेटेड तस्वीर बने") */}
+                <div className="bg-white rounded-2xl p-4 border-2 border-amber-300 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-amber-100">
+                    <div className="flex items-center gap-2 font-black text-xs sm:text-sm text-[#8B0000]">
+                      <Palette className="w-4 h-4 text-amber-700" />
+                      <span>2. शुभकामना थीम व पृष्ठभूमि रंग (Theme & Colors)</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md">
+                      {FESTIVAL_THEME_PRESETS.length} शैलियां
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-gray-600 leading-tight">
+                    चयनित थीम के अनुसार प्रमाण पत्र का बैकग्राउंड रंग, बॉर्डर और उससे संबंधित पावन चित्र/प्रतीक स्वतः तैयार होगा।
+                  </p>
+
+                  {/* Theme Presets Grid */}
+                  <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
+                    {FESTIVAL_THEME_PRESETS.map((theme) => {
+                      const isSelected = selectedThemeId === theme.id;
+                      return (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          onClick={() => setSelectedThemeId(theme.id)}
+                          className={`p-2 rounded-xl text-left border transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
+                            isSelected
+                              ? 'ring-2 ring-amber-500 border-amber-600 shadow-md bg-amber-50/80'
+                              : 'border-amber-200 hover:border-amber-400 bg-white hover:bg-amber-50/30'
+                          }`}
+                          style={{
+                            background: isSelected ? theme.bgGradient : undefined
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-1 w-full">
+                            <span className="text-lg shrink-0">{theme.symbolEmoji}</span>
+                            <div className="shrink-0 p-0.5 rounded bg-white/80 border border-amber-300 shadow-2xs">
+                              <FestivalThemeArtwork themeId={theme.id} size={24} variant="emblem" />
+                            </div>
+                          </div>
+
+                          <div className="mt-1.5 min-w-0">
+                            <div className="text-[11px] font-black text-gray-900 truncate leading-snug">
+                              {theme.nameHindi.split('(')[0]}
+                            </div>
+                            <div className="text-[9px] text-amber-800 font-semibold truncate">
+                              {theme.nameEnglish}
+                            </div>
+                          </div>
+
+                          {/* Selected Check Badge */}
+                          {isSelected && (
+                            <div className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-emerald-600 ring-2 ring-white"></div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -584,6 +693,63 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
                     )}
                   </div>
 
+                  {/* Live Certificate Theme Preview Box */}
+                  <div className="p-3.5 rounded-2xl border-2 border-amber-300 space-y-2 bg-amber-50/50">
+                    <div className="flex items-center justify-between text-xs font-black text-amber-950">
+                      <div className="flex items-center gap-1.5">
+                        <Eye className="w-3.5 h-3.5 text-amber-700" />
+                        <span>लाइव थीम एवं तस्वीर पूर्वावलोकन (Live Theme Preview)</span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                        {activeTheme.nameHindi.split('(')[0]}
+                      </span>
+                    </div>
+
+                    {/* Mini Card Rendering with theme background and theme picture */}
+                    <div
+                      className="p-4 rounded-xl relative overflow-hidden transition-all duration-300 shadow-sm"
+                      style={{
+                        background: activeTheme.bgGradient,
+                        border: `2px solid ${activeTheme.innerBorderColor}`,
+                        boxShadow: `0 4px 14px rgba(0,0,0,0.08)`
+                      }}
+                    >
+                      {/* Theme Picture as right watermark */}
+                      <div className="absolute -right-2 -bottom-2 pointer-events-none opacity-25">
+                        <FestivalThemeArtwork themeId={activeTheme.id} size={90} variant="watermark" />
+                      </div>
+
+                      <div className="relative z-10 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Theme Emblem Picture */}
+                          <div className="p-1 rounded-xl bg-white/80 shadow-xs border border-amber-300 shrink-0">
+                            <FestivalThemeArtwork themeId={activeTheme.id} size={48} variant="emblem" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-[10px] font-black uppercase tracking-wider text-amber-900">
+                              जीवन ज्योति फाउंडेशन • पावन पर्व प्रमाण पत्र
+                            </div>
+                            <div className="text-sm font-black truncate" style={{ color: activeTheme.textColor }}>
+                              {recipientName.trim() ? recipientName : 'प्राप्तकर्ता का नाम यहाँ प्रदर्शित होगा'}
+                            </div>
+                            <div className="text-[11px] font-bold text-gray-700 truncate">
+                              {recipientTitle || 'सम्मानित नागरिक'} • {selectedFestival.nameHindi} ({selectedYear})
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Recipient Photo Thumbnail if uploaded */}
+                        {recipientPhoto && (
+                          <img
+                            src={recipientPhoto}
+                            alt="Recipient"
+                            className="w-12 h-14 rounded-lg object-cover border-2 border-emerald-600 shadow-xs shrink-0"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Submit Button */}
                   <div className="pt-2">
                     <button
@@ -688,69 +854,90 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
                   </p>
                 </div>
               ) : (
-                filteredFestivals.map((festival) => (
-                <div
-                  key={festival.id}
-                  className="bg-white rounded-2xl p-5 border-2 border-amber-200 hover:border-amber-400 shadow-sm hover:shadow-xl transition-all flex flex-col justify-between group relative overflow-hidden"
-                >
-                  <div>
-                    <div className="flex items-start justify-between">
-                      <span className="text-3xl p-2 rounded-xl bg-amber-50 border border-amber-200 group-hover:scale-110 transition-transform">
-                        {festival.symbolEmoji}
-                      </span>
-                      <div className="text-right">
-                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 block">
-                          {festival.monthHindi}
-                        </span>
-                        {festival.hinduMonthHindi && (
-                          <span className="text-[9px] font-bold text-amber-700 mt-1 block">
-                            {festival.hinduMonthHindi}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <h3 className="font-black text-base text-[#8B0000] mt-3 leading-snug">
-                      {festival.nameHindi}
-                    </h3>
-                    <div className="text-xs text-gray-500 font-semibold">
-                      {festival.nameEnglish}
-                    </div>
-
-                    {/* Exact Tithi & Date */}
-                    <div className="mt-3 p-2 bg-amber-50/70 rounded-xl border border-amber-200/80 space-y-1">
-                      <div className="text-xs font-bold text-amber-950 flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                        <span>{festival.dateFormattedHindi}</span>
-                      </div>
-                      {festival.shubhMuhuratHindi && (
-                        <div className="text-[11px] font-bold text-amber-900 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-amber-600 shrink-0" />
-                          <span>{festival.shubhMuhuratHindi}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-[11.5px] text-gray-600 mt-2.5 line-clamp-2 leading-relaxed">
-                      {festival.blessingHindi}
-                    </p>
-                  </div>
-
-                  <div className="pt-4 mt-3 border-t border-amber-100">
-                    <button
-                      onClick={() => {
-                        setSelectedFestival(festival);
-                        setActiveViewTab('register');
-                        document.getElementById('festivals')?.scrollIntoView({ behavior: 'smooth' });
+                filteredFestivals.map((festival) => {
+                  const festTheme = getThemeForFestival(festival.id);
+                  return (
+                    <div
+                      key={festival.id}
+                      className="bg-white rounded-2xl p-5 border-2 hover:shadow-xl transition-all flex flex-col justify-between group relative overflow-hidden"
+                      style={{
+                        borderColor: `${festTheme.innerBorderColor}66`
                       }}
-                      className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
                     >
-                      <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
-                      <span>शुभकामना पत्र बनाएं ({selectedYear})</span>
-                    </button>
-                  </div>
-                </div>
-              ))
+                      {/* Top Theme Accent Bar */}
+                      <div
+                        className="absolute top-0 inset-x-0 h-1.5"
+                        style={{ background: festTheme.bgGradient }}
+                      />
+
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-3xl p-2 rounded-xl bg-amber-50 border border-amber-200 group-hover:scale-110 transition-transform">
+                              {festival.symbolEmoji}
+                            </span>
+                            <div className="p-1 rounded-xl bg-amber-50/80 border border-amber-200 shadow-2xs group-hover:scale-105 transition-transform">
+                              <FestivalThemeArtwork themeId={festTheme.id} size={32} variant="emblem" />
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 block">
+                              {festival.monthHindi}
+                            </span>
+                            {festival.hinduMonthHindi && (
+                              <span className="text-[9px] font-bold text-amber-700 mt-1 block">
+                                {festival.hinduMonthHindi}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <h3 className="font-black text-base text-[#8B0000] mt-3 leading-snug">
+                          {festival.nameHindi}
+                        </h3>
+                        <div className="text-xs text-gray-500 font-semibold flex items-center gap-1.5">
+                          <span>{festival.nameEnglish}</span>
+                          <span className="text-amber-400">•</span>
+                          <span className="text-[10px] text-amber-800 font-bold">{festTheme.nameHindi.split('(')[0]}</span>
+                        </div>
+
+                        {/* Exact Tithi & Date */}
+                        <div className="mt-3 p-2 bg-amber-50/70 rounded-xl border border-amber-200/80 space-y-1">
+                          <div className="text-xs font-bold text-amber-950 flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                            <span>{festival.dateFormattedHindi}</span>
+                          </div>
+                          {festival.shubhMuhuratHindi && (
+                            <div className="text-[11px] font-bold text-amber-900 flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-amber-600 shrink-0" />
+                              <span>{festival.shubhMuhuratHindi}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <p className="text-[11.5px] text-gray-600 mt-2.5 line-clamp-2 leading-relaxed">
+                          {festival.blessingHindi}
+                        </p>
+                      </div>
+
+                      <div className="pt-4 mt-3 border-t border-amber-100">
+                        <button
+                          onClick={() => {
+                            setSelectedFestival(festival);
+                            setSelectedThemeId(festTheme.id);
+                            setActiveViewTab('register');
+                            document.getElementById('festivals')?.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                          className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
+                          <span>शुभकामना पत्र बनाएं ({selectedYear})</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
             )}
           </div>
         </div>
@@ -776,28 +963,45 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {greetings.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white rounded-2xl p-5 border-2 border-amber-300 shadow-md hover:shadow-xl transition-all relative overflow-hidden flex flex-col justify-between"
-                >
-                  <div className="flex items-start justify-between pb-3 border-b border-amber-100">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{item.symbolEmoji}</span>
-                      <div>
-                        <div className="font-black text-xs text-amber-950 leading-tight">
-                          {item.festivalNameHindi}
+              {greetings.map((item) => {
+                const cardTheme = item.themeId
+                  ? getFestivalThemeById(item.themeId)
+                  : getThemeForFestival(item.festivalId);
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-2xl p-5 border-2 shadow-md hover:shadow-xl transition-all relative overflow-hidden flex flex-col justify-between"
+                    style={{
+                      borderColor: `${cardTheme.innerBorderColor}88`
+                    }}
+                  >
+                    {/* Top Theme Accent Bar */}
+                    <div
+                      className="absolute top-0 inset-x-0 h-1.5"
+                      style={{ background: cardTheme.bgGradient }}
+                    />
+
+                    <div className="flex items-start justify-between pb-3 border-b border-amber-100">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{item.symbolEmoji}</span>
+                        <div className="p-1 rounded-lg bg-amber-50 border border-amber-200 shrink-0">
+                          <FestivalThemeArtwork themeId={cardTheme.id} size={22} variant="emblem" />
                         </div>
-                        <div className="text-[10px] font-mono text-gray-500">
-                          {item.id}
+                        <div>
+                          <div className="font-black text-xs text-amber-950 leading-tight">
+                            {item.festivalNameHindi}
+                          </div>
+                          <div className="text-[10px] font-mono text-gray-500">
+                            {item.id} • <span className="text-amber-800 font-semibold">{cardTheme.nameHindi.split('(')[0]}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full">
-                      {item.date}
-                    </span>
-                  </div>
+                      <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full shrink-0">
+                        {item.date}
+                      </span>
+                    </div>
 
                   <div className="py-3 space-y-1">
                     <div className="text-xs text-gray-500 font-semibold">
@@ -836,7 +1040,8 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
                     </button>
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           </div>
         )}

@@ -44,53 +44,72 @@ export const CandidatePhotoUploader: React.FC<CandidatePhotoUploaderProps> = ({
 
   // Compress and convert image file to Base64 data URL
   const processImageFile = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert('कृपया केवल इमेज फाइल (JPG, PNG, JPEG) चुनें।');
-      return;
+    try {
+      if (!file.type || !file.type.startsWith('image/')) {
+        setCameraError('कृपया केवल इमेज फाइल (JPG, PNG, JPEG) चुनें।');
+        return;
+      }
+
+      setCameraError(null);
+      setIsProcessing(true);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 800;
+              const MAX_HEIGHT = 800;
+              let width = img.width;
+              let height = img.height;
+
+              if (width > height) {
+                if (width > MAX_WIDTH) {
+                  height = Math.round((height * MAX_WIDTH) / width);
+                  width = MAX_WIDTH;
+                }
+              } else {
+                if (height > MAX_HEIGHT) {
+                  width = Math.round((width * MAX_HEIGHT) / height);
+                  height = MAX_HEIGHT;
+                }
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+                onPhotoChange(compressedDataUrl);
+              } else {
+                onPhotoChange(e.target?.result as string);
+              }
+            } catch {
+              onPhotoChange(e.target?.result as string);
+            } finally {
+              setIsProcessing(false);
+            }
+          };
+          img.onerror = () => {
+            setIsProcessing(false);
+            onPhotoChange(e.target?.result as string);
+          };
+          img.src = e.target?.result as string;
+        } catch {
+          setIsProcessing(false);
+        }
+      };
+      reader.onerror = () => {
+        setIsProcessing(false);
+        setCameraError('फोटो पढ़ने में त्रुटि आई। कृपया पुनः प्रयास करें।');
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.warn('Process image file warning:', err);
+      setIsProcessing(false);
     }
-
-    setIsProcessing(true);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 800;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width = Math.round((width * MAX_HEIGHT) / height);
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-          onPhotoChange(compressedDataUrl);
-        } else {
-          onPhotoChange(e.target?.result as string);
-        }
-        setIsProcessing(false);
-      };
-      img.onerror = () => {
-        setIsProcessing(false);
-        onPhotoChange(e.target?.result as string);
-      };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {

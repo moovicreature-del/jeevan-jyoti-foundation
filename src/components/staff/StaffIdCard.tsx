@@ -444,21 +444,45 @@ export const StaffIdCard: React.FC<StaffIdCardProps> = ({
       <div className="px-4 py-2 flex-1 flex flex-col justify-between relative z-10">
         {/* Photo + Identity Badging */}
         <div className="flex items-center gap-3.5 mt-1">
-          {/* Staff Photo in Gold Frame */}
-          <div className="relative shrink-0">
-            <div className="w-22 h-26 rounded-xl p-1 bg-gradient-to-b from-amber-400 via-yellow-200 to-amber-500 shadow-md border border-amber-300">
-              <img
-                src={staff.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80'}
-                alt={staff.fullName}
-                className="w-full h-full object-cover rounded-lg bg-gray-100"
-                crossOrigin="anonymous"
-                onError={(e) => {
-                  e.currentTarget.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80';
+          {/* Staff Photo in Gold Frame with Digital Cross Stamp */}
+          <div className="relative shrink-0 overflow-visible">
+            <div className="relative w-22 h-26">
+              {/* Photo Frame (clipped to rounded corners) */}
+              <div className="w-full h-full rounded-xl p-1 bg-gradient-to-b from-amber-400 via-yellow-200 to-amber-500 shadow-md border border-amber-300 overflow-hidden">
+                <img
+                  src={staff.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80'}
+                  alt={staff.fullName}
+                  className="w-full h-full object-cover rounded-lg bg-gray-100"
+                  crossOrigin="anonymous"
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80';
+                  }}
+                />
+              </div>
+
+              {/* Digitally Attested Official Attached Cross Stamp - 100% Complete & Uncut across photo, left, right, and bottom */}
+              <div
+                className="absolute -bottom-3 -left-3.5 -right-3.5 pointer-events-none select-none z-20 flex items-center justify-center"
+                style={{
+                  transform: 'rotate(-9deg)',
+                  transformOrigin: 'center center'
                 }}
-              />
+              >
+                <img
+                  src="/assets/aistudio/IMG_20261020_133052_0b52a993.png"
+                  onError={(e) => {
+                    if (e.currentTarget.src !== '/uploads/official_stamp.png') {
+                      e.currentTarget.src = '/uploads/official_stamp.png';
+                    }
+                  }}
+                  alt="Official Seal"
+                  className="w-[108px] max-w-none h-auto max-h-12 object-contain filter contrast-160 brightness-95 mix-blend-multiply drop-shadow-[0_1px_2px_rgba(20,40,100,0.3)]"
+                />
+              </div>
             </div>
+
             {/* Active / Verified Badge */}
-            <div className="absolute -bottom-1.5 -right-1.5 bg-emerald-600 text-white p-0.5 rounded-full shadow-md border-2 border-white" title="सत्यापित सक्रिय स्टाफ">
+            <div className="absolute -top-1.5 -right-1.5 bg-emerald-600 text-white p-0.5 rounded-full shadow-md border-2 border-white z-30" title="सत्यापित सक्रिय स्टाफ">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>

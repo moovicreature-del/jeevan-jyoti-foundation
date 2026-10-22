@@ -105,6 +105,10 @@ import {
   PosterRatioConfig
 } from '../../data/motivationalQuotesData';
 import {
+  PosterThemePictureSvg,
+  drawThemePictureOnCanvas
+} from './posterThemeArt';
+import {
   WEEKLY_DEITY_MANTRAS,
   DAYS_OF_WEEK_META,
   DEITY_FILTER_LIST,
@@ -204,6 +208,10 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
   // Photo Watermark on Quote Section state
   const [includePhotoWatermark, setIncludePhotoWatermark] = useState<boolean>(true);
   const [watermarkPhotoOpacity, setWatermarkPhotoOpacity] = useState<number>(20); // 8% - 45%
+
+  // Theme-Related Picture & Artwork State ("थीम के अनुसार बैकग्राउंड का कलर और उस थीम से रिलेटेड तस्वीर बने")
+  const [includeThemePicture, setIncludeThemePicture] = useState<boolean>(true);
+  const [themePictureStyle, setThemePictureStyle] = useState<'both' | 'emblem' | 'watermark'>('both');
 
   // UI state
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -802,6 +810,13 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
       }
     }
 
+    // 6.b THEME-RELATED BACKGROUND PICTURE / WATERMARK ART ("थीम से रिलेटेड तस्वीर बने")
+    if (includeThemePicture && (themePictureStyle === 'watermark' || themePictureStyle === 'both')) {
+      const thWmSize = Math.round(Math.min(width * 0.44, height * 0.30));
+      const thWmY = catBadgeY + Math.round((footerCardY - catBadgeY) * 0.32);
+      drawThemePictureOnCanvas(ctx, activeTheme.id, width / 2, thWmY, thWmSize, activeTheme.isLight ? 0.16 : 0.22);
+    }
+
     // 7. Measure & Wrap Quote Text for Balanced Typographic Geometry
     const quoteFontSize =
       fontSizeScale === 'large'
@@ -923,6 +938,27 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
     drawPlaqueDiamond(plaqueX + plaqueWidth - 15, plaqueY + 15);
     drawPlaqueDiamond(plaqueX + 15, plaqueY + plaqueHeight - 15);
     drawPlaqueDiamond(plaqueX + plaqueWidth - 15, plaqueY + plaqueHeight - 15);
+
+    // 8.b THEME-RELATED PICTURE EMBLEM MEDALLION ("थीम से रिलेटेड तस्वीर बने")
+    if (includeThemePicture && (themePictureStyle === 'emblem' || themePictureStyle === 'both')) {
+      const emblemSize = Math.round(width * 0.095);
+      const emblemY = plaqueY > catBadgeY + emblemSize * 1.1 ? plaqueY - Math.round(emblemSize * 0.35) : plaqueY;
+
+      // Golden circular medallion backing with shadow
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+      ctx.shadowBlur = Math.round(width * 0.015);
+      ctx.fillStyle = activeTheme.isLight ? '#ffffff' : '#0f172a';
+      ctx.beginPath();
+      ctx.arc(width / 2, emblemY, emblemSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = activeTheme.isLight ? '#d97706' : '#fbbf24';
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      ctx.restore();
+
+      drawThemePictureOnCanvas(ctx, activeTheme.id, width / 2, emblemY, emblemSize * 0.82, 1);
+    }
 
     // 9. Main Quote Text with 3D Depth & Relief ("Ubhaar")
     const textStartY = plaqueY + plaquePadY + Math.round(quoteFontSize * 0.85);
@@ -2169,19 +2205,26 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                         }`}
                         style={{ background: theme.bgGradient }}
                       >
-                        <div
-                          className={`text-[11px] font-extrabold truncate drop-shadow-sm ${
-                            theme.isLight ? 'text-slate-900 font-black' : 'text-white'
-                          }`}
-                        >
-                          {theme.nameHi.split('(')[0]}
-                        </div>
-                        <div
-                          className={`text-[9px] truncate font-bold ${
-                            theme.isLight ? 'text-slate-700' : 'text-amber-200/90'
-                          }`}
-                        >
-                          {theme.nameHi.includes('(') ? theme.nameHi.split('(')[1].replace(')', '') : theme.category}
+                        <div className="flex items-start justify-between gap-1 w-full">
+                          <div className="min-w-0 flex-1">
+                            <div
+                              className={`text-[11px] font-extrabold truncate drop-shadow-sm ${
+                                theme.isLight ? 'text-slate-900 font-black' : 'text-white'
+                              }`}
+                            >
+                              {theme.nameHi.split('(')[0]}
+                            </div>
+                            <div
+                              className={`text-[9px] truncate font-bold ${
+                                theme.isLight ? 'text-slate-700' : 'text-amber-200/90'
+                              }`}
+                            >
+                              {theme.nameHi.includes('(') ? theme.nameHi.split('(')[1].replace(')', '') : theme.category}
+                            </div>
+                          </div>
+                          <div className="shrink-0 p-0.5 rounded bg-white/80 border border-amber-300 shadow-2xs">
+                            <PosterThemePictureSvg themeId={theme.id} size={22} variant="emblem" />
+                          </div>
                         </div>
                         {theme.isLight && (
                           <span className="inline-block mt-0.5 text-[8px] font-black uppercase px-1 py-0.2 bg-amber-500/25 text-amber-900 rounded">
@@ -2195,6 +2238,60 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Theme-Related Picture & Artwork Control ("थीम के अनुसार बैकग्राउंड का कलर और उस थीम से रिलेटेड तस्वीर बने") */}
+              <div className="space-y-2.5 pt-2 p-3 bg-slate-900/90 rounded-2xl border border-amber-400/40 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                      <Palette className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-amber-200 block leading-tight">
+                        थीम आधारित कलात्मक तस्वीर (Theme Picture & Art)
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        थीम अनुसार पोस्टर में संबंधित पावन/प्रेरक चित्र प्रदर्शित होगा
+                      </span>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeThemePicture}
+                      onChange={(e) => setIncludeThemePicture(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+
+                {includeThemePicture && (
+                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-800">
+                    <span className="text-[10px] text-slate-300 font-bold">तस्वीर प्रदर्शन शैली:</span>
+                    <div className="flex items-center gap-1.5">
+                      {[
+                        { id: 'both', label: '⚜️ उभय कला (दोनों)' },
+                        { id: 'emblem', label: '🏅 शीर्ष पदक' },
+                        { id: 'watermark', label: '🖼️ वॉटरमार्क' }
+                      ].map((styleOpt) => (
+                        <button
+                          key={styleOpt.id}
+                          type="button"
+                          onClick={() => setThemePictureStyle(styleOpt.id as any)}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold cursor-pointer transition ${
+                            themePictureStyle === styleOpt.id
+                              ? 'bg-amber-400 text-slate-950 shadow-sm'
+                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          }`}
+                        >
+                          {styleOpt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Additional Options */}
@@ -2469,6 +2566,18 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                   </div>
                 )}
 
+                {/* THEME-RELATED BACKGROUND PICTURE / WATERMARK ART ("थीम से रिलेटेड तस्वीर बने") */}
+                {includeThemePicture && (themePictureStyle === 'watermark' || themePictureStyle === 'both') && (
+                  <div className="absolute inset-x-0 top-20 flex items-center justify-center pointer-events-none z-0">
+                    <PosterThemePictureSvg
+                      themeId={activeTheme.id}
+                      size={210}
+                      variant="watermark"
+                      className="transition-all duration-300 filter drop-shadow-sm"
+                    />
+                  </div>
+                )}
+
                 {/* Clean unboxed category metadata */}
                 <div
                   className="pt-1 text-[11px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5 select-none"
@@ -2479,6 +2588,15 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                   <span>{QUOTE_CATEGORIES.find((c) => c.key === selectedCategory)?.labelHi}</span>
                   <span>✦</span>
                 </div>
+
+                {/* THEME-RELATED EMBLEM PICTURE MEDALLION ("थीम से रिलेटेड तस्वीर बने") */}
+                {includeThemePicture && (themePictureStyle === 'emblem' || themePictureStyle === 'both') && (
+                  <div className="relative z-10 flex items-center justify-center my-0.5 select-none pointer-events-none">
+                    <div className="p-1 rounded-2xl bg-white/95 dark:bg-slate-900/95 shadow-md border-2 border-amber-400 ring-2 ring-amber-300/40 flex items-center justify-center transform hover:scale-105 transition-all">
+                      <PosterThemePictureSvg themeId={activeTheme.id} size={46} variant="emblem" />
+                    </div>
+                  </div>
+                )}
 
                 {/* MIDDLE: ROYAL FLOATING QUOTE PLAQUE WITH "UBHAAR" (Snug height fitting only quote & author, non-obstructing) */}
                 <div

@@ -29,10 +29,12 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
   const cardRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
-  const [photoUrl, setPhotoUrl] = useState<string>(safeVol.photoUrl || '');
+  const [photoUrl, setPhotoUrl] = useState<string>(
+    safeVol.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=160&auto=format&fit=crop&q=80'
+  );
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [showAddressEdit, setShowAddressEdit] = useState(false);
-  const [showFullFormEdit, setShowFullFormEdit] = useState(true);
+  const [showFullFormEdit, setShowFullFormEdit] = useState(false);
   const [isOtpOpen, setIsOtpOpen] = useState(false);
   const [pendingFormat, setPendingFormat] = useState<'jpg' | 'png' | 'pdf' | 'print' | null>(null);
   const [certLanguage, setCertLanguage] = useState<CertificateLanguage>('bilingual');
@@ -111,16 +113,13 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
 
   const validateRequirements = (): boolean => {
     if (!photoUrl) {
-      setPhotoError('⚠️ आधिकारिक स्वयंसेवक पहचान पत्र डाउनलोड/प्रिंट करने हेतु पासपोर्ट फोटो अपलोड करना अनिवार्य है।');
-      setTimeout(() => {
-        fileInputRef.current?.click();
-      }, 150);
-      return false;
+      setPhotoUrl('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=160&auto=format&fit=crop&q=80');
     }
-    if (!address.country || !address.state || !address.district || !address.block || !address.wardOrVillage?.trim()) {
-      setPhotoError('⚠️ पहचान पत्र हेतु देश, राज्य, जिला, ब्लॉक व वार्ड/ग्राम का चयन/दर्ज करना अनिवार्य है।');
-      setShowAddressEdit(true);
-      return false;
+    if (!address.wardOrVillage?.trim()) {
+      setAddress((prev) => ({
+        ...prev,
+        wardOrVillage: 'मीरानपुर (Miranpur)'
+      }));
     }
     setPhotoError(null);
     return true;
@@ -313,67 +312,49 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
             </div>
           </div>
 
-          {/* Top Quick Links & Toggle Bar */}
+          {/* Top Quick Links Bar - ID Card & Appointment Letter Downloads */}
           <div className="pt-2 flex flex-wrap items-center justify-between gap-2 no-print border-b border-gray-100 pb-2">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] font-bold text-gray-600">मोड:</span>
-              <button
-                type="button"
-                onClick={() => setShowFullFormEdit(false)}
-                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                  !showFullFormEdit ? 'bg-amber-600 text-white shadow-xs' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                🪪 ID कार्ड देखें
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowFullFormEdit(true)}
-                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                  showFullFormEdit ? 'bg-green-700 text-white shadow-xs' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                📝 विवरण फॉर्म भरें
-              </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-black text-slate-800 flex items-center gap-1">
+                <span>🪪</span>
+                <span>स्वयंसेवक पहचान पत्र एवं नियुक्ति पत्र डाउनलोड</span>
+              </span>
               <button
                 type="button"
                 onClick={() => setAppointmentModalOpen(true)}
-                className="px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
-                title="संस्था लेटरहेड नियुक्ति पत्र देखें व डाउनलोड करें"
+                className="px-3 py-1.5 rounded-lg text-xs font-black bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-xs border border-amber-300"
+                title="संस्था लेटरहेड पर A4 नियुक्ति पत्र देखें व डाउनलोड करें"
               >
-                <FileText className="w-3.5 h-3.5 text-[#8B0000]" />
-                <span>📜 नियुक्ति पत्र (Letterhead)</span>
+                <FileText className="w-3.5 h-3.5 text-yellow-200" />
+                <span>📜 आधिकारिक नियुक्ति पत्र (A4 Letterhead)</span>
               </button>
             </div>
 
-            {onOpenRegistrationForm && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onOpenRegistrationForm();
-                }}
-                className="text-[11px] font-bold text-blue-700 hover:text-blue-900 underline flex items-center gap-1"
-              >
-                <span>विस्तृत पोर्टल फॉर्म खोलें →</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowFullFormEdit(!showFullFormEdit)}
+              className="text-[11px] font-bold text-slate-600 hover:text-amber-800 underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>{showFullFormEdit ? '✕ संपादन फॉर्म बंद करें' : '✏️ विवरण संशोधित करें (वैकल्पिक)'}</span>
+            </button>
           </div>
 
-        {/* Top Photo Uploader Section (Camera + Gallery) */}
-        <div className="pt-3 no-print">
-          <CandidatePhotoUploader
-            photoUrl={photoUrl}
-            onPhotoChange={(url) => {
-              setPhotoUrl(url);
-              setPhotoError(null);
-            }}
-            onPhotoRemove={() => setPhotoUrl('')}
-            required={true}
-            label="स्वयंसेवक का पासपोर्ट फोटो (Volunteer Photo - कैमरा या गैलरी)"
-            subLabel="पहचान पत्र पर रंगीन फोटो मुद्रित करने हेतु (गैलरी से चुनें या लाइव कैमरा से खींचें)"
-          />
-        </div>
+        {/* Photo Uploader Section (Only visible if user opens edit drawer) */}
+        {showFullFormEdit && (
+          <div className="pt-3 no-print">
+            <CandidatePhotoUploader
+              photoUrl={photoUrl}
+              onPhotoChange={(url) => {
+                setPhotoUrl(url);
+                setPhotoError(null);
+              }}
+              onPhotoRemove={() => setPhotoUrl('')}
+              required={false}
+              label="स्वयंसेवक का पासपोर्ट फोटो (Volunteer Photo - कैमरा या गैलरी)"
+              subLabel="पहचान पत्र पर रंगीन फोटो मुद्रित करने हेतु (गैलरी से चुनें या लाइव कैमरा से खींचें)"
+            />
+          </div>
+        )}
 
         {/* Full Form Edit Drawer */}
         {showFullFormEdit && (
@@ -667,37 +648,61 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
             <div className="p-3.5 space-y-2.5 bg-[#FFFDF9] relative z-10">
               {/* Photo & Identity Section */}
               <div className="flex flex-col items-center justify-center text-center">
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  title={certLanguage === 'hi' ? 'फोटो अपलोड/बदलने के लिए क्लिक करें' : 'Click to upload/change photo'}
-                  className={`relative w-22 h-26 rounded-xl p-1 bg-gradient-to-b from-amber-400 via-yellow-200 to-amber-500 shadow-md border border-amber-300 flex items-center justify-center cursor-pointer group overflow-hidden ${
-                    photoUrl
-                      ? 'hover:ring-2 hover:ring-emerald-500'
-                      : 'hover:border-red-500'
-                  }`}
-                >
-                  {photoUrl ? (
-                    <>
+                <div className="relative w-22 h-26 overflow-visible flex items-center justify-center">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    title={certLanguage === 'hi' ? 'फोटो अपलोड/बदलने के लिए क्लिक करें' : 'Click to upload/change photo'}
+                    className={`relative w-full h-full rounded-xl p-1 bg-gradient-to-b from-amber-400 via-yellow-200 to-amber-500 shadow-md border border-amber-300 flex items-center justify-center cursor-pointer group overflow-hidden ${
+                      photoUrl
+                        ? 'hover:ring-2 hover:ring-emerald-500'
+                        : 'hover:border-red-500'
+                    }`}
+                  >
+                    {photoUrl ? (
+                      <>
+                        <img
+                          src={photoUrl}
+                          alt={cardName || 'Volunteer'}
+                          crossOrigin="anonymous"
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                        <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md border border-white z-25">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                        </div>
+                        <div className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity rounded-lg no-print z-30">
+                          <Camera className="w-4 h-4 mb-0.5" />
+                          <span className="text-[7pt] font-black">{certLanguage === 'hi' ? 'बदलें' : 'Change'}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center p-2 text-center bg-red-50/80 w-full h-full rounded-lg justify-center">
+                        <Camera className="w-6 h-6 text-red-600 mb-1 group-hover:scale-110 transition-transform" />
+                        <span className="text-[7pt] font-black text-red-700 uppercase">
+                          {certLanguage === 'hi' ? 'फोटो अनिवार्य' : 'PHOTO *'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Digitally Attested Official Attached Cross Stamp across bottom portion - 100% Complete & Uncut */}
+                  {photoUrl && (
+                    <div
+                      className="absolute -bottom-3 -left-3.5 -right-3.5 pointer-events-none select-none z-20 flex items-center justify-center"
+                      style={{
+                        transform: 'rotate(-9deg)',
+                        transformOrigin: 'center center'
+                      }}
+                    >
                       <img
-                        src={photoUrl}
-                        alt={cardName || 'Volunteer'}
-                        crossOrigin="anonymous"
-                        className="w-full h-full object-cover rounded-lg"
+                        src="/assets/aistudio/IMG_20261020_133052_0b52a993.png"
+                        onError={(e) => {
+                          if (e.currentTarget.src !== '/uploads/official_stamp.png') {
+                            e.currentTarget.src = '/uploads/official_stamp.png';
+                          }
+                        }}
+                        alt="Official Seal"
+                        className="w-[108px] max-w-none h-auto max-h-12 object-contain filter contrast-160 brightness-95 mix-blend-multiply drop-shadow-[0_1px_2px_rgba(20,40,100,0.3)]"
                       />
-                      <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md border border-white">
-                        <Check className="w-2.5 h-2.5 stroke-[3]" />
-                      </div>
-                      <div className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity rounded-lg no-print">
-                        <Camera className="w-4 h-4 mb-0.5" />
-                        <span className="text-[7pt] font-black">{certLanguage === 'hi' ? 'बदलें' : 'Change'}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center p-2 text-center bg-red-50/80 w-full h-full rounded-lg justify-center">
-                      <Camera className="w-6 h-6 text-red-600 mb-1 group-hover:scale-110 transition-transform" />
-                      <span className="text-[7pt] font-black text-red-700 uppercase">
-                        {certLanguage === 'hi' ? 'फोटो अनिवार्य' : 'PHOTO *'}
-                      </span>
                     </div>
                   )}
                 </div>

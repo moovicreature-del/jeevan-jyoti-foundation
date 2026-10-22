@@ -83,6 +83,7 @@ export const StaffHubModal: React.FC<StaffHubModalProps> = ({
         {/* Header Banner */}
         <div className="bg-gradient-to-r from-[#8B0000] via-[#A00000] to-[#3F2B96] text-white p-5 sm:p-6 text-center relative border-b-2 border-amber-400">
           <button
+            type="button"
             onClick={onClose}
             className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
             title="बंद करें"

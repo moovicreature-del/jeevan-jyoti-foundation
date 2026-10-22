@@ -49,6 +49,8 @@ interface TabDashboardOverviewProps {
   onOpenBackupModal?: () => void;
 }
 
+import { getAllVolunteers } from '../../services/volunteerService';
+
 export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
   onSelectTab,
   onViewWebsite,
@@ -60,6 +62,7 @@ export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
   const [certCount, setCertCount] = useState<number>(0);
   const [yearCount, setYearCount] = useState<number>(0);
   const [pendingStaffCount, setPendingStaffCount] = useState<number>(0);
+  const [pendingVolCount, setPendingVolCount] = useState<number>(0);
   const [isSyncingData, setIsSyncingData] = useState<boolean>(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
 
@@ -76,7 +79,7 @@ export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
     }
   };
 
-  useEffect(() => {
+  const loadStats = () => {
     try {
       const allCerts = getAllRegisteredCertificates();
       const stats = computeCertificatePipelineStats(allCerts, '2026', 'all');
@@ -84,11 +87,25 @@ export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
       setYearCount(stats.totalSelectedYear);
 
       const staff = getAllStaffMembers();
-      const pending = staff.filter((s) => s.status === 'pending').length;
-      setPendingStaffCount(pending);
+      const pendingStaff = staff.filter((s) => s.status === 'pending').length;
+      setPendingStaffCount(pendingStaff);
+
+      const volunteers = getAllVolunteers();
+      const pendingVol = volunteers.filter((v) => v.approvalStatus === 'pending').length;
+      setPendingVolCount(pendingVol);
     } catch (e) {
       console.warn('Error loading overview stats:', e);
     }
+  };
+
+  useEffect(() => {
+    loadStats();
+    window.addEventListener('jjf-staff-updated', loadStats);
+    window.addEventListener('jjf-volunteer-updated', loadStats);
+    return () => {
+      window.removeEventListener('jjf-staff-updated', loadStats);
+      window.removeEventListener('jjf-volunteer-updated', loadStats);
+    };
   }, []);
 
   return (
@@ -162,49 +179,54 @@ export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
         </button>
       </div>
 
-      {/* Featured Banner: Staff I-Card Approvals */}
-      <div className={`rounded-3xl p-6 shadow-md border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
-        pendingStaffCount > 0
-          ? 'bg-gradient-to-r from-amber-950 via-slate-900 to-blue-950 border-amber-400 text-white ring-2 ring-amber-400/30'
-          : 'bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 border-slate-700 text-white'
-      }`}>
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-400 text-blue-950 flex items-center justify-center font-black shrink-0 shadow-md">
-            <IdCard className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.2 rounded-full font-black uppercase tracking-wider">
-                STAFF I-CARD APPROVALS
-              </span>
-              {pendingStaffCount > 0 ? (
-                <span className="text-xs bg-amber-400 text-blue-950 px-2 py-0.5 rounded-full font-black animate-pulse">
-                  {pendingStaffCount} नया आवेदन अनुमोदन हेतु लंबित
-                </span>
-              ) : (
-                <span className="text-xs text-slate-300">
-                  सभी आवेदन संसाधित
-                </span>
-              )}
+      {/* Featured Banner: Staff & Volunteer I-Card & Appointment Letter Approvals */}
+      {(() => {
+        const totalPending = pendingStaffCount + pendingVolCount;
+        return (
+          <div className={`rounded-3xl p-6 shadow-md border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+            totalPending > 0
+              ? 'bg-gradient-to-r from-amber-950 via-slate-900 to-blue-950 border-amber-400 text-white ring-2 ring-amber-400/30'
+              : 'bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 border-slate-700 text-white'
+          }`}>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-400 text-blue-950 flex items-center justify-center font-black shrink-0 shadow-md">
+                <IdCard className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.2 rounded-full font-black uppercase tracking-wider">
+                    STAFF & VOLUNTEER APPROVALS
+                  </span>
+                  {totalPending > 0 ? (
+                    <span className="text-xs bg-amber-400 text-blue-950 px-2.5 py-0.5 rounded-full font-black animate-pulse">
+                      {totalPending} नए आवेदन (स्टाफ: {pendingStaffCount}, स्वयंसेवक: {pendingVolCount}) अनुमोदन हेतु लंबित
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-300">
+                      सभी स्टाफ व स्वयंसेवक आवेदन संसाधित
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-base font-black text-white mt-0.5">
+                  स्टाफ व स्वयंसेवक (Swayam Sewak) पहचान पत्र, नियुक्ति पत्र एवं प्रमाण पत्र अनुमोदन
+                </h2>
+                <p className="text-xs text-slate-300">
+                  पंजीकृत स्टाफ व स्वयंसेवकों के आई-कार्ड, अधिकृत नियुक्ति पत्र (Appointment Letter) व प्रमाण पत्र देखें, स्वीकृति प्रदान करें एवं WhatsApp लिंक भेजें।
+                </p>
+              </div>
             </div>
-            <h2 className="text-base font-black text-white mt-0.5">
-              स्टाफ पहचान पत्र (I-Card) अनुमोदन एवं WhatsApp लिंक
-            </h2>
-            <p className="text-xs text-slate-300">
-              पंजीकृत स्टाफ की सूची देखें, स्वीकृति/अस्वीकृति प्रदान करें एवं WhatsApp पर सीधा डाउनलोड लिंक भेजें।
-            </p>
-          </div>
-        </div>
 
-        <button
-          onClick={() => onSelectTab('staff_approval')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-xs rounded-xl shadow-md transition cursor-pointer shrink-0"
-        >
-          <IdCard className="w-4 h-4" />
-          <span>स्टाफ अप्रूवल पोर्टल खोलें</span>
-          <ArrowUpRight className="w-4 h-4" />
-        </button>
-      </div>
+            <button
+              onClick={() => onSelectTab('staff_approval')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-xs rounded-xl shadow-md transition cursor-pointer shrink-0"
+            >
+              <IdCard className="w-4 h-4" />
+              <span>स्वीकृति व अनुमोदन पोर्टल खोलें</span>
+              <ArrowUpRight className="w-4 h-4" />
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Featured Banner: Super-Admin Certificate Issuance Pipeline */}
       <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white rounded-3xl p-6 shadow-md border border-blue-900 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Award, UserPlus, MapPin, Calendar, CreditCard, X, Printer, LayoutGrid, FileSpreadsheet, Search, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { TaskRecord, Volunteer } from '../types';
-import { INITIAL_TASKS, INITIAL_VOLUNTEERS } from '../data/taskData';
+import { INITIAL_TASKS } from '../data/taskData';
 import { useLanguage } from '../context/LanguageContext';
 import { StructuredAddressSelector } from './StructuredAddressSelector';
 import { EMPTY_STRUCTURED_ADDRESS, StructuredAddress } from '../data/locationData';
@@ -10,6 +10,7 @@ import { formatCertificateNumber } from '../utils/certificateUtils';
 import { FOUNDATION_INFO } from '../data/foundationData';
 import { saveWhatsAppConsent } from '../services/whatsappConsentFirestoreService';
 import { notifyNewVolunteerRegistration } from '../services/adminBotNotificationService';
+import { getAllVolunteers, registerNewVolunteer } from '../services/volunteerService';
 import toast from 'react-hot-toast';
 
 interface Props {
@@ -32,7 +33,17 @@ export const VolunteerTaskPortal: React.FC<Props> = ({
   };
 
   const { t, isHindi } = useLanguage();
-  const [volunteers, setVolunteers] = useState<Volunteer[]>(INITIAL_VOLUNTEERS);
+  const [volunteers, setVolunteers] = useState<Volunteer[]>(() => getAllVolunteers());
+
+  useEffect(() => {
+    const handleVolUpdate = () => {
+      setVolunteers(getAllVolunteers());
+    };
+    window.addEventListener('jjf-volunteer-updated', handleVolUpdate);
+    return () => {
+      window.removeEventListener('jjf-volunteer-updated', handleVolUpdate);
+    };
+  }, []);
   const [tasks] = useState<TaskRecord[]>(INITIAL_TASKS);
   const [isPrintView, setIsPrintView] = useState<boolean>(false);
   const [tableSearchQuery, setTableSearchQuery] = useState<string>('');
@@ -123,7 +134,11 @@ export const VolunteerTaskPortal: React.FC<Props> = ({
       });
     }
 
-    setVolunteers([newVol, ...volunteers]);
+    // Save volunteer and synchronize ID Card, Appointment Letter, and Certificate as 'pending' awaiting Admin approval
+    const registered = registerNewVolunteer(newVol, 'pending');
+    setVolunteers([registered, ...volunteers.filter(v => v.id !== registered.id)]);
+    toast.success('🎉 स्वयंसेवक पंजीकरण सफलतापूर्वक दर्ज हुआ! संस्था एडमिन द्वारा अनुमोदन (Approval) के बाद पहचान पत्र व नियुक्ति पत्र जारी होगा।', { duration: 5000 });
+
     setShowRegModal(false);
     setNewName('');
     setNewPhone('');
@@ -131,7 +146,7 @@ export const VolunteerTaskPortal: React.FC<Props> = ({
     setNewPhoto('');
     setNewJoinDate(getTodayDateString());
     setRegError(null);
-    onSelectVolunteerCertificate(newVol);
+    onSelectVolunteerCertificate(registered);
   };
 
   const filteredVolunteers = volunteers.filter((vol) => {

@@ -8,6 +8,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 import { AdminLoginView } from './AdminLoginView';
 import { AdminLayout } from './AdminLayout';
 import { RotateCw, ShieldCheck } from 'lucide-react';
+import { ErrorBoundary } from '../common/ErrorBoundary';
 
 interface SuperAdminPortalProps {
   isOpen: boolean;
@@ -54,10 +55,12 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({
   // यदि एडमिन लॉगइन और अप्रूव्ड है -> पूर्ण डैशबोर्ड लेआउट दिखाएं
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-100">
-      <AdminLayout
-        onBackToWebsite={onClose}
-        onOpenVerificationPortal={onOpenVerificationPortal}
-      />
+      <ErrorBoundary fallbackTitle="प्रशासनिक कंसोल (Admin Portal Error Recovered)">
+        <AdminLayout
+          onBackToWebsite={onClose}
+          onOpenVerificationPortal={onOpenVerificationPortal}
+        />
+      </ErrorBoundary>
     </div>
   );
 };

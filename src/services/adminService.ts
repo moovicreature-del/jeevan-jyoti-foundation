@@ -691,13 +691,19 @@ export function applyDynamicAppThumbnail(thumbnailUrl: string = ''): void {
 
     // 6. Force-refresh Web App Manifest dynamically so PWA download/install uses the new thumbnail
     // Chromium and W3C require fresh link tag with cache-busting timestamp
-    document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
-    const manifestLink = document.createElement('link');
-    manifestLink.rel = 'manifest';
-    manifestLink.id = 'app-pwa-manifest';
     const manifestUrl = `/manifest.json?v=${timestamp}&thumb=${encodeURIComponent(resolvedThumb)}`;
-    manifestLink.href = manifestUrl;
-    document.head.appendChild(manifestLink);
+    const existingManifest = document.querySelector('link[rel="manifest"]');
+    if (existingManifest && existingManifest.getAttribute('data-thumb') === resolvedThumb) {
+      // Already synchronized, prevent redundant DOM thrashing
+    } else {
+      document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
+      const manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      manifestLink.id = 'app-pwa-manifest';
+      manifestLink.setAttribute('data-thumb', resolvedThumb);
+      manifestLink.href = manifestUrl;
+      document.head.appendChild(manifestLink);
+    }
 
     // 7. Notify active Service Worker controller to update cached app icons
     try {
@@ -2335,13 +2341,12 @@ export async function getHomeContent(): Promise<AppHomeContent> {
  * एडमिन डेटा को गिटहब फाइलों (synced_app_data.json) में सिंक करें
  * Ensures all customizations made in AI Studio are bundled in repository for GitHub push
  */
-export async function syncCurrentAdminDataToGitHub(): Promise<{ success: boolean; message: string }> {
+export async function syncCurrentAdminDataToGitHub(triggerDownloadIfOffline: boolean = false): Promise<{ success: boolean; message: string }> {
   try {
     let homeContent: any = null;
     let paymentSettings: any = null;
     let staffMembers: any = null;
     let notices: any = null;
-
     let certificates: any = null;
 
     try {
@@ -2396,20 +2401,27 @@ export async function syncCurrentAdminDataToGitHub(): Promise<{ success: boolean
       console.warn('API sync endpoint notice:', e);
     }
 
-    // Fallback: If running in client-only or static preview, trigger download of synced_app_data.json
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'synced_app_data.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Fallback: ONLY trigger manual download if user explicitly requested it (e.g., from Backup Modal)
+    if (triggerDownloadIfOffline && typeof document !== 'undefined') {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'synced_app_data.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      return {
+        success: true,
+        message: 'डेटा फ़ाइल (synced_app_data.json) डाउनलोड हो गई है!'
+      };
+    }
 
     return {
       success: true,
-      message: 'डेटा फ़ाइल (synced_app_data.json) डाउनलोड हो गई है! इसे public/data/ में रखकर GitHub पर push करें।'
+      message: 'डेटा स्थानीय रूप से सुरक्षित है।'
     };
   } catch (err: any) {
     return {

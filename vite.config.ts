@@ -240,6 +240,20 @@ function streamMediaResponse(req: any, res: any, buffer: Buffer, mimeType: strin
 function apiDevServerPlugin(): Plugin {
   return {
     name: 'api-dev-server-plugin',
+    handleHotUpdate({ file }) {
+      // NEVER trigger full page reload on changes inside public/ (uploads, data, sitemaps, versions)
+      const normalized = file.replace(/\\/g, '/');
+      if (
+        normalized.includes('/public/') ||
+        normalized.includes('/uploads/') ||
+        normalized.includes('/dist/') ||
+        normalized.includes('/scripts/') ||
+        normalized.includes('synced_app_data.json') ||
+        normalized.includes('version.json')
+      ) {
+        return [];
+      }
+    },
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         if (!req.url) {
@@ -1249,7 +1263,14 @@ export default defineConfig({
     port: 3000,
     host: '0.0.0.0',
     watch: {
-      ignored: ['**/public/uploads/**', '**/uploads/**', '**/node_modules/**']
+      ignored: [
+        '**/public/**',
+        '**/uploads/**',
+        '**/dist/**',
+        '**/scripts/**',
+        '**/node_modules/**',
+        '**/.git/**'
+      ]
     }
   },
   build: {

@@ -9,6 +9,7 @@ export interface ExportOptions {
   pixelRatio?: number;
   orientation?: 'portrait' | 'landscape' | 'auto';
   isIdCard?: boolean;
+  isFullBleedA4?: boolean;
 }
 
 /**
@@ -147,6 +148,27 @@ export async function captureElementToImageData(
   const bg = options?.backgroundColor ?? '#FFFFFF';
   let cleanup: (() => void) | null = null;
 
+  // Determine if element or its children is an A4 letterhead or official certificate document
+  const isA4Doc = 
+    element.classList.contains('official-letterhead-a4') ||
+    Boolean(element.querySelector('.official-letterhead-a4')) ||
+    element.id.toLowerCase().includes('letterhead') ||
+    element.id.toLowerCase().includes('appointment');
+
+  let targetWidth = 0;
+  let targetHeight = 0;
+
+  if (isA4Doc) {
+    targetWidth = 794;
+    targetHeight = 1123;
+  } else {
+    targetWidth = Math.max(element.scrollWidth || 0, element.offsetWidth || 0);
+    targetHeight = Math.max(element.scrollHeight || 0, element.offsetHeight || 0);
+  }
+
+  if (targetWidth === 0) targetWidth = element.offsetWidth || 794;
+  if (targetHeight === 0) targetHeight = element.offsetHeight || 1123;
+
   // 1. Force resolve public image assets & ensure CORS accessibility
   try {
     cleanup = await forceResolvePublicAssets(element);
@@ -165,12 +187,32 @@ export async function captureElementToImageData(
       allowTaint: false,
       scrollX: 0,
       scrollY: 0,
+      x: 0,
+      y: 0,
+      width: targetWidth,
+      height: targetHeight,
+      windowWidth: Math.max(targetWidth, 1280),
+      windowHeight: Math.max(targetHeight, 1600),
       logging: false,
       imageTimeout: 25000,
       onclone: (_clonedDoc, clonedElement) => {
         // Anti-aliasing and font smoothing on root cloned element
         (clonedElement.style as any).webkitFontSmoothing = 'antialiased';
         (clonedElement.style as any).fontSmooth = 'always';
+
+        // Force full target width on cloned element and all parent containers so mobile screen boundaries never clip the canvas!
+        clonedElement.style.width = `${targetWidth}px`;
+        clonedElement.style.minWidth = `${targetWidth}px`;
+        clonedElement.style.maxWidth = `${targetWidth}px`;
+        clonedElement.style.overflow = 'visible';
+
+        let curr: HTMLElement | null = clonedElement.parentElement;
+        while (curr && curr !== _clonedDoc.body) {
+          curr.style.width = `${targetWidth}px`;
+          curr.style.minWidth = `${targetWidth}px`;
+          curr.style.overflow = 'visible';
+          curr = curr.parentElement;
+        }
 
         // Process all cloned images: remove raster filters, ensure smooth interpolation and full clarity
         const clonedImgs = clonedElement.querySelectorAll('img');
@@ -349,8 +391,11 @@ export async function exportElementAsPdf(
     // Preserve exact aspect ratio with crisp margins
     const elemAspect = elemWidth / elemHeight;
 
-    // Margin for clean printing (4mm)
-    const margin = 4;
+    // Detect if this is an A4 portrait document (aspect ~ 210/297 = 0.707)
+    const isA4PortraitDoc = options?.isFullBleedA4 || (orientation === 'portrait' && Math.abs(elemAspect - (210 / 297)) < 0.05);
+
+    // Margin for clean printing (0mm for full bleed A4 letterhead, 4mm for other standard cards)
+    const margin = isA4PortraitDoc ? 0 : 4;
     const usableWidth = pageWidth - (margin * 2);
     const usableHeight = pageHeight - (margin * 2);
 
@@ -360,13 +405,18 @@ export async function exportElementAsPdf(
     let offsetY = margin + ((usableHeight - renderHeight) / 2);
 
     // Smart Badge Sizing: If it's an ID Card (narrow portrait aspect ratio), render at standard pocket badge width (~92mm) centered on A4
-    const isIdCardDoc = options?.isIdCard || (orientation === 'portrait' && elemAspect < 0.72);
+    const isIdCardDoc = options?.isIdCard || (orientation === 'portrait' && elemAspect < 0.72 && !isA4PortraitDoc);
 
     if (isIdCardDoc) {
       renderWidth = Math.min(usableWidth, 92);
       renderHeight = renderWidth / elemAspect;
       offsetX = margin + ((usableWidth - renderWidth) / 2);
       offsetY = margin + ((usableHeight - renderHeight) / 2);
+    } else if (isA4PortraitDoc) {
+      renderWidth = pageWidth;
+      renderHeight = pageHeight;
+      offsetX = 0;
+      offsetY = 0;
     } else if (renderHeight > usableHeight) {
       renderHeight = usableHeight;
       renderWidth = usableHeight * elemAspect;

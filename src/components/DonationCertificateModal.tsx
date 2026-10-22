@@ -21,6 +21,7 @@ import { saveCertificateToRegistry } from '../services/certificateRegistryServic
 import { CertificateLanguage, getDonationCertMatter } from '../utils/certificateLanguageUtils';
 import { CertificateLanguageToggle } from './common/CertificateLanguageToggle';
 import { OfficialVerifiedBadge } from './common/OfficialVerifiedBadge';
+import { DonationLetterheadA4Document } from './common/DonationLetterheadA4Document';
 
 interface Props {
   donation: DonationRecord;
@@ -330,26 +331,24 @@ export const DonationCertificateModal: React.FC<Props> = ({ donation, onClose })
           onChange={handlePhotoUpload}
           className="hidden"
         />
-
-        <div className="overflow-x-auto py-4 flex justify-center">
+        <div className="overflow-x-auto py-4 flex justify-center bg-slate-200/80 rounded-xl">
           <div
             ref={certRef}
-            className="printable-certificate bg-[#FFFDF8] text-black p-[10px] rounded-2xl shadow-2xl relative min-w-[720px] max-w-[860px] mx-auto select-none"
-            style={{
-              border: '9px solid #8B0000',
-              boxShadow: '0 0 0 3px #D4AF37, 0 0 0 6px #700000, 0 12px 35px rgba(139, 0, 0, 0.25)',
-              backgroundColor: '#FFFDF8'
-            }}
+            className="w-[794px] min-w-[794px] max-w-[794px] bg-white print:m-0 print:shadow-none shadow-2xl"
           >
-            {/* Inner Border with Gold Filigree */}
-            <div
-              className="relative p-6 bg-[#FFFEFC] rounded-xl overflow-hidden"
-              style={{
-                border: '2.5px double #D4AF37',
-                outline: '1px dashed rgba(212, 175, 55, 0.5)',
-                outlineOffset: '-5px'
+            <DonationLetterheadA4Document
+              id="donation-cert-letterhead-print"
+              donation={{
+                ...donation,
+                photoUrl: donorPhotoUrl || donation.photoUrl,
+                address: donorAddress ? `${donorAddress.wardOrVillage}, ${donorAddress.block}, ${donorAddress.district}, ${donorAddress.state}` : donation.address
               }}
-            >
+              donorPhotoUrl={donorPhotoUrl}
+            />
+          </div>
+        </div>
+        {false && (
+          <div>
               {/* Royal Vector Gold Corner Ornaments */}
               <RoyalFourCorners color="#D4AF37" size={56} />
 
@@ -426,40 +425,64 @@ export const DonationCertificateModal: React.FC<Props> = ({ donation, onClose })
               <div className="flex items-center justify-center gap-6">
                 {/* Clickable Donor Photo Slot */}
                 <div className="shrink-0 flex flex-col items-center">
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    title={certLanguage === 'hi' ? 'दानदाता फोटो अपलोड/बदलने के लिए क्लिक करें' : 'Click to upload/change donor photo'}
-                    className={`relative w-22 h-26 rounded-lg border-2 flex flex-col items-center justify-center text-center p-1 bg-white cursor-pointer group shadow-xs overflow-hidden ${
-                      donorPhotoUrl
-                        ? 'border-[#008000] hover:ring-2 hover:ring-emerald-500'
-                        : 'border-dashed border-red-400 bg-red-50/40 hover:bg-red-50 hover:border-red-600'
-                    }`}
-                  >
-                    {donorPhotoUrl ? (
-                      <>
+                  <div className="relative w-22 h-26 overflow-visible flex items-center justify-center">
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      title={certLanguage === 'hi' ? 'दानदाता फोटो अपलोड/बदलने के लिए क्लिक करें' : 'Click to upload/change donor photo'}
+                      className={`relative w-full h-full rounded-lg border-2 flex flex-col items-center justify-center text-center p-1 bg-white cursor-pointer group shadow-xs overflow-hidden ${
+                        donorPhotoUrl
+                          ? 'border-[#008000] hover:ring-2 hover:ring-emerald-500'
+                          : 'border-dashed border-red-400 bg-red-50/40 hover:bg-red-50 hover:border-red-600'
+                      }`}
+                    >
+                      {donorPhotoUrl ? (
+                        <>
+                          <img
+                            src={donorPhotoUrl}
+                            alt={donation.donorName}
+                            crossOrigin="anonymous"
+                            className="w-full h-full object-cover rounded"
+                          />
+                          <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md z-25">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </div>
+                          <div className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity rounded no-print z-30">
+                            <Camera className="w-4 h-4 mb-0.5" />
+                            <span className="text-[7pt] font-black">{certLanguage === 'hi' ? 'बदलें' : 'Change'}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                            <Camera className="w-4 h-4 text-red-600" />
+                          </div>
+                          <span className="text-[7.5pt] font-black text-red-700 uppercase leading-tight">
+                            {certLanguage === 'hi' ? 'फोटो अपलोड *' : 'PHOTO UPLOAD *'}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Digitally Attested Official Attached Cross Stamp across bottom portion - 100% Complete & Uncut */}
+                    {donorPhotoUrl && (
+                      <div
+                        className="absolute -bottom-3 -left-3.5 -right-3.5 pointer-events-none select-none z-20 flex items-center justify-center"
+                        style={{
+                          transform: 'rotate(-9deg)',
+                          transformOrigin: 'center center'
+                        }}
+                      >
                         <img
-                          src={donorPhotoUrl}
-                          alt={donation.donorName}
-                          crossOrigin="anonymous"
-                          className="w-full h-full object-cover rounded"
+                          src="/assets/aistudio/IMG_20261020_133052_0b52a993.png"
+                          onError={(e) => {
+                            if (e.currentTarget.src !== '/uploads/official_stamp.png') {
+                              e.currentTarget.src = '/uploads/official_stamp.png';
+                            }
+                          }}
+                          alt="Official Seal"
+                          className="w-[108px] max-w-none h-auto max-h-12 object-contain filter contrast-160 brightness-95 mix-blend-multiply drop-shadow-[0_1px_2px_rgba(20,40,100,0.3)]"
                         />
-                        <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md">
-                          <Check className="w-3 h-3 stroke-[3]" />
-                        </div>
-                        <div className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity rounded no-print">
-                          <Camera className="w-4 h-4 mb-0.5" />
-                          <span className="text-[7pt] font-black">{certLanguage === 'hi' ? 'बदलें' : 'Change'}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
-                          <Camera className="w-4 h-4 text-red-600" />
-                        </div>
-                        <span className="text-[7.5pt] font-black text-red-700 uppercase leading-tight">
-                          {certLanguage === 'hi' ? 'फोटो अपलोड *' : 'PHOTO UPLOAD *'}
-                        </span>
-                      </>
+                      </div>
                     )}
                   </div>
                   <span className={`text-[7pt] font-black uppercase tracking-wider mt-1 px-1 rounded ${
@@ -593,9 +616,8 @@ export const DonationCertificateModal: React.FC<Props> = ({ donation, onClose })
                 </div>
               </div>
             </div>
-            </div>
           </div>
-        </div>
+        )}
 
         {/* OTP Verification Modal for Secure Certificate Download */}
         <OtpVerificationModal

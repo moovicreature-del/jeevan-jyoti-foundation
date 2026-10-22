@@ -29,6 +29,7 @@ import toast from 'react-hot-toast';
 import { triggerDonationReceiptEmail } from '../../services/emailService';
 import { useDonationPaymentSettings } from '../../hooks/useDonationPaymentSettings';
 import { RealPaymentGatewayModal, DonorPaymentData } from './RealPaymentGatewayModal';
+import { CandidatePhotoUploader } from '../CandidatePhotoUploader';
 
 interface Props {
   isOpen?: boolean;
@@ -48,6 +49,7 @@ export const Donation80GPortal: React.FC<Props> = ({
   // Form State
   const [donorName, setDonorName] = useState('');
   const [fatherName, setFatherName] = useState('');
+  const [donorPhoto, setDonorPhoto] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [panNumber, setPanNumber] = useState('');
@@ -126,6 +128,12 @@ export const Donation80GPortal: React.FC<Props> = ({
   const handleSubmitDonation = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Mandatory Photo Validation
+    if (!donorPhoto) {
+      toast.error('⚠️ दानदाता की पासपोर्ट साइज फोटो अपलोड करना अनिवार्य है (Photo upload is mandatory)!');
+      return;
+    }
+
     if (!donorName.trim()) {
       toast.error('कृपया दानदाता का नाम दर्ज करें!');
       return;
@@ -162,6 +170,7 @@ export const Donation80GPortal: React.FC<Props> = ({
       fatherName: fatherName.trim() || undefined,
       phone: phone.trim(),
       email: email.trim(),
+      photoUrl: donorPhoto,
       panNumber: panNumber.trim().toUpperCase() || undefined,
       address: address.trim() || undefined,
       city: city.trim() || 'Ghazipur',
@@ -444,6 +453,16 @@ export const Donation80GPortal: React.FC<Props> = ({
                   * चिह्नित फ़ील्ड अनिवार्य हैं
                 </span>
               </div>
+
+              {/* Mandatory Donor Passport Photo Upload with Camera & Gallery */}
+              <CandidatePhotoUploader
+                photoUrl={donorPhoto}
+                onPhotoChange={setDonorPhoto}
+                onPhotoRemove={() => setDonorPhoto('')}
+                required={true}
+                label="दानदाता का पासपोर्ट फोटो (Donor Photo - कैमरा या गैलरी)"
+                subLabel="आधिकारिक 80G रसीद व प्रशस्ति सम्मान पत्र पर डिजिटल क्रॉस स्टांप मुद्रण हेतु अनिवार्य"
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Donor Name* */}

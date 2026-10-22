@@ -76,6 +76,14 @@ export interface Volunteer {
   district?: string;
   block?: string;
   wardOrVillage?: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+  statusUpdatedAt?: string;
+  whatsappNotified?: boolean;
+  whatsappNotifiedAt?: string;
 }
 
 export interface DonationRecord {
@@ -258,6 +266,7 @@ export interface FestivalGreetingRecord {
   shloka: string;
   category: string;
   symbolEmoji: string;
+  themeId?: string;
 }
 
 // ----------------------------------------------------

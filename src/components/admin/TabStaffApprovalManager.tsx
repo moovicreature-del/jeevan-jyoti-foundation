@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users,
+  IdCard,
   CheckCircle2,
   XCircle,
   Clock,
@@ -55,6 +56,17 @@ import { exportElementsAsMultiPagePdf, directPrintElement } from '../../utils/ex
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import { AppointmentLetterModal } from '../common/AppointmentLetterModal';
 import { FOUNDATION_INFO } from '../../data/foundationData';
+import { Volunteer } from '../../types';
+import {
+  getAllVolunteers,
+  approveVolunteer,
+  rejectVolunteer,
+  deleteVolunteer,
+  generateVolunteerApprovalWhatsAppUrl
+} from '../../services/volunteerService';
+import { SwayamSewakCardModal } from '../SwayamSewakCardModal';
+import { VolunteerCertificateModal } from '../VolunteerCertificateModal';
+import { StampedCandidatePhoto } from '../common/StampedCandidatePhoto';
 
 export const TabStaffApprovalManager: React.FC = () => {
   const { adminProfile } = useAdminAuth();
@@ -89,17 +101,34 @@ export const TabStaffApprovalManager: React.FC = () => {
   // Delete Confirmation Dialog Modal
   const [deleteModalStaff, setDeleteModalStaff] = useState<StaffMember | null>(null);
 
+  // Active Sub-Tab: 'staff' vs 'volunteer'
+  const [activeRoleTab, setActiveRoleTab] = useState<'staff' | 'volunteer'>('staff');
+
+  // Volunteer State & Filters
+  const [volunteerList, setVolunteerList] = useState<Volunteer[]>([]);
+  const [volStatusFilter, setVolStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [adminAppointmentVolunteer, setAdminAppointmentVolunteer] = useState<Volunteer | null>(null);
+  const [previewVolunteerCard, setPreviewVolunteerCard] = useState<Volunteer | null>(null);
+  const [previewVolunteerCert, setPreviewVolunteerCert] = useState<Volunteer | null>(null);
+  const [rejectModalVolunteer, setRejectModalVolunteer] = useState<Volunteer | null>(null);
+  const [volRejectionReason, setVolRejectionReason] = useState('विवरण अथवा दस्तावेज अपूर्ण हैं।');
+  const [deleteModalVolunteer, setDeleteModalVolunteer] = useState<Volunteer | null>(null);
+
   const refreshList = () => {
     setStaffList(getAllStaffMembers());
+    setVolunteerList(getAllVolunteers());
   };
 
   useEffect(() => {
     refreshList();
 
     const handleStaffUpdate = () => refreshList();
+    const handleVolUpdate = () => refreshList();
     window.addEventListener('jjf-staff-updated', handleStaffUpdate);
+    window.addEventListener('jjf-volunteer-updated', handleVolUpdate);
     return () => {
       window.removeEventListener('jjf-staff-updated', handleStaffUpdate);
+      window.removeEventListener('jjf-volunteer-updated', handleVolUpdate);
     };
   }, []);
 
@@ -200,6 +229,98 @@ export const TabStaffApprovalManager: React.FC = () => {
     if (previewStaff?.id === deleteModalStaff.id) {
       setPreviewStaff(null);
     }
+    refreshList();
+  };
+
+  // =========================================================================
+  // VOLUNTEER (SWAYAM SEWAK) COMPUTED METRICS & ACTIONS
+  // =========================================================================
+  const volunteerCounts = useMemo(() => {
+    const pending = volunteerList.filter((v) => v.approvalStatus === 'pending').length;
+    const approved = volunteerList.filter(
+      (v) => v.approvalStatus === 'approved' || (!v.approvalStatus && (v.status === 'certified' || v.status === 'leader'))
+    ).length;
+    const rejected = volunteerList.filter((v) => v.approvalStatus === 'rejected').length;
+    return {
+      total: volunteerList.length,
+      pending,
+      approved,
+      rejected
+    };
+  }, [volunteerList]);
+
+  const filteredVolunteers = useMemo(() => {
+    return volunteerList.filter((vol) => {
+      const isApproved =
+        vol.approvalStatus === 'approved' || (!vol.approvalStatus && (vol.status === 'certified' || vol.status === 'leader'));
+      const isPending = vol.approvalStatus === 'pending';
+      const isRejected = vol.approvalStatus === 'rejected';
+
+      if (volStatusFilter === 'pending' && !isPending) return false;
+      if (volStatusFilter === 'approved' && !isApproved) return false;
+      if (volStatusFilter === 'rejected' && !isRejected) return false;
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matches =
+          vol.name.toLowerCase().includes(q) ||
+          vol.id.toLowerCase().includes(q) ||
+          (vol.phone && vol.phone.includes(q)) ||
+          vol.fatherName.toLowerCase().includes(q) ||
+          vol.area.toLowerCase().includes(q) ||
+          (vol.areaHindi && vol.areaHindi.includes(q)) ||
+          (vol.district && vol.district.toLowerCase().includes(q));
+        if (!matches) return false;
+      }
+
+      return true;
+    });
+  }, [volunteerList, volStatusFilter, searchQuery]);
+
+  const handleApproveVol = (vol: Volunteer) => {
+    const adminName = adminProfile?.name || 'Admin';
+    const res = approveVolunteer(vol.id, adminName);
+    if (res) {
+      refreshList();
+      showToast(`✅ स्वयंसेवक ${vol.name} जी का पंजीकरण, आई-कार्ड व नियुक्ति पत्र स्वीकृत!`);
+      const cleanPhone = (vol.phone || '').replace(/[^0-9]/g, '').slice(-10);
+      setWhatsappModalData({
+        staff: {
+          id: vol.id,
+          fullName: vol.name,
+          fatherOrHusbandName: vol.fatherName,
+          relationType: vol.relationType === 'Husband' ? 'Wo' : 'So',
+          designation: vol.role || 'सक्रिय स्वयंसेवक (Volunteer)',
+          department: vol.areaHindi || vol.area,
+          dutyLocation: `${vol.district || 'गाजीपुर'}, ${vol.state || 'उ.प्र.'}`,
+          mobile: cleanPhone,
+          photoUrl: vol.photoUrl || '',
+          bloodGroup: vol.bloodGroup || 'O+',
+          dateOfJoining: vol.joinDate,
+          staffBadgeLevel: 'कार्यकारी स्टाफ (Executive Staff)',
+          status: 'approved',
+          createdAt: vol.joinDate,
+          emergencyContact: cleanPhone,
+          address: `${vol.wardOrVillage || ''}, ${vol.block || ''}, ${vol.district || 'गाजीपुर'}`
+        },
+        url: res.whatsappUrl
+      });
+    }
+  };
+
+  const handleConfirmRejectVol = () => {
+    if (!rejectModalVolunteer) return;
+    rejectVolunteer(rejectModalVolunteer.id, volRejectionReason);
+    showToast(`❌ स्वयंसेवक ${rejectModalVolunteer.name} का आवेदन अस्वीकृत किया गया।`);
+    setRejectModalVolunteer(null);
+    refreshList();
+  };
+
+  const handleConfirmDeleteVol = () => {
+    if (!deleteModalVolunteer) return;
+    deleteVolunteer(deleteModalVolunteer.id);
+    showToast(`🗑️ स्वयंसेवक ${deleteModalVolunteer.name} का रिकॉर्ड स्थायी रूप से हटाया गया।`);
+    setDeleteModalVolunteer(null);
     refreshList();
   };
 
@@ -335,13 +456,70 @@ export const TabStaffApprovalManager: React.FC = () => {
         </div>
       )}
 
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-md border border-blue-800">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-amber-400 text-blue-950 flex items-center justify-center font-black shadow-md shrink-0">
-              <Award className="w-7 h-7" />
-            </div>
+      {/* 🌟 MASTER ROLE SWITCHER: STAFF APPROVALS vs VOLUNTEER (SWAYAM SEWAK) APPROVALS */}
+      <div className="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setActiveRoleTab('staff')}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+              activeRoleTab === 'staff'
+                ? 'bg-blue-900 text-white shadow-md shadow-blue-900/20'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <IdCard className={`w-4 h-4 ${activeRoleTab === 'staff' ? 'text-amber-300' : 'text-slate-500'}`} />
+            <span>1. स्टाफ अप्रूवल (Staff Approvals)</span>
+            {counts.pending > 0 && (
+              <span className="bg-amber-400 text-blue-950 font-black text-[10px] px-2 py-0.5 rounded-full animate-pulse shadow-xs">
+                {counts.pending} लंबित
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveRoleTab('volunteer')}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+              activeRoleTab === 'volunteer'
+                ? 'bg-blue-900 text-white shadow-md shadow-blue-900/20'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <Award className={`w-4 h-4 ${activeRoleTab === 'volunteer' ? 'text-amber-300' : 'text-slate-500'}`} />
+            <span>2. स्वयंसेवक अप्रूवल (Swayam Sewak Approvals)</span>
+            {volunteerCounts.pending > 0 && (
+              <span className="bg-amber-400 text-blue-950 font-black text-[10px] px-2 py-0.5 rounded-full animate-pulse shadow-xs">
+                {volunteerCounts.pending} लंबित
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="text-[11px] text-slate-500 font-bold flex items-center gap-2">
+          <span>
+            कुल लंबित अनुमोदन: <strong className="text-amber-700 font-mono font-black">{counts.pending + volunteerCounts.pending}</strong>
+          </span>
+          <span>•</span>
+          <button
+            onClick={refreshList}
+            className="text-blue-800 hover:underline flex items-center gap-1 cursor-pointer font-bold"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>रिफ्रेश</span>
+          </button>
+        </div>
+      </div>
+
+      {activeRoleTab === 'staff' && (
+        <>
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-md border border-blue-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-amber-400 text-blue-950 flex items-center justify-center font-black shadow-md shrink-0">
+                  <Award className="w-7 h-7" />
+                </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg sm:text-xl font-black tracking-tight text-white font-['Cinzel',serif]">
@@ -971,6 +1149,16 @@ export const TabStaffApprovalManager: React.FC = () => {
                             <Eye className="w-3.5 h-3.5 text-blue-800" />
                           </button>
 
+                          {/* 6b. Official Appointment Letter Button */}
+                          <button
+                            onClick={() => setAdminAppointmentStaff(staff)}
+                            className="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                            title="संस्था के अधिकृत लेटरहेड पर स्टाफ नियुक्ति पत्र देखें व प्रिंट करें"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-amber-700" />
+                            <span>नियुक्ति पत्र</span>
+                          </button>
+
                           {/* 7. Delete Button (Permanent deletion from database) */}
                           <button
                             onClick={() => handleDelete(staff)}
@@ -1014,12 +1202,14 @@ export const TabStaffApprovalManager: React.FC = () => {
                 }`}
               >
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  {/* Left: Staff Photo + Core Profile */}
+                  {/* Left: Staff Photo with Digital Cross Stamp + Core Profile */}
                   <div className="flex items-start gap-3.5">
-                    <img
-                      src={staff.photoUrl}
-                      alt={staff.fullName}
-                      className="w-16 h-20 sm:w-18 sm:h-22 object-cover rounded-xl border-2 border-amber-400 shadow-sm shrink-0 bg-slate-100"
+                    <StampedCandidatePhoto
+                      photoUrl={staff.photoUrl}
+                      name={staff.fullName}
+                      className="w-16 sm:w-18 shrink-0"
+                      containerClassName="aspect-3/4"
+                      showStamp={true}
                     />
 
                     <div className="min-w-0 space-y-1">
@@ -1252,6 +1442,16 @@ export const TabStaffApprovalManager: React.FC = () => {
                       <span>कार्ड देखें</span>
                     </button>
 
+                    {/* Official Appointment Letter Button in Staff Card */}
+                    <button
+                      onClick={() => setAdminAppointmentStaff(staff)}
+                      className="px-3 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      title="संस्था के अधिकृत लेटरहेड पर स्टाफ नियुक्ति पत्र देखें व प्रिंट करें"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-amber-700" />
+                      <span>नियुक्ति पत्र</span>
+                    </button>
+
                     {/* Delete button (Permanent Deletion) */}
                     <button
                       onClick={() => handleDelete(staff)}
@@ -1268,6 +1468,564 @@ export const TabStaffApprovalManager: React.FC = () => {
           })}
         </div>
       )}
+    </>
+  )}
+
+  {/* ========================================================================= */}
+  {/* 🤝 VOLUNTEER (SWAYAM SEWAK) APPROVAL VIEW                                  */}
+  {/* ========================================================================= */}
+  {activeRoleTab === 'volunteer' && (
+    <>
+      {/* Volunteer Header Banner */}
+      <div className="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-md border border-emerald-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-amber-400 text-blue-950 flex items-center justify-center font-black shadow-md shrink-0">
+              <Award className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-lg sm:text-xl font-black tracking-tight text-white font-['Cinzel',serif]">
+                  स्वयंसेवक (Swayam Sewak) अनुमोदन एवं जारीकरण (Volunteer Approvals)
+                </h2>
+                {volunteerCounts.pending > 0 && (
+                  <span className="bg-amber-400 text-blue-950 font-black text-xs px-2.5 py-0.5 rounded-full animate-pulse shadow-xs">
+                    {volunteerCounts.pending} नए स्वयंसेवक लंबित
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-emerald-200 mt-1">
+                स्वयंसेवक पंजीकरण प्राप्त होते ही यहाँ सूची दिखेगी। अनुमोदन (Approve) करते ही डिजिटल पहचान पत्र (I-Card), अधिकृत लेटरहेड नियुक्ति पत्र (Appointment Letter) और सेवा सम्मान प्रमाण पत्र (Certificate) सक्रिय हो जाएंगे तथा WhatsApp पर लिंक जाएगा।
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={refreshList}
+            className="self-start sm:self-auto flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition cursor-pointer border border-white/15"
+          >
+            <RefreshCw className="w-4 h-4 text-amber-300" />
+            <span>रिफ्रेश सूची</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Volunteer KPI Overview Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        {/* 1. Pending */}
+        <button
+          onClick={() => setVolStatusFilter('pending')}
+          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+            volStatusFilter === 'pending'
+              ? 'bg-amber-500/15 border-amber-500 shadow-md ring-2 ring-amber-400/30'
+              : 'bg-white border-slate-200 hover:border-amber-400'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-amber-700">
+              लंबित अनुमोदन (Pending)
+            </span>
+            <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2 flex items-baseline gap-2">
+            <span>{volunteerCounts.pending}</span>
+            {volunteerCounts.pending > 0 && (
+              <span className="text-[11px] text-amber-600 font-bold">कार्रवाई आवश्यक</span>
+            )}
+          </div>
+          <p className="text-[10px] text-slate-500 mt-1">स्वीकृति हेतु प्रतीक्षारत नए स्वयंसेवक</p>
+        </button>
+
+        {/* 2. Approved */}
+        <button
+          onClick={() => setVolStatusFilter('approved')}
+          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+            volStatusFilter === 'approved'
+              ? 'bg-emerald-500/15 border-emerald-500 shadow-md ring-2 ring-emerald-400/30'
+              : 'bg-white border-slate-200 hover:border-emerald-400'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700">
+              स्वीकृत स्वयंसेवक (Approved)
+            </span>
+            <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2">
+            <span>{volunteerCounts.approved}</span>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-1">सक्रिय व अधिकृत स्वयंसेवक</p>
+        </button>
+
+        {/* 3. Rejected */}
+        <button
+          onClick={() => setVolStatusFilter('rejected')}
+          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+            volStatusFilter === 'rejected'
+              ? 'bg-red-500/15 border-red-500 shadow-md ring-2 ring-red-400/30'
+              : 'bg-white border-slate-200 hover:border-red-400'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-red-700">
+              अस्वीकृत (Rejected)
+            </span>
+            <div className="w-7 h-7 rounded-xl bg-red-100 text-red-700 flex items-center justify-center">
+              <XCircle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2">
+            <span>{volunteerCounts.rejected}</span>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-1">निरस्त किए गए आवेदन</p>
+        </button>
+
+        {/* 4. Total */}
+        <button
+          onClick={() => setVolStatusFilter('all')}
+          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+            volStatusFilter === 'all'
+              ? 'bg-blue-500/15 border-blue-600 shadow-md ring-2 ring-blue-400/30'
+              : 'bg-white border-slate-200 hover:border-blue-400'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-blue-800">
+              कुल पंजीकृत स्वयंसेवक (Total)
+            </span>
+            <div className="w-7 h-7 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2">
+            <span>{volunteerCounts.total}</span>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-1">संस्था के पंजीकृत समाज सेवी</p>
+        </button>
+      </div>
+
+      {/* Volunteer Filter Chips & Search Bar */}
+      <div className="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+        {/* Status Filter Chips */}
+        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          {[
+            { id: 'pending', label: '⏳ लंबित अप्रूवल', count: volunteerCounts.pending, color: 'text-amber-800 bg-amber-100' },
+            { id: 'approved', label: '✅ स्वीकृत स्वयंसेवक', count: volunteerCounts.approved, color: 'text-emerald-800 bg-emerald-100' },
+            { id: 'rejected', label: '❌ अस्वीकृत', count: volunteerCounts.rejected, color: 'text-red-800 bg-red-100' },
+            { id: 'all', label: '👥 सभी स्वयंसेवक', count: volunteerCounts.total, color: 'text-blue-800 bg-blue-100' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setVolStatusFilter(tab.id as any)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                volStatusFilter === tab.id
+                  ? 'bg-blue-900 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${tab.color}`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Search Input & View Toggle */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="नाम, मोबाइल, कार्यक्षेत्र या ID..."
+              className="w-full pl-9 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-800 focus:bg-white outline-hidden"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 shrink-0">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                viewMode === 'table' ? 'bg-white text-blue-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="टेबल व्यू"
+            >
+              <Table className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">टेबल</span>
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`p-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                viewMode === 'cards' ? 'bg-white text-blue-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="कार्ड्स व्यू"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">कार्ड्स</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Volunteer List: Empty State */}
+      {filteredVolunteers.length === 0 ? (
+        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 space-y-3">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto">
+            <Award className="w-8 h-8" />
+          </div>
+          <h3 className="font-black text-slate-900 text-base">कोई स्वयंसेवक रिकॉर्ड नहीं मिला</h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            {searchQuery
+              ? `खोज "${searchQuery}" के लिए कोई परिणाम नहीं मिला।`
+              : volStatusFilter === 'pending'
+              ? 'वर्तमान में कोई नया स्वयंसेवक आवेदन अनुमोदन हेतु लंबित नहीं है।'
+              : 'चयनित फ़िल्टर के अंतर्गत कोई स्वयंसेवक दर्ज नहीं है।'}
+          </p>
+        </div>
+      ) : viewMode === 'table' ? (
+        /* Volunteer Table View */
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-900 text-white font-black uppercase text-[10px] tracking-wider border-b border-slate-800">
+                  <th className="px-4 py-3.5">स्वयंसेवक विवरण (Volunteer)</th>
+                  <th className="px-4 py-3.5">आईडी / कार्यक्षेत्र (ID & Area)</th>
+                  <th className="px-4 py-3.5">संपर्क व रक्त समूह (Phone)</th>
+                  <th className="px-4 py-3.5">पता व तिथि (Date & Location)</th>
+                  <th className="px-4 py-3.5">अनुमोदन स्थिति (Status)</th>
+                  <th className="px-4 py-3.5 text-right">दस्तावेज़ एवं कार्रवाई (Actions)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredVolunteers.map((vol) => {
+                  const isApproved =
+                    vol.approvalStatus === 'approved' || (!vol.approvalStatus && (vol.status === 'certified' || vol.status === 'leader'));
+                  const isPending = vol.approvalStatus === 'pending';
+                  const isRejected = vol.approvalStatus === 'rejected';
+
+                  return (
+                    <tr key={vol.id} className="hover:bg-slate-50/70 transition-colors">
+                      {/* Photo + Name + Father */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={vol.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=160&auto=format&fit=crop&q=80'}
+                            alt={vol.name}
+                            className="w-10 h-10 rounded-xl object-cover border border-amber-300 shadow-2xs shrink-0"
+                            crossOrigin="anonymous"
+                          />
+                          <div className="min-w-0">
+                            <div className="font-black text-slate-900 text-xs truncate">{vol.name}</div>
+                            <div className="text-[11px] text-slate-500 truncate">
+                              पिता/पति: {vol.fatherName}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* ID & Area */}
+                      <td className="px-4 py-3.5">
+                        <span className="font-mono font-black text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md text-[11px]">
+                          {vol.id}
+                        </span>
+                        <div className="text-[11px] font-bold text-amber-800 mt-1">
+                          {vol.areaHindi || vol.area}
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          {vol.role}
+                        </div>
+                      </td>
+
+                      {/* Phone & Blood Group */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1 font-mono font-bold text-slate-800 text-xs">
+                          <Phone className="w-3 h-3 text-emerald-600" />
+                          <span>{vol.phone || '+91 8052361666'}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-0.5">
+                          <Droplet className="w-3 h-3 text-red-500" />
+                          <span>रक्त समूह: <strong className="text-red-700">{vol.bloodGroup || 'O+'}</strong></span>
+                        </div>
+                      </td>
+
+                      {/* Date & Location */}
+                      <td className="px-4 py-3.5">
+                        <div className="text-slate-800 text-xs font-semibold">
+                          {vol.joinDate || '2026-01-15'}
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-slate-400" />
+                          <span>{vol.district || 'गाजीपुर'}, {vol.state || 'उ.प्र.'}</span>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3.5">
+                        {isPending ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-black bg-amber-50 border-amber-300 text-amber-900 shadow-2xs">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                            </span>
+                            <Clock className="w-3 h-3 text-amber-700" />
+                            <span>लंबित अनुमोदन</span>
+                          </div>
+                        ) : isApproved ? (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-black bg-emerald-50 border-emerald-300 text-emerald-900 shadow-2xs">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>स्वीकृत एवं सक्रिय</span>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-black bg-red-50 border-red-300 text-red-900 shadow-2xs">
+                            <XCircle className="w-3.5 h-3.5 text-red-600" />
+                            <span>अस्वीकृत</span>
+                          </div>
+                        )}
+                        {isRejected && vol.rejectionReason && (
+                          <div className="text-[10px] text-red-700 bg-red-100/70 border border-red-200 px-2 py-0.5 rounded-md mt-1 truncate max-w-[180px]">
+                            {vol.rejectionReason}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Document & Approval Actions */}
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {/* 1. Swayam Sewak ID Card */}
+                          <button
+                            type="button"
+                            onClick={() => setPreviewVolunteerCard(vol)}
+                            className="px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title="स्वयंसेवक डिजिटल पहचान पत्र (I-Card) देखें व डाउनलोड करें"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-blue-700" />
+                            <span>🪪 आई-कार्ड</span>
+                          </button>
+
+                          {/* 2. Official Appointment Letter */}
+                          <button
+                            type="button"
+                            onClick={() => setAdminAppointmentVolunteer(vol)}
+                            className="px-2 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title="संस्था लेटरहेड पर A4 नियुक्ति पत्र देखें व प्रिंट करें"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-amber-700" />
+                            <span>📜 नियुक्ति पत्र</span>
+                          </button>
+
+                          {/* 3. Official Certificate */}
+                          <button
+                            type="button"
+                            onClick={() => setPreviewVolunteerCert(vol)}
+                            className="px-2 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                            title="मानद सेवा सम्मान प्रमाण पत्र देखें व डाउनलोड करें"
+                          >
+                            <Award className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>🎖️ प्रमाण पत्र</span>
+                          </button>
+
+                          {/* 4. Approve Action */}
+                          {(isPending || isRejected) && (
+                            <button
+                              type="button"
+                              onClick={() => handleApproveVol(vol)}
+                              className="px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-lg text-[11px] font-black shadow-xs transition flex items-center gap-1 cursor-pointer border border-emerald-400"
+                              title="स्वीकृत करें (Approve) और तीनों दस्तावेज़ जारी करें"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-200" />
+                              <span>स्वीकृत करें</span>
+                            </button>
+                          )}
+
+                          {/* 5. Reject Action (if pending) */}
+                          {isPending && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRejectModalVolunteer(vol);
+                                setVolRejectionReason('दस्तावेज अथवा विवरण अपूर्ण होने के कारण');
+                              }}
+                              className="px-2 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
+                              title="अस्वीकृत करें (Reject)"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>अस्वीकृत</span>
+                            </button>
+                          )}
+
+                          {/* 6. Delete Action */}
+                          <button
+                            type="button"
+                            onClick={() => setDeleteModalVolunteer(vol)}
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-bold transition cursor-pointer"
+                            title="रिकॉर्ड हटाएं"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* Volunteer Cards View */
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredVolunteers.map((vol) => {
+            const isApproved =
+              vol.approvalStatus === 'approved' || (!vol.approvalStatus && (vol.status === 'certified' || vol.status === 'leader'));
+            const isPending = vol.approvalStatus === 'pending';
+            const isRejected = vol.approvalStatus === 'rejected';
+
+            return (
+              <div
+                key={vol.id}
+                className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition space-y-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <StampedCandidatePhoto
+                      photoUrl={vol.photoUrl}
+                      name={vol.name}
+                      className="w-14 sm:w-16 shrink-0"
+                      containerClassName="aspect-3/4"
+                      showStamp={true}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-black text-slate-900 text-sm truncate">{vol.name}</div>
+                      <div className="text-xs text-slate-500 truncate">पिता/पति: {vol.fatherName}</div>
+                      <span className="inline-block mt-1 font-mono font-black text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md text-[10.5px]">
+                        {vol.id}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    {isPending ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                        ⏳ लंबित
+                      </span>
+                    ) : isApproved ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+                        ✓ स्वीकृत
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-red-100 text-red-900 border border-red-300">
+                        ✕ अस्वीकृत
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold">सेवा प्रकल्प (Area):</span>
+                    <span className="font-bold text-slate-800 truncate block">{vol.areaHindi || vol.area}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold">रक्त समूह (Blood):</span>
+                    <span className="font-bold text-red-700">{vol.bloodGroup || 'O+'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold">मोबाइल (Phone):</span>
+                    <span className="font-mono font-bold text-slate-800">{vol.phone || '+91 8052361666'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold">जिला / क्षेत्र:</span>
+                    <span className="font-semibold text-slate-700">{vol.district || 'गाजीपुर'}</span>
+                  </div>
+                </div>
+
+                {/* 3 Document Links + Approval Buttons */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewVolunteerCard(vol)}
+                      className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-blue-700" />
+                      <span>🪪 आई-कार्ड</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setAdminAppointmentVolunteer(vol)}
+                      className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-amber-700" />
+                      <span>📜 नियुक्ति पत्र</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPreviewVolunteerCert(vol)}
+                      className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <Award className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>🎖️ प्रमाण पत्र</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {(isPending || isRejected) && (
+                      <button
+                        type="button"
+                        onClick={() => handleApproveVol(vol)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs transition flex items-center gap-1 cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>स्वीकृत करें</span>
+                      </button>
+                    )}
+
+                    {isPending && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRejectModalVolunteer(vol);
+                          setVolRejectionReason('दस्तावेज अथवा विवरण अपूर्ण होने के कारण');
+                        }}
+                        className="px-2.5 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-xl text-xs font-bold transition cursor-pointer"
+                      >
+                        अस्वीकृत
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setDeleteModalVolunteer(vol)}
+                      className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  )}
 
       {/* WHATSAPP SENDING DIALOG MODAL */}
       {whatsappModalData && (
@@ -1850,6 +2608,126 @@ export const TabStaffApprovalManager: React.FC = () => {
             address: adminAppointmentStaff.address || FOUNDATION_INFO.address
           }}
         />
+      )}
+
+      {/* 📜 Volunteer Appointment Letter Modal (Official Letterhead) for Admin */}
+      {adminAppointmentVolunteer && (
+        <AppointmentLetterModal
+          isOpen={!!adminAppointmentVolunteer}
+          onClose={() => setAdminAppointmentVolunteer(null)}
+          type="volunteer"
+          volunteerData={{
+            id: adminAppointmentVolunteer.id,
+            name: adminAppointmentVolunteer.name,
+            fatherName: adminAppointmentVolunteer.fatherName,
+            relationType: adminAppointmentVolunteer.relationType,
+            role: adminAppointmentVolunteer.role,
+            area: adminAppointmentVolunteer.areaHindi || adminAppointmentVolunteer.area,
+            phone: adminAppointmentVolunteer.phone,
+            photoUrl: adminAppointmentVolunteer.photoUrl,
+            address: `${adminAppointmentVolunteer.wardOrVillage || 'मीरानपुर'}, ${adminAppointmentVolunteer.block || 'मोहम्मदाबाद'}, ${adminAppointmentVolunteer.district || 'गाजीपुर'}, ${adminAppointmentVolunteer.state || 'उ.प्र.'}`,
+            issueDate: adminAppointmentVolunteer.joinDate
+          }}
+        />
+      )}
+
+      {/* 🪪 Volunteer ID Card Modal */}
+      {previewVolunteerCard && (
+        <SwayamSewakCardModal
+          volunteer={previewVolunteerCard}
+          onClose={() => setPreviewVolunteerCard(null)}
+        />
+      )}
+
+      {/* 🎖️ Volunteer Honorary Service Certificate Modal */}
+      {previewVolunteerCert && (
+        <VolunteerCertificateModal
+          volunteer={previewVolunteerCert}
+          onClose={() => setPreviewVolunteerCert(null)}
+        />
+      )}
+
+      {/* ❌ Volunteer Rejection Dialog Modal */}
+      {rejectModalVolunteer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-red-300 space-y-4 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center gap-3 text-red-700">
+              <div className="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center font-black">
+                <XCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 text-base">स्वयंसेवक आवेदन अस्वीकृत करें</h3>
+                <p className="text-xs text-slate-500">{rejectModalVolunteer.name} ({rejectModalVolunteer.id})</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">अस्वीकृति का कारण (Reason for Rejection):</label>
+              <textarea
+                value={volRejectionReason}
+                onChange={(e) => setVolRejectionReason(e.target.value)}
+                rows={3}
+                className="w-full p-2.5 text-xs border rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-red-500 outline-hidden"
+                placeholder="दस्तावेज अथवा विवरण अपूर्ण होने के कारण..."
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setRejectModalVolunteer(null)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                रद्द करें
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmRejectVol}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-md"
+              >
+                अस्वीकृत करें
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🗑️ Volunteer Deletion Dialog Modal */}
+      {deleteModalVolunteer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-rose-300 space-y-4 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-center gap-3 text-rose-700">
+              <div className="w-10 h-10 rounded-2xl bg-rose-100 flex items-center justify-center font-black">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 text-base">स्वयंसेवक रिकॉर्ड हटाएं</h3>
+                <p className="text-xs text-slate-500">{deleteModalVolunteer.name} ({deleteModalVolunteer.id})</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              क्या आप वाकई स्वयंसेवक <strong>{deleteModalVolunteer.name}</strong> का रिकॉर्ड स्थायी रूप से हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।
+            </p>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModalVolunteer(null)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                रद्द करें
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteVol}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs cursor-pointer shadow-md"
+              >
+                स्थायी रूप से हटाएं
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

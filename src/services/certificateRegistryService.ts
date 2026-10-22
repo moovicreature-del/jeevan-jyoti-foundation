@@ -8,6 +8,7 @@ import { archiveCertificateToPublicArchive } from './publicVerifiedArchiveServic
 export type CertificateCategoryType =
   | 'volunteer_cert'
   | 'volunteer_id'
+  | 'staff_id'
   | 'donation_80g'
   | 'task_appreciation'
   | 'festival_greeting';
@@ -850,6 +851,7 @@ export interface MonthlyIssuanceData {
   total: number;
   volunteer_cert: number;
   volunteer_id: number;
+  staff_id: number;
   donation_80g: number;
   task_appreciation: number;
   festival_greeting: number;
@@ -862,6 +864,7 @@ export interface YearlyIssuanceData {
   growthVsPrevYear: number;
   volunteer_cert: number;
   volunteer_id: number;
+  staff_id: number;
   donation_80g: number;
   task_appreciation: number;
   festival_greeting: number;
@@ -991,6 +994,7 @@ export function computeCertificatePipelineStats(
       total: 0,
       volunteer_cert: 0,
       volunteer_id: 0,
+      staff_id: 0,
       donation_80g: 0,
       task_appreciation: 0,
       festival_greeting: 0,
@@ -1007,6 +1011,7 @@ export function computeCertificatePipelineStats(
       growthVsPrevYear: 0,
       volunteer_cert: 0,
       volunteer_id: 0,
+      staff_id: 0,
       donation_80g: 0,
       task_appreciation: 0,
       festival_greeting: 0
@@ -1020,6 +1025,7 @@ export function computeCertificatePipelineStats(
   const categoryCounts = {
     volunteer_cert: 0,
     volunteer_id: 0,
+    staff_id: 0,
     donation_80g: 0,
     task_appreciation: 0,
     festival_greeting: 0
@@ -1045,6 +1051,7 @@ export function computeCertificatePipelineStats(
         growthVsPrevYear: 0,
         volunteer_cert: 0,
         volunteer_id: 0,
+        staff_id: 0,
         donation_80g: 0,
         task_appreciation: 0,
         festival_greeting: 0
@@ -1129,6 +1136,14 @@ export function computeCertificatePipelineStats(
       count: categoryCounts.volunteer_id,
       percentage: totalAllTime > 0 ? Math.round((categoryCounts.volunteer_id / totalAllTime) * 100) : 0,
       color: '#0284c7' // Sky 600
+    },
+    {
+      type: 'staff_id' as CertificateCategoryType,
+      labelHi: 'स्टाफ पहचान पत्र (Staff ID)',
+      labelEn: 'Staff ID Cards',
+      count: categoryCounts.staff_id,
+      percentage: totalAllTime > 0 ? Math.round((categoryCounts.staff_id / totalAllTime) * 100) : 0,
+      color: '#e11d48' // Rose 600
     },
     {
       type: 'donation_80g' as CertificateCategoryType,
@@ -1270,12 +1285,24 @@ export function computeCertificatePipelineStats(
  * Super-Admin API Fetcher: Fetches server-side stats from /api/admin/certificates/stats with fallback
  */
 export async function fetchServerCertificateStats(year: string = '2026', month: string = 'all'): Promise<CertificatePipelineStats> {
+  const localCerts = getAllRegisteredCertificates();
   try {
     const res = await fetch('/api/admin/certificates/stats');
     if (res.ok) {
       const data = await res.json();
       if (data && data.success && Array.isArray(data.certificates)) {
-        return computeCertificatePipelineStats(data.certificates, year, month);
+        // Merge server certificates with local storage records so freshly submitted registrations are ALWAYS present
+        const certMap = new Map<string, RegisteredCertificateItem>();
+        data.certificates.forEach((c: RegisteredCertificateItem) => {
+          if (c && c.id) certMap.set(c.id, c);
+        });
+        localCerts.forEach((c: RegisteredCertificateItem) => {
+          if (c && c.id) {
+            certMap.set(c.id, { ...certMap.get(c.id), ...c });
+          }
+        });
+        const merged = Array.from(certMap.values());
+        return computeCertificatePipelineStats(merged, year, month);
       }
     }
   } catch (err) {
@@ -1283,7 +1310,6 @@ export async function fetchServerCertificateStats(year: string = '2026', month: 
   }
 
   // Fallback to local and synchronized Firestore records
-  const all = getAllRegisteredCertificates();
-  return computeCertificatePipelineStats(all, year, month);
+  return computeCertificatePipelineStats(localCerts, year, month);
 }
 

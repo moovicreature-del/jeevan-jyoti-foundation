@@ -26,6 +26,8 @@ import {
 import { StaffMember, StaffRelationType } from '../../types/staff';
 import { registerNewStaffMember } from '../../services/staffService';
 import confetti from 'canvas-confetti';
+import { CandidatePhotoUploader } from '../CandidatePhotoUploader';
+import { StampedCandidatePhoto } from '../common/StampedCandidatePhoto';
 
 interface StaffRegistrationModalProps {
   onClose: () => void;
@@ -87,7 +89,7 @@ export const StaffRegistrationModal: React.FC<StaffRegistrationModalProps> = ({
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [aadhaarOrIdRef, setAadhaarOrIdRef] = useState('');
   const [address, setAddress] = useState('ग्राम मीरानपुर, पो. मोहम्मदाबाद, गाजीपुर (उ.प्र.) - 233303');
-  const [photoUrl, setPhotoUrl] = useState(SAMPLE_AVATARS[0]);
+  const [photoUrl, setPhotoUrl] = useState('');
   const [badgeLevel, setBadgeLevel] = useState<'कोर टीम (Core Team)' | 'कार्यकारी स्टाफ (Executive Staff)' | 'वरिष्ठ अधिकारी (Lead Officer)'>('कार्यकारी स्टाफ (Executive Staff)');
   const [dutyLocation, setDutyLocation] = useState('गाजीपुर मुख्य शाखा (Ghazipur HQ)');
 
@@ -95,29 +97,16 @@ export const StaffRegistrationModal: React.FC<StaffRegistrationModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredStaff, setRegisteredStaff] = useState<StaffMember | null>(null);
 
-  // Photo Upload Handler
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setFormError('कृपया 5MB से छोटी पासपोर्ट फोटो चुनें।');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        if (uploadEvent.target?.result) {
-          setPhotoUrl(uploadEvent.target.result as string);
-          setFormError(null);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   // Form Submit Handler
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    // 1. Mandatory Photo Validation
+    if (!photoUrl || !photoUrl.trim() || SAMPLE_AVATARS.includes(photoUrl)) {
+      setFormError('⚠️ स्टाफ सदस्य की पासपोर्ट साइज फोटो अपलोड करना अनिवार्य है (Photo upload is mandatory)!');
+      return;
+    }
 
     // Validations
     if (!fullName.trim()) {
@@ -246,12 +235,14 @@ export const StaffRegistrationModal: React.FC<StaffRegistrationModalProps> = ({
               </p>
             </div>
 
-            {/* Staff Card Preview Snippet */}
+            {/* Staff Card Preview Snippet with Digital Cross Stamp */}
             <div className="max-w-md mx-auto p-4 bg-white rounded-xl border border-amber-200 shadow-md flex items-center gap-4 text-left">
-              <img
-                src={registeredStaff.photoUrl}
-                alt={registeredStaff.fullName}
-                className="w-14 h-16 object-cover rounded-lg border-2 border-amber-400 shadow-xs"
+              <StampedCandidatePhoto
+                photoUrl={registeredStaff.photoUrl}
+                name={registeredStaff.fullName}
+                className="w-16 shrink-0"
+                containerClassName="aspect-3/4"
+                showStamp={true}
               />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-black text-gray-900 truncate">
@@ -299,6 +290,7 @@ export const StaffRegistrationModal: React.FC<StaffRegistrationModalProps> = ({
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <button
+                type="button"
                 onClick={() => onSuccessViewCard(registeredStaff)}
                 className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-[#8B0000] via-red-700 to-amber-600 hover:from-red-800 hover:to-amber-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
@@ -306,17 +298,20 @@ export const StaffRegistrationModal: React.FC<StaffRegistrationModalProps> = ({
                 <span>मोबाइल नंबर से स्थिति जांचें (Check Status)</span>
               </button>
               <button
+                type="button"
                 onClick={onClose}
                 className="w-full sm:w-auto px-5 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer"
               >
                 पूर्ण / बन्द करें (Done)
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setRegisteredStaff(null);
                   setFullName('');
                   setFatherOrHusbandName('');
                   setMobile('');
+                  setPhotoUrl('');
                 }}
                 className="w-full sm:w-auto px-4 py-3 text-amber-900 hover:bg-amber-50 font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
@@ -334,63 +329,18 @@ export const StaffRegistrationModal: React.FC<StaffRegistrationModalProps> = ({
               </div>
             )}
 
-            {/* 1. Photo Selection & Avatar */}
-            <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-center gap-4">
-              <div className="relative shrink-0">
-                <img
-                  src={photoUrl}
-                  alt="Staff Preview"
-                  className="w-20 h-24 object-cover rounded-xl border-2 border-amber-400 shadow-md bg-white"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-2 -right-2 p-1.5 bg-[#8B0000] text-white rounded-full shadow-md hover:bg-red-800 cursor-pointer transition-transform hover:scale-110"
-                  title="गैलरी / कैमरा से फोटो अपलोड करें"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-              </div>
-
-              <div className="flex-1 text-center sm:text-left">
-                <div className="text-xs font-bold text-gray-800">
-                  📷 पासपोर्ट साइज फोटो (Passport Size Photo)
-                </div>
-                <p className="text-[11px] text-gray-600 mt-0.5">
-                  अपनी स्पष्ट फोटो अपलोड करें या नीचे दिए गए सैंपल अवतार में से चुनें:
-                </p>
-                {/* Sample Avatar Picker */}
-                <div className="flex items-center justify-center sm:justify-start gap-1.5 mt-2">
-                  {SAMPLE_AVATARS.map((av, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setPhotoUrl(av)}
-                      className={`w-8 h-8 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
-                        photoUrl === av ? 'border-[#8B0000] scale-110 shadow-xs' : 'border-gray-200 opacity-70 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={av} alt={`Avatar ${idx}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-2.5 py-1 text-[11px] font-bold text-[#8B0000] bg-white border border-[#8B0000] rounded-lg hover:bg-red-50 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Upload className="w-3 h-3" />
-                    <span>अपलोड</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+            {/* 1. Mandatory Passport Photo Upload with Camera / Gallery Support */}
+            <CandidatePhotoUploader
+              photoUrl={photoUrl}
+              onPhotoChange={(url) => {
+                setPhotoUrl(url);
+                setFormError(null);
+              }}
+              onPhotoRemove={() => setPhotoUrl('')}
+              required={true}
+              label="स्टाफ सदस्य का पासपोर्ट फोटो (Staff Photo - कैमरा या गैलरी)"
+              subLabel="आधिकारिक 2-Page पहचान पत्र एवं संस्था रिकॉर्ड पर डिजिटल क्रॉस स्टांप हेतु अनिवार्य"
+            />
 
             {/* 2. Personal Information */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">

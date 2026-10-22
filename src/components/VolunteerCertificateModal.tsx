@@ -546,45 +546,69 @@ export const VolunteerCertificateModal: React.FC<Props> = ({ volunteer, onClose 
                 <div className="flex items-center gap-5 px-3 py-1">
                   {/* Left: Square Verified Photo */}
                   <div className="shrink-0 flex flex-col items-center justify-center">
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      title={customPhotoUrl ? 'फोटो बदलने के लिए क्लिक करें' : 'फोटो अपलोड करने के लिए क्लिक करें (Mandatory)'}
-                      className={`relative w-26 h-30 border-2 rounded-lg flex flex-col items-center justify-center text-center p-1 shadow-xs bg-white cursor-pointer group transition-all overflow-hidden ${
-                        customPhotoUrl
-                          ? 'border-[#008000] hover:ring-2 hover:ring-emerald-500'
-                          : 'border-dashed border-red-400 bg-red-50/40 hover:bg-red-50 hover:border-red-600'
-                      }`}
-                    >
-                      {customPhotoUrl ? (
-                        <>
+                    <div className="relative w-26 h-30 overflow-visible flex items-center justify-center">
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        title={customPhotoUrl ? 'फोटो बदलने के लिए क्लिक करें' : 'फोटो अपलोड करने के लिए क्लिक करें (Mandatory)'}
+                        className={`relative w-full h-full border-2 rounded-lg flex flex-col items-center justify-center text-center p-1 shadow-xs bg-white cursor-pointer group transition-all overflow-hidden ${
+                          customPhotoUrl
+                            ? 'border-[#008000] hover:ring-2 hover:ring-emerald-500'
+                            : 'border-dashed border-red-400 bg-red-50/40 hover:bg-red-50 hover:border-red-600'
+                        }`}
+                      >
+                        {customPhotoUrl ? (
+                          <>
+                            <img
+                              src={customPhotoUrl}
+                              alt={volunteerName}
+                              crossOrigin="anonymous"
+                              className="w-full h-full object-cover rounded"
+                            />
+                            {/* Green verified check badge */}
+                            <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md z-25">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </div>
+                            {/* Hover Overlay */}
+                            <div className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity rounded no-print z-30">
+                              <Camera className="w-4 h-4 mb-0.5 text-white" />
+                              <span className="text-[7.5pt] font-black leading-tight">बदलें (Change)</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                              <Camera className="w-5 h-5 text-red-600" />
+                            </div>
+                            <span className="text-[8pt] font-black text-red-700 uppercase leading-tight">
+                              फोटो अनिवार्य *
+                            </span>
+                            <span className="text-[7pt] font-bold text-gray-600 uppercase mt-0.5">
+                              CLICK HERE
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Digitally Attested Official Attached Cross Stamp across bottom portion - 100% Complete & Uncut */}
+                      {customPhotoUrl && (
+                        <div
+                          className="absolute -bottom-3 -left-3.5 -right-3.5 pointer-events-none select-none z-20 flex items-center justify-center"
+                          style={{
+                            transform: 'rotate(-9deg)',
+                            transformOrigin: 'center center'
+                          }}
+                        >
                           <img
-                            src={customPhotoUrl}
-                            alt={volunteerName}
-                            crossOrigin="anonymous"
-                            className="w-full h-full object-cover rounded"
+                            src="/assets/aistudio/IMG_20261020_133052_0b52a993.png"
+                            onError={(e) => {
+                              if (e.currentTarget.src !== '/uploads/official_stamp.png') {
+                                e.currentTarget.src = '/uploads/official_stamp.png';
+                              }
+                            }}
+                            alt="Official Seal"
+                            className="w-[112px] max-w-none h-auto max-h-12 object-contain filter contrast-160 brightness-95 mix-blend-multiply drop-shadow-[0_1px_2px_rgba(20,40,100,0.3)]"
                           />
-                          {/* Green verified check badge */}
-                          <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md">
-                            <Check className="w-3 h-3 stroke-[3]" />
-                          </div>
-                          {/* Hover Overlay */}
-                          <div className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-opacity rounded no-print">
-                            <Camera className="w-4 h-4 mb-0.5 text-white" />
-                            <span className="text-[7.5pt] font-black leading-tight">बदलें (Change)</span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
-                            <Camera className="w-5 h-5 text-red-600" />
-                          </div>
-                          <span className="text-[8pt] font-black text-red-700 uppercase leading-tight">
-                            फोटो अपलोड *
-                          </span>
-                          <span className="text-[7pt] font-bold text-gray-600 uppercase mt-0.5">
-                            CLICK HERE
-                          </span>
-                        </>
+                        </div>
                       )}
                     </div>
                     {/* Caption underneath photo */}
