@@ -274,8 +274,9 @@ export function approveCertificateInRegistry(certId: string, approvedBy: string 
   if (idx < 0) return null;
 
   const timestamp = new Date().toISOString();
+  const target = current[idx];
   const updated: RegisteredCertificateItem = {
-    ...current[idx],
+    ...target,
     approvalStatus: 'approved',
     approvedAt: timestamp,
     approvedBy: approvedBy,
@@ -285,6 +286,73 @@ export function approveCertificateInRegistry(certId: string, approvedBy: string 
   };
 
   current[idx] = updated;
+
+  // Propagate approval to companion volunteer records (ID card, Volunteer Cert, Appointment Letter)
+  const cleanPhone = normalizePhoneNumber(target.phone);
+  if (target.type === 'volunteer_id' || target.type === 'volunteer_cert' || target.id.includes('VOL') || target.id.includes('ID')) {
+    current.forEach((item, i) => {
+      if (i !== idx) {
+        const itemPhone = normalizePhoneNumber(item.phone);
+        const isSamePhone = cleanPhone && itemPhone === cleanPhone;
+        const isCompanionId =
+          (certId.includes('VOL') && item.id === certId.replace('VOL', 'ID')) ||
+          (certId.includes('ID') && item.id === certId.replace('ID', 'VOL')) ||
+          item.id === `${certId}-APPT` ||
+          item.id.replace('-APPT', '') === certId;
+
+        if (
+          isCompanionId ||
+          (isSamePhone && (item.type === 'volunteer_cert' || item.type === 'volunteer_id' || item.id.includes('VOL') || item.id.includes('ID') || item.id.includes('-APPT')))
+        ) {
+          current[i] = {
+            ...item,
+            approvalStatus: 'approved',
+            approvedAt: timestamp,
+            approvedBy: approvedBy,
+            rejectionReason: undefined,
+            rejectedAt: undefined,
+            updatedAt: timestamp
+          };
+          saveCertificateToFirestore(current[i]).catch(() => {});
+        }
+      }
+    });
+
+    // Also update volunteer roster in localStorage
+    try {
+      const rawVols = localStorage.getItem('jjf_volunteers');
+      if (rawVols) {
+        const vols = JSON.parse(rawVols);
+        if (Array.isArray(vols)) {
+          let volChanged = false;
+          vols.forEach((v: any) => {
+            const vPhone = normalizePhoneNumber(v.phone);
+            if (
+              (cleanPhone && vPhone === cleanPhone) ||
+              v.id === certId ||
+              (certId.includes('ID') && v.id === certId.replace('ID', 'VOL')) ||
+              (certId.includes('VOL') && v.id === certId.replace('VOL', 'ID'))
+            ) {
+              v.approvalStatus = 'approved';
+              v.status = 'certified';
+              v.approvedAt = timestamp;
+              v.approvedBy = approvedBy;
+              volChanged = true;
+            }
+          });
+          if (volChanged) {
+            localStorage.setItem('jjf_volunteers', JSON.stringify(vols));
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('jjf-volunteer-updated'));
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.debug('Volunteer update note:', err);
+    }
+  }
+
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
   } catch (e) {
@@ -688,6 +756,83 @@ export function getCertificatesByPhone(phone: string): RegisteredCertificateItem
         approvalStatus: existingVol.approvalStatus || 'approved'
       });
     }
+  }
+
+  // Also check jjf_volunteers so registered volunteers automatically have their ID Card & Certificate fetched
+  try {
+    const rawVols = typeof window !== 'undefined' ? localStorage.getItem('jjf_volunteers') : null;
+    if (rawVols) {
+      const volList: any[] = JSON.parse(rawVols);
+      if (Array.isArray(volList)) {
+        const foundVol = volList.find((v) => normalizePhoneNumber(v.phone) === clean);
+        if (foundVol) {
+          const effectiveApproval = foundVol.approvalStatus || (foundVol.status === 'certified' ? 'approved' : 'pending');
+          const hasVolCert = result.some(isVolCertItem);
+          const hasVolId = result.some(isVolIdItem);
+          const baseId = foundVol.id || `JJF-VOL-2026-001`;
+          const certId = baseId.includes('ID') ? baseId.replace(/ID/g, 'VOL') : (baseId.includes('VOL') ? baseId : `JJF-VOL-2026-${baseId.replace(/\D/g, '').slice(-3) || '101'}`);
+          const cardId = baseId.includes('VOL') ? baseId.replace(/VOL/g, 'ID') : (baseId.includes('ID') ? baseId : `JJF-ID-2026-${baseId.replace(/\D/g, '').slice(-3) || '101'}`);
+
+          if (!hasVolCert) {
+            result.unshift({
+              id: certId,
+              type: 'volunteer_cert',
+              titleHindi: 'आधिकारिक स्वयंसेवक सेवा सम्मान प्रमाण पत्र',
+              titleEnglish: 'Official Volunteer Certificate',
+              recipientName: foundVol.name,
+              fatherOrHusbandName: foundVol.fatherName,
+              phone: clean,
+              issueDate: foundVol.joinDate || new Date().toISOString().slice(0, 10),
+              categoryOrPurpose: `${foundVol.role || 'Dedicated Swayam Sewak'} • ${foundVol.areaHindi || foundVol.area || 'समाज सेवा व शिक्षा'}`,
+              photoUrl: foundVol.photoUrl,
+              details: `सेवा योगदान: ${foundVol.areaHindi || foundVol.area || 'समाज सेवा व शिक्षा'} • निष्काम समाज सेवा सम्मान`,
+              status: 'verified',
+              approvalStatus: effectiveApproval,
+              approvedAt: foundVol.approvedAt,
+              approvedBy: foundVol.approvedBy,
+              rawVolunteer: foundVol
+            });
+          } else {
+            const certIdx = result.findIndex(isVolCertItem);
+            if (certIdx >= 0 && effectiveApproval === 'approved') {
+              result[certIdx].approvalStatus = 'approved';
+              result[certIdx].approvedAt = foundVol.approvedAt || result[certIdx].approvedAt;
+              result[certIdx].approvedBy = foundVol.approvedBy || result[certIdx].approvedBy;
+            }
+          }
+
+          if (!hasVolId) {
+            result.push({
+              id: cardId,
+              type: 'volunteer_id',
+              titleHindi: 'स्वयंसेवक डिजिटल पहचान पत्र',
+              titleEnglish: 'Swayam Sewak Digital ID Card',
+              recipientName: foundVol.name,
+              fatherOrHusbandName: foundVol.fatherName,
+              phone: clean,
+              issueDate: foundVol.joinDate || new Date().toISOString().slice(0, 10),
+              categoryOrPurpose: `${foundVol.role || 'Dedicated Swayam Sewak'} • ${foundVol.areaHindi || foundVol.area || 'शिक्षा एवं सामाजिक सेवा'}`,
+              photoUrl: foundVol.photoUrl,
+              details: `रक्त समूह: ${foundVol.bloodGroup || 'O+'} • अधिकृत स्वयंसेवक पहचान पत्र`,
+              status: 'active',
+              approvalStatus: effectiveApproval,
+              approvedAt: foundVol.approvedAt,
+              approvedBy: foundVol.approvedBy,
+              rawVolunteer: foundVol
+            });
+          } else {
+            const idIdx = result.findIndex(isVolIdItem);
+            if (idIdx >= 0 && effectiveApproval === 'approved') {
+              result[idIdx].approvalStatus = 'approved';
+              result[idIdx].approvedAt = foundVol.approvedAt || result[idIdx].approvedAt;
+              result[idIdx].approvedBy = foundVol.approvedBy || result[idIdx].approvedBy;
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.debug('Volunteer lookup in getCertificatesByPhone note:', err);
   }
 
   return result;

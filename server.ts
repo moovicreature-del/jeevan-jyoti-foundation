@@ -383,7 +383,7 @@ app.get(['/favicon.ico', '/favicon.png'], (_req, res, next) => {
 });
 
 // Dynamic Web App Manifest - returns manifest with latest custom thumbnail
-app.get(['/manifest.json', '/api/manifest.json'], (req, res) => {
+app.get(['/manifest.json', '/manifest.webmanifest', '/api/manifest.json'], (req, res) => {
   const queryThumb = req.query.thumb as string | undefined;
   const rawThumb = queryThumb || serverAppThumbnailUrl;
 
@@ -465,6 +465,7 @@ app.get(['/manifest.json', '/api/manifest.json'], (req, res) => {
     lang: 'hi',
     dir: 'ltr',
     categories: ['social', 'education', 'lifestyle', 'utilities'],
+    prefer_related_applications: false,
     icons,
     shortcuts: [
       {

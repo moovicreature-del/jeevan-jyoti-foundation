@@ -312,31 +312,67 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
             </div>
           </div>
 
-          {/* Top Quick Links Bar - ID Card & Appointment Letter Downloads */}
-          <div className="pt-2 flex flex-wrap items-center justify-between gap-2 no-print border-b border-gray-100 pb-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-black text-slate-800 flex items-center gap-1">
-                <span>🪪</span>
-                <span>स्वयंसेवक पहचान पत्र एवं नियुक्ति पत्र डाउनलोड</span>
+          {/* Top Dual Document Download Hub (ID Card & Appointment Letter) */}
+          <div className="mt-2 mb-2.5 p-3 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 border-2 border-amber-300 shadow-xs flex flex-wrap items-center justify-between gap-2.5 no-print">
+            <div className="flex items-center gap-2">
+              <span className="w-7 h-7 rounded-lg bg-[#8B0000] text-amber-300 flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                📁
               </span>
+              <div>
+                <span className="text-xs font-black text-[#8B0000] block leading-tight">
+                  स्वयंसेवक दस्तावेज़ डाउनलोड केंद्र (Dual Document Hub):
+                </span>
+                <span className="text-[10.5px] text-gray-700 font-medium">
+                  नीचे दोनों आधिकारिक दस्तावेज़ 300 DPI में डाउनलोड करें:
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Option 1: ID Card Download */}
+              <div className="inline-flex items-center bg-white rounded-xl border border-emerald-400 p-0.5 shadow-2xs">
+                <span className="text-[11px] font-black text-emerald-900 px-2 flex items-center gap-1">
+                  <span>🪪 ID कार्ड:</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleInitiateDownload('jpg')}
+                  disabled={downloading !== null}
+                  className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-black cursor-pointer shadow-2xs disabled:opacity-50"
+                  title="ID कार्ड JPG डाउनलोड करें"
+                >
+                  {downloading === 'jpg' ? '...' : 'JPG'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInitiateDownload('pdf')}
+                  disabled={downloading !== null}
+                  className="ml-1 px-2.5 py-1 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-black cursor-pointer shadow-2xs disabled:opacity-50"
+                  title="ID कार्ड PDF डाउनलोड करें"
+                >
+                  {downloading === 'pdf' ? '...' : 'PDF'}
+                </button>
+              </div>
+
+              {/* Option 2: Appointment Letter Download */}
               <button
                 type="button"
                 onClick={() => setAppointmentModalOpen(true)}
-                className="px-3 py-1.5 rounded-lg text-xs font-black bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-xs border border-amber-300"
-                title="संस्था लेटरहेड पर A4 नियुक्ति पत्र देखें व डाउनलोड करें"
+                className="px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-xs border border-amber-300 hover:scale-102"
+                title="संस्था के अधिकृत लेटरहेड पर A4 नियुक्ति पत्र (Appointment Letter) खोलें व डाउनलोड करें"
               >
                 <FileText className="w-3.5 h-3.5 text-yellow-200" />
-                <span>📜 आधिकारिक नियुक्ति पत्र (A4 Letterhead)</span>
+                <span>📜 अपॉइंटमेंट लेटर डाउनलोड (A4)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowFullFormEdit(!showFullFormEdit)}
+                className="text-[11px] font-bold text-slate-600 hover:text-amber-800 underline flex items-center gap-1 cursor-pointer ml-1"
+              >
+                <span>{showFullFormEdit ? '✕ संपादन बंद' : '✏️ संपादन'}</span>
               </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setShowFullFormEdit(!showFullFormEdit)}
-              className="text-[11px] font-bold text-slate-600 hover:text-amber-800 underline flex items-center gap-1 cursor-pointer"
-            >
-              <span>{showFullFormEdit ? '✕ संपादन फॉर्म बंद करें' : '✏️ विवरण संशोधित करें (वैकल्पिक)'}</span>
-            </button>
           </div>
 
         {/* Photo Uploader Section (Only visible if user opens edit drawer) */}

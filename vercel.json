@@ -5,7 +5,41 @@
   "outputDirectory": "dist",
   "headers": [
     {
-      "source": "/(index.html|sw.js|version.json|manifest.json)",
+      "source": "/(manifest.json|manifest.webmanifest)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json; charset=utf-8"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(index.html|version.json)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -29,6 +63,19 @@
           "value": "public, max-age=31536000, immutable"
         }
       ]
+    },
+    {
+      "source": "/(pwa-icon-.*|apple-touch-icon.*|favicon.*|logo.*|official-seal.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
     }
   ],
   "rewrites": [
@@ -37,7 +84,7 @@
       "destination": "/api"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/|assets/|uploads/|.*\\.[\\w]+$).*)",
       "destination": "/index.html"
     }
   ]

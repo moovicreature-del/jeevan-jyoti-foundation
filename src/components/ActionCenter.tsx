@@ -136,17 +136,17 @@ export const ActionCenter: React.FC<ActionCenterProps> = ({
             </span>
           </button>
 
-          {/* 5. Volunteer Certificate Registration Form */}
+          {/* 5. Volunteer Certificate Direct Download (Auto-fetched from Volunteer ID) */}
           <button
             onClick={onOpenVolunteerCert}
             className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 cursor-pointer group text-center"
-            title="स्वयंसेवक पंजीकरण व प्रमाण पत्र फॉर्म खोलें"
+            title="स्वयंसेवक प्रमाण पत्र डाउनलोड करें (स्वयंसेवक ID डेटा से स्वतः संकलित)"
           >
             <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
               <Award className="w-5 h-5 text-blue-700" />
             </div>
             <span className="font-black text-slate-900">{t('action.vol_cert', 'स्वयंसेवक प्रमाण पत्र', 'Volunteer Cert')}</span>
-            <span className="text-[9px] text-blue-800 font-semibold mt-0.5">{t('action.vol_cert_sub', 'स्वयंसेवक फॉर्म', 'Volunteer Reg')}</span>
+            <span className="text-[9px] text-blue-800 font-semibold mt-0.5">{t('action.vol_cert_sub', '⚡ प्रमाण पत्र डाउनलोड', '⚡ Download Cert')}</span>
           </button>
 
           {/* 6. Swayam Sewak ID Card Registration Form */}

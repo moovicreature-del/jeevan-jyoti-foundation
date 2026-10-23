@@ -42,9 +42,19 @@ async function run() {
     await logo.clone().resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(distDir, 'apple-touch-icon.png'));
     await logo.clone().toFile(path.join(distDir, 'logo.png'));
     await seal.clone().toFile(path.join(distDir, 'official-seal.png'));
+
+    if (fs.existsSync(path.join(rootDir, 'public/manifest.json'))) {
+      fs.copyFileSync(path.join(rootDir, 'public/manifest.json'), path.join(distDir, 'manifest.json'));
+    }
+    if (fs.existsSync(path.join(rootDir, 'public/manifest.webmanifest'))) {
+      fs.copyFileSync(path.join(rootDir, 'public/manifest.webmanifest'), path.join(distDir, 'manifest.webmanifest'));
+    }
+    if (fs.existsSync(path.join(rootDir, 'public/sw.js'))) {
+      fs.copyFileSync(path.join(rootDir, 'public/sw.js'), path.join(distDir, 'sw.js'));
+    }
   }
 
-  console.log('✅ ALL ICONS SYNCHRONIZED WITH AUTHENTIC NGO LOGO AND OFFICIAL SEAL!');
+  console.log('✅ ALL ICONS AND MANIFEST SYNCHRONIZED WITH AUTHENTIC NGO LOGO AND OFFICIAL SEAL!');
 }
 
 run().catch(console.error);

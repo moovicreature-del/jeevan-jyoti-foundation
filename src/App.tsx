@@ -111,6 +111,7 @@ export function App() {
   const [showDownloadCertificatesModal, setShowDownloadCertificatesModal] = useState(false);
   const [downloadCertInitialPhone, setDownloadCertInitialPhone] = useState<string>('');
   const [downloadCertInitialId, setDownloadCertInitialId] = useState<string>('');
+  const [downloadCertInitialTab, setDownloadCertInitialTab] = useState<string>('all');
   const [showGoogleDriveModal, setShowGoogleDriveModal] = useState(false);
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [staffModalTab, setStaffModalTab] = useState<'options' | 'registration' | 'download'>('options');
@@ -210,6 +211,10 @@ export function App() {
         }
         if (downloadCertParam) {
           setDownloadCertInitialId(downloadCertParam);
+        }
+        const tabParam = urlParams.get('tab') || urlParams.get('type');
+        if (tabParam) {
+          setDownloadCertInitialTab(tabParam);
         }
         setShowDownloadCertificatesModal(true);
       }
@@ -331,9 +336,15 @@ export function App() {
         {/* Action Hub Strip */}
         <ActionCenter
           onOpenQuickDonate={() => setShowQuickDonateModal(true)}
-          onOpenDownloadCertificates={() => setShowDownloadCertificatesModal(true)}
+          onOpenDownloadCertificates={() => {
+            setDownloadCertInitialTab('all');
+            setShowDownloadCertificatesModal(true);
+          }}
           onOpenDonate={() => handleOpenFormTab('donation')}
-          onOpenVolunteerCert={() => handleOpenFormTab('volunteer')}
+          onOpenVolunteerCert={() => {
+            setDownloadCertInitialTab('volunteer_cert');
+            setShowDownloadCertificatesModal(true);
+          }}
           onOpenDonationCert={() => handleOpenFormTab('donation')}
           onOpenIdCard={() => handleOpenFormTab('volunteer')}
           onOpenTaskCert={() => handleOpenFormTab('appreciation')}
@@ -442,7 +453,10 @@ export function App() {
             setActiveFormTab('volunteer');
             document.getElementById('official-forms')?.scrollIntoView({ behavior: 'smooth' });
           }}
-          onOpenVolunteerCert={() => setSelectedVolunteer(INITIAL_VOLUNTEERS[0])}
+          onOpenVolunteerCert={() => {
+            setDownloadCertInitialTab('volunteer_cert');
+            setShowDownloadCertificatesModal(true);
+          }}
         />
 
         {/* Voices from Ground */}
@@ -631,7 +645,10 @@ export function App() {
           {showDownloadCertificatesModal && (
             <DownloadCertificatesModal
               isOpen={showDownloadCertificatesModal}
-              onClose={() => setShowDownloadCertificatesModal(false)}
+              onClose={() => {
+                setShowDownloadCertificatesModal(false);
+                setDownloadCertInitialTab('all');
+              }}
               onPreviewVolunteerCert={(vol) => {
                 setShowDownloadCertificatesModal(false);
                 setSelectedVolunteer(vol);
@@ -654,6 +671,7 @@ export function App() {
               }}
               initialPhone={downloadCertInitialPhone}
               initialCertId={downloadCertInitialId}
+              initialTab={downloadCertInitialTab}
             />
           )}
 

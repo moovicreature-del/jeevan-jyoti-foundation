@@ -92,6 +92,7 @@ interface DownloadCertificatesModalProps {
   onPreviewFestivalCert: (fest: FestivalGreetingRecord) => void;
   initialPhone?: string;
   initialCertId?: string;
+  initialTab?: string;
 }
 
 export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps> = ({
@@ -103,7 +104,8 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
   onPreviewTaskCert,
   onPreviewFestivalCert,
   initialPhone = '',
-  initialCertId = ''
+  initialCertId = '',
+  initialTab = 'all'
 }) => {
   // Wizard steps: 'phone' -> 'otp' -> 'list'
   const [step, setStep] = useState<'phone' | 'otp' | 'list'>('phone');
@@ -218,6 +220,10 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
         setTargetCertId('');
       }
 
+      if (initialTab) {
+        setSelectedFilter(initialTab);
+      }
+
       if (initialPhone && normalizePhoneNumber(initialPhone).length === 10) {
         const clean = normalizePhoneNumber(initialPhone);
         setPhoneNumber(clean);
@@ -228,7 +234,7 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
         setStep('phone');
       }
     }
-  }, [isOpen, initialPhone, initialCertId]);
+  }, [isOpen, initialPhone, initialCertId, initialTab]);
 
   // Timer countdown for OTP
   useEffect(() => {
@@ -1015,6 +1021,23 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
                   </div>
                 )}
 
+                {/* Special Guidance Banner for Volunteer Certificate */}
+                {selectedFilter === 'volunteer_cert' && (
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50 to-amber-50 border-2 border-blue-400 text-left flex items-start gap-3 shadow-md">
+                    <div className="w-9 h-9 rounded-xl bg-blue-700 text-white flex items-center justify-center shrink-0 font-bold shadow-xs">
+                      🎖️
+                    </div>
+                    <div className="text-xs space-y-1">
+                      <p className="font-black text-blue-950 text-sm">
+                        स्वयंसेवक प्रमाण पत्र डाउनलोड (Zero Form • Direct Download)
+                      </p>
+                      <p className="text-blue-900 leading-relaxed font-medium">
+                        स्वयंसेवक प्रमाण पत्र के लिए अलग से कोई फॉर्म भरने की आवश्यकता नहीं है। आपका प्रमाण पत्र आपके <strong>स्वयंसेवक ID डेटा</strong> से स्वतः तैयार किया जाता है। जैसे ही एडमिन द्वारा आपकी स्वयंसेवक ID स्वीकृत (Approve) होती है, आप यहाँ अपना 10-अंकीय रजिस्टर्ड मोबाइल नंबर दर्ज कर OTP से सत्यापित करके अपना आधिकारिक प्रमाण पत्र तुरंत डाउनलोड कर सकते हैं।
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Security Note Banner */}
                 <div className="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-left flex items-start gap-3 shadow-xs">
                   <ShieldCheck className="w-5 h-5 text-amber-800 shrink-0 mt-0.5" />
@@ -1291,34 +1314,53 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
 
                 {/* 📜 NEW: Banner for Swayam Sewak ID Card & Appointment Letter in volunteer_id tab */}
                 {selectedFilter === 'volunteer_id' && (
-                  <div className="p-3 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 rounded-2xl border-2 border-amber-300 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
-                    <div className="flex items-center gap-2.5 min-w-[260px]">
-                      <div className="w-8 h-8 rounded-xl bg-[#8B0000] text-white flex items-center justify-center shrink-0 shadow-xs">
-                        <FileText className="w-4 h-4 text-amber-300" />
+                  <div className="p-4 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100 rounded-2xl border-2 border-amber-300 shadow-md flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-3 min-w-[280px]">
+                      <div className="w-10 h-10 rounded-2xl bg-[#8B0000] text-amber-300 flex items-center justify-center shrink-0 shadow-md font-bold text-lg">
+                        🪪
                       </div>
                       <div>
-                        <span className="font-black text-[#8B0000] block text-xs sm:text-sm">
-                          🪪 स्वयंसेवक पहचान पत्र एवं 📜 नियुक्ति पत्र डाउनलोड केंद्र:
+                        <span className="font-black text-[#8B0000] block text-sm sm:text-base font-serif">
+                          स्वयंसेवक पहचान पत्र (ID Card) एवं नियुक्ति पत्र (Appointment Letter) डाउनलोड
                         </span>
-                        <span className="text-[11px] text-gray-700">
-                          यहाँ केवल आधिकारिक ID कार्ड व A4 लेटरहेड नियुक्ति पत्र डाउनलोड करने के सीधे लिंक उपलब्ध हैं। कोई फॉर्म नहीं खुलेगा।
+                        <span className="text-[11.5px] text-gray-700 font-medium">
+                          यहाँ दोनों आधिकारिक दस्तावेज़ 300 DPI में डाउनलोड करने के विकल्प उपलब्ध हैं:
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
+                      {/* Option 1: ID Card Download */}
                       <button
                         type="button"
                         onClick={() => {
                           const firstVol = filteredCertificates.find((c) => isVolIdDoc(c)) || filteredCertificates[0];
                           if (firstVol) {
-                            handlePreview(firstVol);
+                            handleDirectDownload(firstVol, 'pdf');
                           }
                         }}
-                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs cursor-pointer flex items-center gap-1"
-                        title="स्वयंसेवक ID कार्ड डाउनलोड करें"
+                        className="px-3.5 py-2 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white rounded-xl font-black text-xs shadow-md cursor-pointer flex items-center gap-1.5 border border-emerald-500 hover:scale-102 transition-transform"
+                        title="स्वयंसेवक ID कार्ड (PDF) तुरंत डाउनलोड करें"
                       >
-                        <span>🪪 I-Card डाउनलोड</span>
+                        <Download className="w-4 h-4 text-emerald-200" />
+                        <span>🪪 1. ID कार्ड डाउनलोड (PDF)</span>
                       </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const firstVol = filteredCertificates.find((c) => isVolIdDoc(c)) || filteredCertificates[0];
+                          if (firstVol) {
+                            handleDirectDownload(firstVol, 'jpg');
+                          }
+                        }}
+                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs cursor-pointer flex items-center gap-1 border border-emerald-400"
+                        title="स्वयंसेवक ID कार्ड (JPG) डाउनलोड करें"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>JPG</span>
+                      </button>
+
+                      {/* Option 2: Appointment Letter Download */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1340,10 +1382,63 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
                             }
                           });
                         }}
-                        className="px-3 py-1.5 bg-gradient-to-r from-amber-700 to-[#8B0000] hover:from-amber-800 hover:to-[#6b0000] text-white rounded-xl font-bold text-xs shadow-xs cursor-pointer flex items-center gap-1 border border-amber-300"
-                        title="संस्था लेटरहेड A4 नियुक्ति पत्र डाउनलोड करें"
+                        className="px-3.5 py-2 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl font-black text-xs shadow-md cursor-pointer flex items-center gap-1.5 border border-amber-300 hover:scale-102 transition-transform"
+                        title="संस्था लेटरहेड पर A4 नियुक्ति पत्र (Appointment Letter) खोलें व डाउनलोड करें"
                       >
-                        <span>📜 A4 नियुक्ति पत्र</span>
+                        <FileText className="w-4 h-4 text-yellow-200" />
+                        <span>📜 2. अपॉइंटमेंट लेटर डाउनलोड (A4 PDF)</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 📜 NEW: Banner for Swayam Sewak Official Certificate in volunteer_cert tab */}
+                {selectedFilter === 'volunteer_cert' && (
+                  <div className="p-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-amber-50 rounded-2xl border-2 border-blue-400 shadow-md flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-3 min-w-[280px]">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-700 to-indigo-900 text-yellow-300 flex items-center justify-center shrink-0 shadow-md font-bold text-lg">
+                        🎖️
+                      </div>
+                      <div>
+                        <span className="font-black text-blue-950 block text-sm sm:text-base font-serif">
+                          स्वयंसेवक आधिकारिक प्रमाण पत्र (Official Volunteer Certificate)
+                        </span>
+                        <span className="text-[11.5px] text-blue-900 font-medium">
+                          स्वयंसेवक ID डेटा से स्वतः संकलित • एडमिन अप्रूवल के बाद 300 DPI में सीधे डाउनलोड:
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Option 1: Certificate PDF Download */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const firstCert = filteredCertificates.find((c) => isVolCertDoc(c)) || filteredCertificates[0];
+                          if (firstCert) {
+                            handleDirectDownload(firstCert, 'pdf');
+                          }
+                        }}
+                        className="px-3.5 py-2 bg-gradient-to-r from-blue-700 to-indigo-900 hover:from-blue-800 hover:to-indigo-950 text-white rounded-xl font-black text-xs shadow-md cursor-pointer flex items-center gap-1.5 border border-blue-400 hover:scale-102 transition-transform"
+                        title="स्वयंसेवक प्रमाण पत्र (PDF) डाउनलोड करें"
+                      >
+                        <Download className="w-4 h-4 text-yellow-300" />
+                        <span>🎖️ प्रमाण पत्र डाउनलोड (PDF)</span>
+                      </button>
+
+                      {/* Option 2: Certificate JPG Download */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const firstCert = filteredCertificates.find((c) => isVolCertDoc(c)) || filteredCertificates[0];
+                          if (firstCert) {
+                            handleDirectDownload(firstCert, 'jpg');
+                          }
+                        }}
+                        className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs cursor-pointer flex items-center gap-1 border border-amber-400"
+                        title="स्वयंसेवक प्रमाण पत्र (JPG) डाउनलोड करें"
+                      >
+                        <Download className="w-3.5 h-3.5 text-white" />
+                        <span>JPG</span>
                       </button>
                     </div>
                   </div>
@@ -1607,128 +1702,170 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
                                     <span>नोट</span>
                                   </button>
 
-                                  {/* 3. Download JPG Button */}
-                                  <button
-                                    type="button"
-                                    disabled={isDownloading || !isApproved}
-                                    onClick={() => handleDirectDownload(item, 'jpg')}
-                                    className={`flex-1 sm:flex-none px-3 py-2 rounded-xl font-black text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 ${
-                                      !isApproved
-                                        ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
-                                        : 'bg-amber-600 hover:bg-amber-700 text-white cursor-pointer'
-                                    } disabled:opacity-75`}
-                                    title={
-                                      !isApproved
-                                        ? isRejected
-                                          ? 'एडमिन द्वारा अस्वीकृत - डाउनलोड अवरुद्ध'
-                                          : 'एडमिन स्वीकृति प्रतीक्षारत - एडमिन अनुमोदन के बाद ही डाउनलोड संभव'
-                                        : 'JPG इमेज डाउनलोड करें'
-                                    }
-                                  >
-                                    {!isApproved ? (
-                                      <Lock className="w-3.5 h-3.5 text-slate-400" />
-                                    ) : (
-                                      <Download className="w-3.5 h-3.5" />
-                                    )}
-                                    <span>
-                                      {isDownloading && downloadingId?.endsWith('jpg')
-                                        ? 'सत्यापन...'
-                                        : !isApproved
-                                        ? 'JPG (लॉक्ड)'
-                                        : 'JPG'}
-                                    </span>
-                                  </button>
+                                   {/* If this is a volunteer ID card or volunteer_id filter is active, show explicit dual download options */}
+                                   {(isVolIdDoc(item) || selectedFilter === 'volunteer_id' || item.type === 'volunteer_id') ? (
+                                     <>
+                                       {/* Option 1: ID Card Download Group */}
+                                       <div className="flex items-center rounded-xl bg-emerald-50 border border-emerald-300 p-1 shadow-2xs">
+                                         <span className="text-[10.5px] font-black text-emerald-900 px-2 flex items-center gap-1">
+                                           <UserCheck className="w-3.5 h-3.5 text-emerald-700" />
+                                           <span>🪪 ID कार्ड:</span>
+                                         </span>
+                                         <button
+                                           type="button"
+                                           disabled={isDownloading || !isApproved}
+                                           onClick={() => handleDirectDownload(item, 'jpg')}
+                                           className="px-2 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-black text-[11px] cursor-pointer shadow-2xs disabled:opacity-50"
+                                           title="स्वयंसेवक ID कार्ड JPG (300 DPI) डाउनलोड करें"
+                                         >
+                                           {isDownloading && downloadingId === `${item.id}-jpg` ? '...' : 'JPG'}
+                                         </button>
+                                         <button
+                                           type="button"
+                                           disabled={isDownloading || !isApproved}
+                                           onClick={() => handleDirectDownload(item, 'pdf')}
+                                           className="ml-1 px-2 py-1 bg-teal-800 hover:bg-teal-900 text-white rounded-lg font-black text-[11px] cursor-pointer shadow-2xs disabled:opacity-50"
+                                           title="स्वयंसेवक ID कार्ड प्रिंट-रेडी PDF डाउनलोड करें"
+                                         >
+                                           {isDownloading && downloadingId === `${item.id}-pdf` ? '...' : 'PDF'}
+                                         </button>
+                                       </div>
 
-                                  {/* 4. Download PDF Button */}
-                                  <button
-                                    type="button"
-                                    disabled={isDownloading || !isApproved}
-                                    onClick={() => handleDirectDownload(item, 'pdf')}
-                                    className={`flex-1 sm:flex-none px-3 py-2 rounded-xl font-black text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 ${
-                                      !isApproved
-                                        ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
-                                        : 'bg-[#8B0000] hover:bg-[#6b0000] text-white cursor-pointer'
-                                    } disabled:opacity-75`}
-                                    title={
-                                      !isApproved
-                                        ? isRejected
-                                          ? 'एडमिन द्वारा अस्वीकृत - डाउनलोड अवरुद्ध'
-                                          : 'एडमिन स्वीकृति प्रतीक्षारत - एडमिन अनुमोदन के बाद ही डाउनलोड संभव'
-                                        : 'A4 प्रिंटेबल PDF डाउनलोड करें'
-                                    }
-                                  >
-                                    {!isApproved ? (
-                                      <Lock className="w-3.5 h-3.5 text-slate-400" />
-                                    ) : (
-                                      <FileText className="w-3.5 h-3.5 text-yellow-300" />
-                                    )}
-                                    <span>
-                                      {isDownloading && downloadingId?.endsWith('pdf')
-                                        ? 'सत्यापन...'
-                                        : !isApproved
-                                        ? 'PDF (लॉक्ड)'
-                                        : 'PDF'}
-                                    </span>
-                                  </button>
+                                       {/* Option 2: Appointment Letter Download Button */}
+                                       <button
+                                         type="button"
+                                         disabled={!isApproved}
+                                         onClick={() => {
+                                           const vol = item.rawVolunteer;
+                                           setAppointmentLetterState({
+                                             isOpen: true,
+                                             type: 'volunteer',
+                                             volunteerData: {
+                                               id: item.id,
+                                               name: item.recipientName,
+                                               fatherName: item.fatherOrHusbandName || vol?.fatherName || 'श्री समाज सेवी',
+                                               role: vol?.role || item.categoryOrPurpose?.split('•')[0]?.trim() || 'Dedicated Swayam Sewak',
+                                               area: vol?.area || item.categoryOrPurpose?.split('•')[1]?.trim() || 'शिक्षा एवं सामाजिक सेवा',
+                                               phone: item.phone,
+                                               photoUrl: item.photoUrl,
+                                               address: vol ? `${vol.wardOrVillage || ''}, ब्लॉक ${vol.block || ''}, जनपद ${vol.district || ''}, ${vol.state || ''} - 233303` : FOUNDATION_INFO.address,
+                                               issueDate: item.issueDate
+                                             }
+                                           });
+                                         }}
+                                         className={`flex-1 sm:flex-none px-3 py-2 rounded-xl font-black text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 ${
+                                           !isApproved
+                                             ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
+                                             : 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white cursor-pointer border border-amber-300 shadow-sm'
+                                         } disabled:opacity-75`}
+                                         title="संस्था के अधिकृत लेटरहेड पर स्वयंसेवक नियुक्ति पत्र (Appointment Letter) खोलें व A4 PDF डाउनलोड करें"
+                                       >
+                                         <FileText className="w-3.5 h-3.5 text-yellow-200" />
+                                         <span>📜 अपॉइंटमेंट लेटर डाउनलोड</span>
+                                       </button>
+                                     </>
+                                   ) : (
+                                     <>
+                                       {/* Standard Download JPG Button */}
+                                       <button
+                                         type="button"
+                                         disabled={isDownloading || !isApproved}
+                                         onClick={() => handleDirectDownload(item, 'jpg')}
+                                         className={`flex-1 sm:flex-none px-3 py-2 rounded-xl font-black text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 ${
+                                           !isApproved
+                                             ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
+                                             : 'bg-amber-600 hover:bg-amber-700 text-white cursor-pointer'
+                                         } disabled:opacity-75`}
+                                         title={
+                                           !isApproved
+                                             ? isRejected
+                                               ? 'एडमिन द्वारा अस्वीकृत - डाउनलोड अवरुद्ध'
+                                               : 'एडमिन स्वीकृति प्रतीक्षारत - एडमिन अनुमोदन के बाद ही डाउनलोड संभव'
+                                             : 'JPG इमेज डाउनलोड करें'
+                                         }
+                                       >
+                                         {!isApproved ? (
+                                           <Lock className="w-3.5 h-3.5 text-slate-400" />
+                                         ) : (
+                                           <Download className="w-3.5 h-3.5" />
+                                         )}
+                                         <span>
+                                           {isDownloading && downloadingId?.endsWith('jpg')
+                                             ? 'सत्यापन...'
+                                             : !isApproved
+                                             ? 'JPG (लॉक्ड)'
+                                             : 'JPG'}
+                                         </span>
+                                       </button>
 
-                                  {/* 5. 📜 NEW: Appointment Letter on Letterhead Download / View Button */}
-                                  {(isVolIdDoc(item) || isStaffIdDoc(item) || item.type === 'volunteer_id' || item.type === 'staff_id' || selectedFilter === 'volunteer_id' || selectedFilter === 'staff_id' || item.id.includes('STF')) && (
-                                    <button
-                                      type="button"
-                                      disabled={!isApproved}
-                                      onClick={() => {
-                                        const isStaff = isStaffIdDoc(item) || item.id.includes('STF') || Boolean(item.titleHindi?.includes('स्टाफ')) || Boolean(item.categoryOrPurpose?.includes('स्टाफ')) || selectedFilter === 'staff_id';
-                                        if (isStaff) {
-                                          setAppointmentLetterState({
-                                            isOpen: true,
-                                            type: 'staff',
-                                            staffData: {
-                                              id: item.id,
-                                              fullName: item.recipientName,
-                                              fatherOrHusbandName: item.fatherOrHusbandName || 'श्री अभिभावक',
-                                              relationType: 'Father',
-                                              designation: item.categoryOrPurpose?.split('•')[0]?.trim() || 'स्टाफ सदस्य',
-                                              department: item.categoryOrPurpose?.split('•')[1]?.trim() || 'प्रशासन',
-                                              dutyLocation: 'जनपद ग़ाज़ीपुर एवं पूर्वांचल',
-                                              mobile: item.phone,
-                                              photoUrl: item.photoUrl,
-                                              dateOfJoining: item.issueDate
-                                            }
-                                          });
-                                        } else {
-                                          const vol = item.rawVolunteer;
-                                          setAppointmentLetterState({
-                                            isOpen: true,
-                                            type: 'volunteer',
-                                            volunteerData: {
-                                              id: item.id,
-                                              name: item.recipientName,
-                                              fatherName: item.fatherOrHusbandName || vol?.fatherName || 'श्री समाज सेवी',
-                                              role: vol?.role || item.categoryOrPurpose?.split('•')[0]?.trim() || 'Dedicated Swayam Sewak',
-                                              area: vol?.area || item.categoryOrPurpose?.split('•')[1]?.trim() || 'शिक्षा एवं सामाजिक सेवा',
-                                              phone: item.phone,
-                                              photoUrl: item.photoUrl,
-                                              address: vol ? `${vol.wardOrVillage || ''}, ब्लॉक ${vol.block || ''}, जनपद ${vol.district || ''}, ${vol.state || ''} - 233303` : FOUNDATION_INFO.address,
-                                              issueDate: item.issueDate
-                                            }
-                                          });
-                                        }
-                                      }}
-                                      className={`flex-1 sm:flex-none px-3 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 ${
-                                        !isApproved
-                                          ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
-                                          : 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white cursor-pointer border border-amber-300 shadow-sm'
-                                      } disabled:opacity-75`}
-                                      title="संस्था के अधिकृत लेटरहेड पर नियुक्ति पत्र (Appointment Letter) देखें व A4 PDF डाउनलोड करें"
-                                    >
-                                      <FileText className="w-3.5 h-3.5 text-yellow-200" />
-                                      <span>
-                                        {isStaffIdDoc(item) || item.id.includes('STF') || selectedFilter === 'staff_id' || item.titleHindi?.includes('स्टाफ')
-                                          ? '📜 स्टाफ नियुक्ति पत्र'
-                                          : '📜 नियुक्ति पत्र'}
-                                      </span>
-                                    </button>
-                                  )}
+                                       {/* Standard Download PDF Button */}
+                                       <button
+                                         type="button"
+                                         disabled={isDownloading || !isApproved}
+                                         onClick={() => handleDirectDownload(item, 'pdf')}
+                                         className={`flex-1 sm:flex-none px-3 py-2 rounded-xl font-black text-xs shadow-xs transition-colors flex items-center justify-center gap-1.5 ${
+                                           !isApproved
+                                             ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
+                                             : 'bg-[#8B0000] hover:bg-[#6b0000] text-white cursor-pointer'
+                                         } disabled:opacity-75`}
+                                         title={
+                                           !isApproved
+                                             ? isRejected
+                                               ? 'एडमिन द्वारा अस्वीकृत - डाउनलोड अवरुद्ध'
+                                               : 'एडमिन स्वीकृति प्रतीक्षारत - एडमिन अनुमोदन के बाद ही डाउनलोड संभव'
+                                             : 'A4 प्रिंटेबल PDF डाउनलोड करें'
+                                         }
+                                       >
+                                         {!isApproved ? (
+                                           <Lock className="w-3.5 h-3.5 text-slate-400" />
+                                         ) : (
+                                           <FileText className="w-3.5 h-3.5 text-yellow-300" />
+                                         )}
+                                         <span>
+                                           {isDownloading && downloadingId?.endsWith('pdf')
+                                             ? 'सत्यापन...'
+                                             : !isApproved
+                                             ? 'PDF (लॉक्ड)'
+                                             : 'PDF'}
+                                         </span>
+                                       </button>
+
+                                       {/* Staff Appointment Letter Button if staff item */}
+                                       {(isStaffIdDoc(item) || item.type === 'staff_id' || selectedFilter === 'staff_id' || item.id.includes('STF')) && (
+                                         <button
+                                           type="button"
+                                           disabled={!isApproved}
+                                           onClick={() => {
+                                             setAppointmentLetterState({
+                                               isOpen: true,
+                                               type: 'staff',
+                                               staffData: {
+                                                 id: item.id,
+                                                 fullName: item.recipientName,
+                                                 fatherOrHusbandName: item.fatherOrHusbandName || 'श्री अभिभावक',
+                                                 relationType: 'Father',
+                                                 designation: item.categoryOrPurpose?.split('•')[0]?.trim() || 'स्टाफ सदस्य',
+                                                 department: item.categoryOrPurpose?.split('•')[1]?.trim() || 'प्रशासन',
+                                                 dutyLocation: 'जनपद ग़ाज़ीपुर एवं पूर्वांचल',
+                                                 mobile: item.phone,
+                                                 photoUrl: item.photoUrl,
+                                                 dateOfJoining: item.issueDate
+                                               }
+                                             });
+                                           }}
+                                           className={`flex-1 sm:flex-none px-3 py-2 rounded-xl font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 ${
+                                             !isApproved
+                                               ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
+                                               : 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white cursor-pointer border border-amber-300 shadow-sm'
+                                           } disabled:opacity-75`}
+                                           title="संस्था के अधिकृत लेटरहेड पर स्टाफ नियुक्ति पत्र (Staff Appointment Letter) खोलें व A4 PDF डाउनलोड करें"
+                                         >
+                                           <FileText className="w-3.5 h-3.5 text-yellow-200" />
+                                           <span>📜 स्टाफ नियुक्ति पत्र</span>
+                                         </button>
+                                       )}
+                                     </>
+                                   )}
 
                                   {/* 6. WhatsApp Share */}
                                   <button

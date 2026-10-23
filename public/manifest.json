@@ -13,6 +13,7 @@
   "lang": "hi",
   "dir": "ltr",
   "categories": ["social", "education", "lifestyle", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/pwa-icon-192.png",

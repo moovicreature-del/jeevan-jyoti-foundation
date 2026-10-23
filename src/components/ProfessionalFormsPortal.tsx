@@ -152,7 +152,7 @@ export const ProfessionalFormsPortal: React.FC<Props> = ({
   const [volDeclaration, setVolDeclaration] = useState(false);
   const [volError, setVolError] = useState<string | null>(null);
   const [volSuccess, setVolSuccess] = useState(false);
-  const [volTargetDoc, setVolTargetDoc] = useState<'id_card' | 'cert'>('id_card');
+  const [volTargetDoc, setVolTargetDoc] = useState<'id_card' | 'cert' | 'appointment'>('id_card');
 
   // ==========================================
   // 3. FESTIVAL WISHES FORM STATE (No prefilled details)
@@ -1875,15 +1875,23 @@ export const ProfessionalFormsPortal: React.FC<Props> = ({
                   className="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-sm sm:text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <UserCheck className="w-5 h-5 text-emerald-200" />
-                  <span>🪪 स्वयंसेवक ID कार्ड प्राप्त करें</span>
+                  <span>🪪 ID कार्ड डाउनलोड करें</span>
+                </button>
+                <button
+                  type="submit"
+                  onClick={() => setVolTargetDoc('appointment')}
+                  className="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 text-white font-black text-sm sm:text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer border border-amber-300"
+                >
+                  <FileText className="w-5 h-5 text-yellow-200" />
+                  <span>📜 अपॉइंटमेंट लेटर डाउनलोड करें</span>
                 </button>
                 <button
                   type="submit"
                   onClick={() => setVolTargetDoc('cert')}
-                  className="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-600 to-[#8B0000] hover:from-amber-700 hover:to-[#700000] text-white font-black text-sm sm:text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#8B0000] to-red-800 hover:from-[#700000] hover:to-red-900 text-white font-black text-sm sm:text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Award className="w-5 h-5 text-yellow-300" />
-                  <span>🎖️ स्वयंसेवक प्रमाण पत्र प्राप्त करें</span>
+                  <span>🎖️ स्वयंसेवक प्रमाण पत्र</span>
                 </button>
                 <button
                   type="button"

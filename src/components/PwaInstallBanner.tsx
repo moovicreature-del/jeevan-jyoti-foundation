@@ -441,6 +441,23 @@ export const PwaInstallBanner: React.FC = () => {
                   <span className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-[10px] font-bold shrink-0">3</span>
                   <p>पॉपअप में <strong>'Install'</strong> बटन दबाएं। ऐप तुरंत आपके फोन में इंस्टॉल हो जाएगा!</p>
                 </div>
+
+                {/* Error Troubleshooting Note if Android Chrome says "This app cannot be installed" */}
+                <div className="mt-3 pt-2.5 border-t border-amber-300 text-[11px] text-amber-950 bg-amber-100/70 p-2.5 rounded-lg space-y-1">
+                  <div className="font-black text-[#8B0000] flex items-center gap-1">
+                    <Info className="w-3.5 h-3.5 text-[#8B0000] shrink-0" />
+                    <span>यदि 'This app cannot be installed' दिखे तो:</span>
+                  </div>
+                  <p className="text-[10.5px] leading-relaxed text-slate-800">
+                    1. <strong>ऐप पहले से मौजूद है:</strong> अपने फ़ोन के होम स्क्रीन या ऐप ड्रॉर में देखें, ऐप पहले से इंस्टॉल हो चुका है और सीधे वहीं से खुलेगा।
+                  </p>
+                  <p className="text-[10.5px] leading-relaxed text-slate-800">
+                    2. <strong>पुनः नया इंस्टॉल करने के लिए:</strong> होम स्क्रीन से पुराने ऐप/शॉर्टकट को अनइंस्टॉल (हटाएं) करें, फिर Chrome में पेज रिफ्रेश करके इंस्टॉल करें।
+                  </p>
+                  <p className="text-[10.5px] leading-relaxed text-slate-800">
+                    3. <strong>शॉर्टकट विकल्प:</strong> आप नीचे दिए <strong>'Create shortcut'</strong> पर क्लिक करके भी तुरंत होम स्क्रीन पर 1-टैप ऐप आइकन जोड़ सकते हैं।
+                  </p>
+                </div>
               </div>
             )}
 
