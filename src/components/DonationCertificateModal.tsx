@@ -148,7 +148,11 @@ export const DonationCertificateModal: React.FC<Props> = ({ donation, onClose })
     setDownloading('jpg');
     try {
       const fileName = `DON_${tier.key.toUpperCase()}_Receipt_${donation.donorName.replace(/\s+/g, '_')}`;
-      await exportElementAsJpg(certRef.current, fileName, { quality: 0.98 });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsJpg(certRef.current, fileName, {
+        quality: 0.98,
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }
@@ -159,7 +163,11 @@ export const DonationCertificateModal: React.FC<Props> = ({ donation, onClose })
     setDownloading('png');
     try {
       const fileName = `DON_${tier.key.toUpperCase()}_Receipt_${donation.donorName.replace(/\s+/g, '_')}`;
-      await exportElementAsPng(certRef.current, fileName, { backgroundColor: '#FFFFFF' });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsPng(certRef.current, fileName, {
+        backgroundColor: '#FFFFFF',
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }
@@ -170,7 +178,11 @@ export const DonationCertificateModal: React.FC<Props> = ({ donation, onClose })
     setDownloading('pdf');
     try {
       const fileName = `DON_${tier.key.toUpperCase()}_Receipt_${donation.donorName.replace(/\s+/g, '_')}_A4`;
-      await exportElementAsPdf(certRef.current, fileName, { orientation: 'landscape' });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsPdf(certRef.current, fileName, {
+        orientation: 'landscape',
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }

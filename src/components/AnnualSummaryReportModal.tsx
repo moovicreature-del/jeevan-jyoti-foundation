@@ -23,7 +23,11 @@ export const AnnualSummaryReportModal: React.FC<Props> = ({ onClose }) => {
     if (!reportRef.current || downloading) return;
     setDownloading('jpg');
     try {
-      await exportElementAsJpg(reportRef.current, 'Annual_Impact_Report_2024_2025', { quality: 0.98 });
+      const highResScale = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5;
+      await exportElementAsJpg(reportRef.current, 'Annual_Impact_Report_2024_2025', {
+        quality: 0.98,
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }
@@ -33,7 +37,11 @@ export const AnnualSummaryReportModal: React.FC<Props> = ({ onClose }) => {
     if (!reportRef.current || downloading) return;
     setDownloading('pdf');
     try {
-      await exportElementAsPdf(reportRef.current, 'Annual_Impact_Report_2024_2025_A4', { orientation: 'portrait' });
+      const highResScale = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5;
+      await exportElementAsPdf(reportRef.current, 'Annual_Impact_Report_2024_2025_A4', {
+        orientation: 'portrait',
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }

@@ -41,6 +41,9 @@ export interface RegisteredCertificateItem {
   rawDonation?: DonationRecord;
   rawTask?: TaskRecord;
   rawGreeting?: FestivalGreetingRecord;
+  rawStaff?: any;
+  address?: string;
+  refNo?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -75,21 +78,20 @@ export function isDummyCertificate(item?: Partial<RegisteredCertificateItem> | n
     id === 'JJF/80G/2026/08/01' ||
     id === 'JJF/FEST/2026/08/01' ||
     id === 'JJF/APP/2026/08/01' ||
-    id.startsWith('JJF-VOL-2026-') ||
-    id.startsWith('JJF-ID-2026-') ||
-    id.startsWith('JJF-80G-2026-') ||
-    id.startsWith('JJF-APP-2026-') ||
-    id.startsWith('JJF-FEST-2026-')
+    id === 'SAMPLE-CERT-000' ||
+    id === 'DUMMY-CERT-000'
   ) {
+    // If recipient is a genuine person (not placeholder sample), don't mark as dummy
+    if (name && name !== 'सम्मानित नागरिक' && !name.includes('Verified User')) {
+      return false;
+    }
     return true;
   }
 
-  // Placeholder recipient names
+  // Placeholder recipient names WITHOUT genuine identity or phone
   if (
-    name === 'सम्मानित नागरिक' ||
-    name.includes('सम्मानित नागरिक') ||
-    name.includes('Verified User') ||
-    name.includes('प्रिय देशवासी')
+    (name === 'सम्मानित नागरिक' || name.includes('Verified User') || name.includes('प्रिय देशवासी')) &&
+    !item.phone
   ) {
     return true;
   }
@@ -149,16 +151,8 @@ export function purgeAllDummyCertificates(): number {
   return purgedCount;
 }
 
-// Auto-purge dummy records on initial script execution
-if (typeof window !== 'undefined') {
-  try {
-    purgeAllDummyCertificates();
-  } catch {
-    // ignore
-  }
-}
-
-// Initial built-in certificates - strictly empty so no dummy data is seeded
+// Auto-purge dummy records on initial script execution has been disabled to prevent accidental data loss
+// Safe initialization:
 function getSeedCertificates(): RegisteredCertificateItem[] {
   return [];
 }
@@ -226,12 +220,13 @@ export function saveCertificateToRegistry(item: RegisteredCertificateItem): void
   const normalizedItem: RegisteredCertificateItem = {
     ...item,
     phone: cleanPhone,
-    approvalStatus: existingIdx >= 0 && current[existingIdx].approvalStatus
-      ? (item.approvalStatus || current[existingIdx].approvalStatus)
-      : initialApprovalStatus,
-    approvedAt: (item.approvalStatus === 'approved' || (isFestival && !item.approvalStatus))
+    approvalStatus: (existingIdx >= 0 && current[existingIdx].approvalStatus === 'approved' && item.approvalStatus !== 'rejected' && item.approvalStatus !== 'cancelled')
+      ? 'approved'
+      : (item.approvalStatus || (existingIdx >= 0 ? current[existingIdx].approvalStatus : initialApprovalStatus)),
+    approvedAt: (item.approvalStatus === 'approved' || (existingIdx >= 0 && current[existingIdx].approvalStatus === 'approved') || (isFestival && !item.approvalStatus))
       ? (item.approvedAt || (existingIdx >= 0 ? current[existingIdx].approvedAt : timestamp))
       : item.approvedAt,
+    approvedBy: item.approvedBy || (existingIdx >= 0 ? current[existingIdx].approvedBy : undefined),
     updatedAt: timestamp,
     createdAt: item.createdAt || (existingIdx >= 0 ? current[existingIdx].createdAt : timestamp)
   };

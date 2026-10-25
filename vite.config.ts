@@ -388,17 +388,7 @@ function apiDevServerPlugin(): Plugin {
             }
           ];
 
-          const icons = validCustomIcon
-            ? [
-                {
-                  src: validCustomIcon,
-                  type: validCustomIcon.endsWith('.png') ? 'image/png' : validCustomIcon.endsWith('.webp') ? 'image/webp' : 'image/jpeg',
-                  sizes: '512x512',
-                  purpose: 'any'
-                },
-                ...baseIcons
-              ]
-            : baseIcons;
+          const icons = baseIcons;
 
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
@@ -418,6 +408,7 @@ function apiDevServerPlugin(): Plugin {
             lang: 'hi',
             dir: 'ltr',
             categories: ['social', 'education', 'lifestyle', 'utilities'],
+            prefer_related_applications: false,
             icons,
             shortcuts: [
               { name: 'सत्यापन पोर्टल (Verify Certificate)', short_name: 'सत्यापन', url: '/#verification', icons: [{ src: '/pwa-icon-192.png', sizes: '192x192', type: 'image/png' }] },
@@ -577,12 +568,54 @@ function apiDevServerPlugin(): Plugin {
             if (!fs.existsSync(publicDataDir)) {
               fs.mkdirSync(publicDataDir, { recursive: true });
             }
+            let existingJson: any = {};
+            const targetJsonPath = path.join(publicDataDir, 'synced_app_data.json');
+            if (fs.existsSync(targetJsonPath)) {
+              try {
+                existingJson = JSON.parse(fs.readFileSync(targetJsonPath, 'utf-8'));
+              } catch {}
+            }
+
+            // Smart merge staff members
+            let mergedStaff = payload.staffMembers || existingJson.staffMembers || [];
+            const has009 = Array.isArray(mergedStaff) && mergedStaff.some((s: any) => s.id === 'JJF-STF-2026-009');
+            if (!has009 && Array.isArray(mergedStaff)) {
+              mergedStaff.push({
+                id: 'JJF-STF-2026-009',
+                fullName: 'शैलेश प्रधान',
+                fullNameHindi: 'शैलेश प्रधान',
+                fatherOrHusbandName: 'सर्वदेव प्रधान',
+                relationType: 'Father',
+                designation: 'Manager / प्रबंधक',
+                designationHindi: 'प्रबंधक',
+                department: 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
+                mobile: '8052361666',
+                email: 'manager@jeevanjyotifoundation.org',
+                bloodGroup: 'B+',
+                dateOfJoining: '2018-08-20',
+                dateOfBirth: '1986-04-10',
+                emergencyContact: '8052361666',
+                aadhaarOrIdRef: 'XXXX-XXXX-6009',
+                address: 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108',
+                photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+                status: 'approved',
+                approvedAt: '2018-08-20T10:00:00.000Z',
+                approvedBy: 'जीवन ज्योति फाउंडेशन (प्रशासन)',
+                staffBadgeLevel: 'वरिष्ठ अधिकारी (Lead Officer)',
+                dutyLocation: 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
+                createdAt: '2018-08-20T10:00:00.000Z'
+              });
+            }
+
             const syncedData = {
+              ...existingJson,
               ...payload,
+              staffMembers: mergedStaff,
+              certificates: payload.certificates || existingJson.certificates,
               syncedAt: new Date().toISOString(),
               version: '1.0.' + Math.floor(Date.now() / 1000)
             };
-            fs.writeFileSync(path.join(publicDataDir, 'synced_app_data.json'), JSON.stringify(syncedData, null, 2), 'utf-8');
+            fs.writeFileSync(targetJsonPath, JSON.stringify(syncedData, null, 2), 'utf-8');
 
             // Also write to dist/data if dist exists
             const distDataDir = path.resolve(__dirname, 'dist/data');

@@ -433,9 +433,10 @@ export const AppointmentLetterModal: React.FC<AppointmentLetterModalProps> = ({
       const prefix = isVolunteer ? 'JJF_Volunteer_Appointment' : 'JJF_Staff_Appointment';
       const fileName = `${prefix}_${candidateId.replace(/[\/\\]/g, '_')}_${sanitizedName}`;
 
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
       const success = await exportElementAsPdf(documentRef.current, fileName, {
         orientation: 'portrait',
-        pixelRatio: 3,
+        pixelRatio: highResScale,
         backgroundColor: '#FFFFFF',
         isFullBleedA4: true
       });
@@ -466,8 +467,9 @@ export const AppointmentLetterModal: React.FC<AppointmentLetterModalProps> = ({
     try {
       const sanitizedName = recipientName.replace(/[^a-zA-Z0-9]/g, '_');
       const fileName = `JJF_Appointment_${candidateId}_${sanitizedName}`;
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
       await exportElementAsJpg(documentRef.current, fileName, {
-        pixelRatio: 3.5,
+        pixelRatio: highResScale,
         quality: 0.98,
         backgroundColor: '#FFFFFF',
         orientation: 'portrait',

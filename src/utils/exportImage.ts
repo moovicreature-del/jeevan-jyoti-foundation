@@ -128,6 +128,22 @@ function getImageDimensions(
 export const DEFAULT_PRINT_DPI_SCALE = 3.5;
 
 /**
+ * Dynamic High-Resolution Canvas Scaling Factor:
+ * Calculates (window.devicePixelRatio || 1) * 3 dynamically to ensure
+ * ultra-sharp rendering of foundation seals, emblems, signatures, and typography
+ * across all screen densities, mobile devices, and export targets.
+ * Retains a minimum safe baseline of 3.5x for standard 1x displays.
+ */
+export function getHighResolutionScale(customScale?: number): number {
+  const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+  const dprScale = dpr * 3;
+  if (customScale && customScale > 0) {
+    return Math.max(customScale, dprScale);
+  }
+  return Math.max(dprScale, DEFAULT_PRINT_DPI_SCALE);
+}
+
+/**
  * Robust capture of any HTMLElement to 350+ DPI high-resolution Image Data URL.
  * Employs high-quality canvas rendering with imageSmoothingQuality: 'high'
  * and full SVG foreignObject / html2canvas pipelines so logos and seals never pixelate.
@@ -141,8 +157,8 @@ export async function captureElementToImageData(
     backgroundColor?: string;
   }
 ): Promise<{ dataUrl: string; width: number; height: number } | null> {
-  // Ensure default export resolution is at least 350 DPI (scale >= 3.5)
-  const scale = options?.scale ? Math.max(options.scale, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE;
+  // Ensure export resolution uses dynamic (devicePixelRatio * 3) scaling with 3.5 baseline
+  const scale = getHighResolutionScale(options?.scale);
   const quality = options?.quality ?? 1.0;
   const format = options?.format ?? 'png';
   const bg = options?.backgroundColor ?? '#FFFFFF';
@@ -295,10 +311,11 @@ export async function exportElementAsPng(
   options?: ExportOptions
 ): Promise<boolean> {
   const finalFileName = fileName.endsWith('.png') ? fileName : `${fileName}.png`;
+  const scale = getHighResolutionScale(options?.pixelRatio);
   const result = await captureElementToImageData(element, {
     format: 'png',
     quality: options?.quality ?? 1.0,
-    scale: options?.pixelRatio ? Math.max(options.pixelRatio, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE,
+    scale: scale,
     backgroundColor: options?.backgroundColor ?? '#FFFFFF'
   });
 
@@ -327,10 +344,11 @@ export async function exportElementAsJpg(
   options?: ExportOptions
 ): Promise<boolean> {
   const finalFileName = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') ? fileName : `${fileName}.jpg`;
+  const scale = getHighResolutionScale(options?.pixelRatio);
   const result = await captureElementToImageData(element, {
     format: 'jpeg',
     quality: options?.quality ?? 0.98,
-    scale: options?.pixelRatio ? Math.max(options.pixelRatio, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE,
+    scale: scale,
     backgroundColor: options?.backgroundColor ?? '#FFFFFF'
   });
 
@@ -359,10 +377,11 @@ export async function exportElementAsPdf(
   options?: ExportOptions
 ): Promise<boolean> {
   const finalFileName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+  const scale = getHighResolutionScale(options?.pixelRatio);
   const result = await captureElementToImageData(element, {
     format: 'png',
     quality: 1.0,
-    scale: options?.pixelRatio ? Math.max(options.pixelRatio, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE,
+    scale: scale,
     backgroundColor: options?.backgroundColor ?? '#FFFFFF'
   });
 
@@ -451,10 +470,11 @@ export async function exportElementsAsMultiPagePdf(
 
     for (let i = 0; i < validElements.length; i++) {
       const element = validElements[i];
+      const scale = getHighResolutionScale(options?.pixelRatio);
       const result = await captureElementToImageData(element, {
         format: 'png',
         quality: 1.0,
-        scale: options?.pixelRatio ? Math.max(options.pixelRatio, DEFAULT_PRINT_DPI_SCALE) : DEFAULT_PRINT_DPI_SCALE,
+        scale: scale,
         backgroundColor: options?.backgroundColor ?? '#FFFFFF'
       });
 

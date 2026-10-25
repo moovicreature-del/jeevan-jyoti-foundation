@@ -155,7 +155,12 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
     setDownloading('jpg');
     try {
       const fileName = `ID_Card_${(cardName || 'Volunteer').replace(/\s+/g, '_')}`;
-      await exportElementAsJpg(cardRef.current, fileName, { pixelRatio: 3.5, quality: 0.98, backgroundColor: '#FFFFFF' });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsJpg(cardRef.current, fileName, {
+        pixelRatio: highResScale,
+        quality: 0.98,
+        backgroundColor: '#FFFFFF'
+      });
     } finally {
       setDownloading(null);
     }
@@ -166,7 +171,11 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
     setDownloading('png');
     try {
       const fileName = `ID_Card_${(cardName || 'Volunteer').replace(/\s+/g, '_')}`;
-      await exportElementAsPng(cardRef.current, fileName, { pixelRatio: 3.5, backgroundColor: '#FFFFFF' });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsPng(cardRef.current, fileName, {
+        pixelRatio: highResScale,
+        backgroundColor: '#FFFFFF'
+      });
     } finally {
       setDownloading(null);
     }
@@ -177,7 +186,12 @@ export const SwayamSewakCardModal: React.FC<Props> = ({ volunteer, onClose, onOp
     setDownloading('pdf');
     try {
       const fileName = `ID_Card_${(cardName || 'Volunteer').replace(/\s+/g, '_')}`;
-      await exportElementAsPdf(cardRef.current, fileName, { orientation: 'portrait', isIdCard: true });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsPdf(cardRef.current, fileName, {
+        orientation: 'portrait',
+        isIdCard: true,
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }

@@ -188,8 +188,9 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
     try {
       const langLabel = langToUse === 'en' ? 'EN' : langToUse === 'hi' ? 'HI' : 'Bilingual';
       const fileName = `JJF_Staff_Card_${selectedStaff.id}_${langLabel}_${cardSide}`;
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
       await exportElementAsPng(cardEl, fileName, {
-        pixelRatio: 3.125,
+        pixelRatio: highResScale,
         backgroundColor: '#FFFFFF'
       });
     } catch (err) {
@@ -222,10 +223,11 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
     try {
       const langLabel = langToUse === 'en' ? 'EN' : langToUse === 'hi' ? 'HI' : 'Bilingual';
       const fileName = `JJF_Staff_ID_${selectedStaff.id}_${langLabel}_BothSides_2Page`;
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
       await exportElementsAsMultiPagePdf(elementsToExport, fileName, {
         orientation: 'portrait',
         backgroundColor: '#FFFFFF',
-        pixelRatio: 3.125
+        pixelRatio: highResScale
       });
     } catch (err) {
       console.error('2-Page PDF download error:', err);

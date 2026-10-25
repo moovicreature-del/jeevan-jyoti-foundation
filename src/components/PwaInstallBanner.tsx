@@ -30,8 +30,11 @@ export const PwaInstallBanner: React.FC = () => {
     isIOS,
     isAndroid,
     isInIframe,
+    isWebView,
     isSwRegistered,
     install,
+    forceResetInstalledStatus,
+    hasDeferredPrompt,
     getReadinessReport
   } = usePWAInstall();
 
@@ -54,9 +57,9 @@ export const PwaInstallBanner: React.FC = () => {
         }
       } catch {}
     }
-    const candidate = content?.appThumbnailUrl || content?.appLogoUrl || '/pwa-icon-512.png';
+    const candidate = content?.appThumbnailUrl || content?.appLogoUrl || '/uploads/ngo_logo.png';
     if (candidate.includes('1791445209912') || candidate.includes('1791445272050')) {
-      return '/pwa-icon-512.png';
+      return '/uploads/ngo_logo.png';
     }
     return candidate;
   });
@@ -75,11 +78,11 @@ export const PwaInstallBanner: React.FC = () => {
     } else {
       const isDeleted = typeof window !== 'undefined' && localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
       if (isDeleted) {
-        setActiveThumbnail(content?.appLogoUrl || '/pwa-icon-512.png');
+        setActiveThumbnail(content?.appLogoUrl || '/uploads/ngo_logo.png');
       } else if (content?.appLogoUrl && !content.appLogoUrl.includes('1791445209912') && !content.appLogoUrl.includes('1791445272050')) {
         setActiveThumbnail(content.appLogoUrl);
       } else {
-        setActiveThumbnail('/pwa-icon-512.png');
+        setActiveThumbnail('/uploads/ngo_logo.png');
       }
     }
   }, [content?.appThumbnailUrl, content?.appLogoUrl]);
@@ -93,7 +96,7 @@ export const PwaInstallBanner: React.FC = () => {
           localStorage.removeItem('jjf_thumb_permanently_deleted');
         }
       } else {
-        setActiveThumbnail(content?.appLogoUrl || '/pwa-icon-512.png');
+        setActiveThumbnail(content?.appLogoUrl || '/uploads/ngo_logo.png');
       }
     };
     window.addEventListener('jjf-thumbnail-changed' as any, handleThumbChange);
@@ -120,7 +123,7 @@ export const PwaInstallBanner: React.FC = () => {
   // Open modal on global custom event
   useEffect(() => {
     const handleOpenCustomModal = async () => {
-      if (isInstallable) {
+      if (hasDeferredPrompt || isInstallable) {
         setIsInstalling(true);
         try {
           const accepted = await install();
@@ -129,6 +132,7 @@ export const PwaInstallBanner: React.FC = () => {
             setShowModal(false);
             return;
           }
+        } catch {
         } finally {
           setIsInstalling(false);
         }
@@ -140,10 +144,10 @@ export const PwaInstallBanner: React.FC = () => {
     return () => {
       window.removeEventListener('open-pwa-install-modal', handleOpenCustomModal);
     };
-  }, [isInstallable, install]);
+  }, [isInstallable, hasDeferredPrompt, install]);
 
   const handleInstallClick = async () => {
-    if (isInstallable) {
+    if (hasDeferredPrompt || isInstallable) {
       setIsInstalling(true);
       try {
         const accepted = await install();
@@ -180,6 +184,18 @@ export const PwaInstallBanner: React.FC = () => {
     }
   })();
 
+  // Android Chrome Intent URL to launch directly in Chrome app from in-app browsers (WhatsApp/Facebook)
+  const chromeIntentUrl = (() => {
+    if (typeof window === 'undefined') return '/';
+    try {
+      const host = window.location.host;
+      const path = window.location.pathname + window.location.search;
+      return `intent://${host}${path}#Intent;scheme=https;package=com.android.chrome;end`;
+    } catch {
+      return directInstallUrl;
+    }
+  })();
+
   const handleCopyLink = () => {
     if (typeof window !== 'undefined') {
       try {
@@ -210,7 +226,12 @@ export const PwaInstallBanner: React.FC = () => {
                   alt="App Icon"
                   className="w-full h-full object-cover rounded-md"
                   onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = '/pwa-icon-512.png';
+                    const img = e.currentTarget as HTMLImageElement;
+                    if (!img.src.includes('ngo_logo.png')) {
+                      img.src = '/uploads/ngo_logo.png';
+                    } else {
+                      img.src = '/pwa-icon-512.png';
+                    }
                   }}
                 />
               </div>
@@ -269,7 +290,12 @@ export const PwaInstallBanner: React.FC = () => {
                   alt="Jeevan Jyoti Foundation App Icon"
                   className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shadow-md bg-white"
                   onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = '/pwa-icon-512.png';
+                    const img = e.currentTarget as HTMLImageElement;
+                    if (!img.src.includes('ngo_logo.png')) {
+                      img.src = '/uploads/ngo_logo.png';
+                    } else {
+                      img.src = '/pwa-icon-512.png';
+                    }
                   }}
                 />
                 <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-0.5 rounded-full border-2 border-white shadow-xs">
@@ -284,13 +310,53 @@ export const PwaInstallBanner: React.FC = () => {
               </p>
             </div>
 
-            {/* If already installed */}
+            {/* If detected as standalone */}
             {isInstalled && (
-              <div className="mb-4 bg-emerald-50 border-2 border-emerald-400 rounded-xl p-3 text-emerald-950 text-xs flex items-center gap-2.5">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <div>
-                  <div className="font-bold text-emerald-800">ऐप पहले से आपके डिवाइस पर इंस्टॉल है!</div>
-                  <div className="text-emerald-700 text-[11px]">आप इसे अपने फ़ोन के होम स्क्रीन या ऐप लॉन्चर से कभी भी खोल सकते हैं।</div>
+              <div className="mb-4 bg-emerald-50 border-2 border-emerald-400 rounded-xl p-3 text-emerald-950 text-xs shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-bold text-emerald-900">सिस्टम संकेत: ऐप स्टैंडअलोन मोड में डिटेक्ट है</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => forceResetInstalledStatus()}
+                    className="text-[11px] text-emerald-700 underline font-black hover:text-emerald-950 cursor-pointer"
+                  >
+                    पुनः इंस्टॉल विकल्प खोलें ↻
+                  </button>
+                </div>
+                <p className="text-emerald-800 text-[11px] mt-1 leading-relaxed">
+                  यदि आपके मोबाइल की मुख्य स्क्रीन पर ऐप आइकन नहीं दिख रहा है, तो नीचे दिए गए <strong>"📲 अभी ऐप इंस्टॉल करें"</strong> या <strong>"होम स्क्रीन में जोड़ें"</strong> विकल्प का उपयोग करें।
+                </p>
+              </div>
+            )}
+
+            {/* In-App Browser (WhatsApp / Telegram / Instagram WebView) Alert */}
+            {isWebView && (
+              <div className="mb-4 bg-blue-50 border-2 border-blue-400 rounded-xl p-3 text-blue-950 text-xs shadow-xs">
+                <div className="font-black flex items-center gap-1.5 text-blue-900 mb-1">
+                  <ExternalLink className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>आप WhatsApp या इन-ऐप ब्राउज़र में हैं (In-App Browser)</span>
+                </div>
+                <p className="text-blue-900/90 text-[11px] leading-relaxed mb-2.5">
+                  सुरक्षा कारणों से WhatsApp/सोशल ऐप के अंदर से डायरेक्ट ऐप इंस्टॉल ब्लॉक रहता है। 1-क्लिक में तुरंत ऐप इंस्टॉल करने के लिए इसे सीधे <strong>Google Chrome</strong> में खोलें:
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <a
+                    href={chromeIntentUrl}
+                    className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs shadow flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                  >
+                    <span>🌐 सीधे Google Chrome में खोलें</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="px-3 py-2.5 bg-white border border-blue-300 text-blue-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>{isCopied ? 'लिंक कॉपी हुआ!' : 'लिंक कॉपी करें'}</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -316,33 +382,45 @@ export const PwaInstallBanner: React.FC = () => {
               </div>
             )}
 
-            {/* PRIMARY ACTION 1: Direct 1-Click Install Button if browser prompt is ready */}
-            {isInstallable && !isInstalled && (
-              <div className="mb-4">
-                <button
-                  onClick={async () => {
-                    setIsInstalling(true);
-                    try {
-                      const success = await install();
-                      if (success) {
-                        setShowModal(false);
-                        setShowBanner(false);
-                      }
-                    } finally {
-                      setIsInstalling(false);
+            {/* PRIMARY ACTION 1: Direct 1-Click Install Button */}
+            <div className="mb-4">
+              <button
+                onClick={async () => {
+                  setIsInstalling(true);
+                  try {
+                    if (isInIframe) {
+                      window.open(directInstallUrl, '_blank');
+                      return;
                     }
-                  }}
-                  disabled={isInstalling}
-                  className="w-full py-3 bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-700 hover:to-green-800 text-white rounded-xl font-black text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                >
-                  <Download className="w-4 h-4 animate-bounce" />
-                  <span>{isInstalling ? 'इंस्टॉल किया जा रहा है...' : '📲 1-क्लिक में अभी ऐप इंस्टॉल करें (Install Now)'}</span>
-                </button>
-                <p className="text-center text-[11px] text-emerald-700 font-semibold mt-1.5">
-                  ✓ ब्राउज़र ने सुरक्षित इंस्टॉलेशन अनुमति दी है। ऊपर दिए बटन पर क्लिक करें।
-                </p>
-              </div>
-            )}
+                    const success = await install();
+                    if (success) {
+                      setShowModal(false);
+                      setShowBanner(false);
+                      return;
+                    }
+                    if (!hasDeferredPrompt) {
+                      window.open(directInstallUrl, '_blank');
+                    }
+                  } catch (err) {
+                    console.debug('[PWA] Direct install action error:', err);
+                  } finally {
+                    setIsInstalling(false);
+                  }
+                }}
+                disabled={isInstalling}
+                className="w-full py-3 bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-700 hover:to-green-800 text-white rounded-xl font-black text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+              >
+                <Download className="w-4 h-4 animate-bounce" />
+                <span>{isInstalling ? 'प्रतीक्षा करें...' : '📲 1-क्लिक में आधिकारिक ऐप इंस्टॉल करें (Install App)'}</span>
+              </button>
+              <p className="text-center text-[11px] text-emerald-700 font-semibold mt-1.5">
+                {hasDeferredPrompt
+                  ? '✓ आधिकारिक Android WebAPK इंस्टॉलेशन तैयार है। ऊपर क्लिक करें।'
+                  : isInIframe
+                  ? 'ℹ️ पूर्वावलोकन में ऑटो-इंस्टॉल ब्लॉक रहता है। ऊपर टैप करते ही सीधे Chrome में खुलेगा।'
+                  : '✓ सुरक्षित आधिकारिक ऐप पैकेज (फोन के App Drawer में इंस्टॉल होगा)।'}
+              </p>
+            </div>
 
             {/* PRIMARY ACTION 2: If inside iframe (AI Studio preview or embedded frame) */}
             {isInIframe && (
@@ -384,7 +462,7 @@ export const PwaInstallBanner: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-600 truncate">
-                  होम-स्क्रीन पर यही आधिकारिक लोगो प्रदर्शित होगा।
+                  फोन में यही आधिकारिक लोगो व ऐप नाम इंस्टॉल होगा।
                 </p>
               </div>
             </div>
@@ -428,35 +506,56 @@ export const PwaInstallBanner: React.FC = () => {
 
             {/* Tab 1: Android Chrome */}
             {activeTab === 'android' && (
-              <div className="space-y-2.5 text-xs text-gray-700 bg-amber-50/60 p-3.5 rounded-xl border border-amber-200">
-                <div className="flex items-start gap-2.5">
-                  <span className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
-                  <p>अपने Chrome ब्राउज़र के ऊपर दाईं ओर <strong>3 डॉट्स (⋮) मेन्यू</strong> पर टैप करें।</p>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <span className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-[10px] font-bold shrink-0">2</span>
-                  <p>सूची में <strong>'Install app'</strong> या <strong>'Add to Home screen (होम स्क्रीन में जोड़ें)'</strong> पर क्लिक करें।</p>
-                </div>
-                <div className="flex items-start gap-2.5">
-                  <span className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-[10px] font-bold shrink-0">3</span>
-                  <p>पॉपअप में <strong>'Install'</strong> बटन दबाएं। ऐप तुरंत आपके फोन में इंस्टॉल हो जाएगा!</p>
+              <div className="space-y-3 text-xs text-gray-700 bg-amber-50/60 p-3.5 rounded-xl border border-amber-200">
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
+                    <p>ऊपर दिए हरे बटन <strong>'📲 1-क्लिक में आधिकारिक ऐप इंस्टॉल करें'</strong> पर टैप करें।</p>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-[10px] font-bold shrink-0">2</span>
+                    <p>यदि बटन न चले, तो Chrome के ऊपर दाईं ओर <strong>3 डॉट्स (⋮) मेन्यू</strong> पर टैप करें और <strong>'Install app' (ऐप इंस्टॉल करें)</strong> चुनें।</p>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-[10px] font-bold shrink-0">3</span>
+                    <p>पॉपअप में <strong>'Install'</strong> दबाएं — ऐप आपके फ़ोन के मेन्यू (App Drawer) में एक असली ऐप की तरह इंस्टॉल हो जाएगा!</p>
+                  </div>
                 </div>
 
-                {/* Error Troubleshooting Note if Android Chrome says "This app cannot be installed" */}
-                <div className="mt-3 pt-2.5 border-t border-amber-300 text-[11px] text-amber-950 bg-amber-100/70 p-2.5 rounded-lg space-y-1">
-                  <div className="font-black text-[#8B0000] flex items-center gap-1">
-                    <Info className="w-3.5 h-3.5 text-[#8B0000] shrink-0" />
-                    <span>यदि 'This app cannot be installed' दिखे तो:</span>
+                {/* Clear Solution for "Shortcut vs Install" issue */}
+                <div className="pt-2.5 border-t border-amber-300 text-[11px] text-amber-950 bg-amber-100/90 p-3 rounded-xl space-y-2">
+                  <div className="font-black text-[#8B0000] flex items-center gap-1.5 text-xs">
+                    <Info className="w-4 h-4 text-[#8B0000] shrink-0" />
+                    <span>⚠️ यदि 'ऐप इंस्टॉल' के बजाय 'शॉर्टकट जोड़ें (Add shortcut)' आ रहा हो:</span>
                   </div>
-                  <p className="text-[10.5px] leading-relaxed text-slate-800">
-                    1. <strong>ऐप पहले से मौजूद है:</strong> अपने फ़ोन के होम स्क्रीन या ऐप ड्रॉर में देखें, ऐप पहले से इंस्टॉल हो चुका है और सीधे वहीं से खुलेगा।
-                  </p>
-                  <p className="text-[10.5px] leading-relaxed text-slate-800">
-                    2. <strong>पुनः नया इंस्टॉल करने के लिए:</strong> होम स्क्रीन से पुराने ऐप/शॉर्टकट को अनइंस्टॉल (हटाएं) करें, फिर Chrome में पेज रिफ्रेश करके इंस्टॉल करें।
-                  </p>
-                  <p className="text-[10.5px] leading-relaxed text-slate-800">
-                    3. <strong>शॉर्टकट विकल्प:</strong> आप नीचे दिए <strong>'Create shortcut'</strong> पर क्लिक करके भी तुरंत होम स्क्रीन पर 1-टैप ऐप आइकन जोड़ सकते हैं।
-                  </p>
+                  <div className="space-y-2 text-[11px] leading-relaxed text-slate-800">
+                    <div className="p-2.5 bg-white/95 rounded-lg border border-amber-300 shadow-2xs">
+                      <p className="font-bold text-[#8B0000]">
+                        1. पूर्वावलोकन या इन-ऐप ब्राउज़र में न खोलें:
+                      </p>
+                      <p className="text-[10.5px] text-slate-700 mt-0.5">
+                        यदि आप AI Studio पूर्वावलोकन, WhatsApp या Facebook के अंदर हैं, तो ब्राउज़र सुरक्षा कारणों से केवल 'शॉर्टकट' ही देता है। असली ऐप पैकेज इंस्टॉल करने हेतु नीचे <strong>'🌐 सीधे Google Chrome में खोलें'</strong> पर क्लिक करें।
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 bg-white/95 rounded-lg border border-amber-300 shadow-2xs">
+                      <p className="font-bold text-[#8B0000]">
+                        2. पुराना अधूरा पैकेज अनइंस्टॉल करें:
+                      </p>
+                      <p className="text-[10.5px] text-slate-700 mt-0.5">
+                        यदि आपने पहले कभी शॉर्टकट जोड़ा था, तो फ़ोन की <strong>Settings &gt; Apps</strong> में जाकर <em>"Jeevan Jyoti Foundation"</em> को <strong>Uninstall</strong> करें। इसके बाद Chrome में इस पेज को रीफ़्रेश करें और ऊपर दिए <strong>'📲 1-क्लिक में आधिकारिक ऐप इंस्टॉल करें'</strong> पर टैप करें।
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 bg-white/95 rounded-lg border border-amber-300 shadow-2xs">
+                      <p className="font-bold text-[#8B0000]">
+                        3. Chrome 3 डॉट्स में 'Install app' चुनें:
+                      </p>
+                      <p className="text-[10.5px] text-slate-700 mt-0.5">
+                        Chrome मेन्यू में 'Add to Home Screen' के स्थान पर <strong>'Install app' (ऐप इंस्टॉल करें)</strong> विकल्प चुनें ताकि यह असली APK की तरह इंस्टॉल हो।
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

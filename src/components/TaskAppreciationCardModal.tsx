@@ -137,7 +137,11 @@ export const TaskAppreciationCardModal: React.FC<Props> = ({ task, volunteerName
     setDownloading('jpg');
     try {
       const fileName = `Task_Appreciation_${task.id}_${volunteerName.replace(/\s+/g, '_')}`;
-      await exportElementAsJpg(cardRef.current, fileName, { quality: 0.98 });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsJpg(cardRef.current, fileName, {
+        quality: 0.98,
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }
@@ -148,7 +152,11 @@ export const TaskAppreciationCardModal: React.FC<Props> = ({ task, volunteerName
     setDownloading('png');
     try {
       const fileName = `Task_Appreciation_${task.id}_${volunteerName.replace(/\s+/g, '_')}`;
-      await exportElementAsPng(cardRef.current, fileName, { backgroundColor: '#FFFFFF' });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsPng(cardRef.current, fileName, {
+        backgroundColor: '#FFFFFF',
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }
@@ -159,7 +167,11 @@ export const TaskAppreciationCardModal: React.FC<Props> = ({ task, volunteerName
     setDownloading('pdf');
     try {
       const fileName = `Task_Appreciation_${task.id}_${volunteerName.replace(/\s+/g, '_')}`;
-      await exportElementAsPdf(cardRef.current, fileName, { orientation: 'landscape' });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsPdf(cardRef.current, fileName, {
+        orientation: 'landscape',
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }

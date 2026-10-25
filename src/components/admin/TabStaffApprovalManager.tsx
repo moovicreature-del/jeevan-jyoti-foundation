@@ -337,7 +337,7 @@ export const TabStaffApprovalManager: React.FC = () => {
           `JJF_Staff_Card_${previewStaff.id}_Official_2Page`,
           {
             quality: 1,
-            pixelRatio: 2
+            pixelRatio: typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5
           }
         );
         showToast('📄 2-Page PDF सफलतापूर्वक डाउनलोड हुआ!');

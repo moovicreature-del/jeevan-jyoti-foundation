@@ -81,6 +81,7 @@ import { RoyalFourCorners, RoyalCenterFlourish } from './common/RoyalCertificate
 import { OfficialVerifiedBadge } from './common/OfficialVerifiedBadge';
 import { AppointmentLetterModal } from './common/AppointmentLetterModal';
 import { DonationLetterheadA4Document } from './common/DonationLetterheadA4Document';
+import { findStaffMember } from '../services/staffService';
 
 interface DownloadCertificatesModalProps {
   isOpen: boolean;
@@ -680,20 +681,25 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
       };
       onPreviewFestivalCert(fest);
     } else if (isStaffIdDoc(item) || item.type === 'staff_id') {
+      const staffMember = findStaffMember(item.id) || (item.rawStaff as any);
       setAppointmentLetterState({
         isOpen: true,
         type: 'staff',
         staffData: {
-          id: item.id,
-          fullName: item.recipientName,
-          fatherOrHusbandName: item.fatherOrHusbandName || 'श्री अभिभावक',
-          relationType: 'Father',
-          designation: item.categoryOrPurpose?.split('•')[0]?.trim() || 'स्टाफ सदस्य',
-          department: item.categoryOrPurpose?.split('•')[1]?.trim() || 'प्रशासन',
-          dutyLocation: 'जनपद ग़ाज़ीपुर एवं पूर्वांचल',
-          mobile: item.phone,
-          photoUrl: item.photoUrl,
-          dateOfJoining: item.issueDate
+          id: staffMember?.id || item.id,
+          fullName: staffMember?.fullName || item.recipientName,
+          fatherOrHusbandName: staffMember?.fatherOrHusbandName || item.fatherOrHusbandName || 'सर्वदेव प्रधान',
+          relationType: staffMember?.relationType || 'Father',
+          designation: staffMember?.designation || item.categoryOrPurpose?.split('•')[0]?.trim() || 'Manager / प्रबंधक',
+          department: staffMember?.department || item.categoryOrPurpose?.split('•')[1]?.trim() || 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
+          dutyLocation: staffMember?.dutyLocation || 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
+          mobile: staffMember?.mobile || item.phone,
+          email: staffMember?.email || 'manager@jeevanjyotifoundation.org',
+          photoUrl: staffMember?.photoUrl || item.photoUrl,
+          bloodGroup: staffMember?.bloodGroup || 'B+',
+          qualification: staffMember?.qualification || 'Graduate',
+          dateOfJoining: staffMember?.dateOfJoining || item.issueDate,
+          address: staffMember?.address || item.address || 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108'
         }
       });
     }
@@ -770,9 +776,10 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
 
       let success = false;
       const isDonation80G = item.type === 'donation_80g';
+      const highResScale = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5;
       if (format === 'jpg') {
         success = await exportElementAsJpg(targetElem, `${baseFileName}.jpg`, {
-          pixelRatio: 3.5,
+          pixelRatio: highResScale,
           quality: 0.98,
           backgroundColor: '#FFFFFF'
         });
@@ -780,7 +787,8 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
         success = await exportElementAsPdf(targetElem, `${baseFileName}.pdf`, {
           orientation: shouldExportVolId || isDonation80G ? 'portrait' : 'landscape',
           isIdCard: shouldExportVolId,
-          isFullBleedA4: isDonation80G
+          isFullBleedA4: isDonation80G,
+          pixelRatio: highResScale
         });
       }
 
@@ -1836,20 +1844,25 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
                                            type="button"
                                            disabled={!isApproved}
                                            onClick={() => {
+                                             const staffMember = findStaffMember(item.id) || (item.rawStaff as any);
                                              setAppointmentLetterState({
                                                isOpen: true,
                                                type: 'staff',
                                                staffData: {
-                                                 id: item.id,
-                                                 fullName: item.recipientName,
-                                                 fatherOrHusbandName: item.fatherOrHusbandName || 'श्री अभिभावक',
-                                                 relationType: 'Father',
-                                                 designation: item.categoryOrPurpose?.split('•')[0]?.trim() || 'स्टाफ सदस्य',
-                                                 department: item.categoryOrPurpose?.split('•')[1]?.trim() || 'प्रशासन',
-                                                 dutyLocation: 'जनपद ग़ाज़ीपुर एवं पूर्वांचल',
-                                                 mobile: item.phone,
-                                                 photoUrl: item.photoUrl,
-                                                 dateOfJoining: item.issueDate
+                                                 id: staffMember?.id || item.id,
+                                                 fullName: staffMember?.fullName || item.recipientName,
+                                                 fatherOrHusbandName: staffMember?.fatherOrHusbandName || item.fatherOrHusbandName || 'सर्वदेव प्रधान',
+                                                 relationType: staffMember?.relationType || 'Father',
+                                                 designation: staffMember?.designation || item.categoryOrPurpose?.split('•')[0]?.trim() || 'Manager / प्रबंधक',
+                                                 department: staffMember?.department || item.categoryOrPurpose?.split('•')[1]?.trim() || 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
+                                                 dutyLocation: staffMember?.dutyLocation || 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
+                                                 mobile: staffMember?.mobile || item.phone,
+                                                 email: staffMember?.email || 'manager@jeevanjyotifoundation.org',
+                                                 photoUrl: staffMember?.photoUrl || item.photoUrl,
+                                                 bloodGroup: staffMember?.bloodGroup || 'B+',
+                                                 qualification: staffMember?.qualification || 'Graduate',
+                                                 dateOfJoining: staffMember?.dateOfJoining || item.issueDate,
+                                                 address: staffMember?.address || item.address || 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108'
                                                }
                                              });
                                            }}

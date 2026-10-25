@@ -1197,8 +1197,8 @@ export async function fixAndCleanAllLogosAndThumbnails(
   adminUid: string = 'admin'
 ): Promise<{ success: boolean; message: string }> {
   const now = new Date().toISOString();
-  const currentLogoUrl = '/uploads/jjf_official_app_logo_current.png';
-  const currentThumbUrl = '/uploads/jjf_official_app_thumbnail_current.png';
+  const currentLogoUrl = '/uploads/ngo_logo.png';
+  const currentThumbUrl = '/uploads/ngo_logo.png';
 
   // 1. Wipe all legacy & stale keys from localStorage and sessionStorage
   const staleKeys = [
@@ -2453,7 +2453,31 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
         window.dispatchEvent(new CustomEvent('jjf-content-updated', { detail: data.homeContent }));
       }
       if (data.staffMembers && Array.isArray(data.staffMembers)) {
-        localStorage.setItem('jjf_staff_registry_v3', JSON.stringify(data.staffMembers));
+        let existingStaff: any[] = [];
+        try {
+          const s = localStorage.getItem('jjf_staff_registry_v3');
+          if (s) existingStaff = JSON.parse(s);
+        } catch {}
+        if (!Array.isArray(existingStaff)) existingStaff = [];
+
+        // Smart merge: keep all existing staff, overlay incoming without wiping user approvals
+        const staffMap = new Map<string, any>();
+        data.staffMembers.forEach((sm: any) => {
+          if (sm && sm.id) staffMap.set(sm.id.toUpperCase(), sm);
+        });
+        existingStaff.forEach((sm: any) => {
+          if (sm && sm.id) {
+            const key = sm.id.toUpperCase();
+            const inc = staffMap.get(key);
+            if (sm.status === 'approved' || !inc) {
+              staffMap.set(key, { ...inc, ...sm, status: sm.status || inc?.status || 'approved' });
+            } else {
+              staffMap.set(key, { ...inc, ...sm });
+            }
+          }
+        });
+        const mergedStaff = Array.from(staffMap.values());
+        localStorage.setItem('jjf_staff_registry_v3', JSON.stringify(mergedStaff));
         window.dispatchEvent(new CustomEvent('jjf-staff-updated'));
       }
       if (data.notices && Array.isArray(data.notices)) {
@@ -2464,7 +2488,31 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
         localStorage.setItem('jjf_donation_payment_settings', JSON.stringify(data.paymentSettings));
       }
       if (data.certificates && Array.isArray(data.certificates)) {
-        localStorage.setItem('jjf_registered_certificates_registry_v2', JSON.stringify(data.certificates));
+        let existingCerts: any[] = [];
+        try {
+          const c = localStorage.getItem('jjf_registered_certificates_registry_v2');
+          if (c) existingCerts = JSON.parse(c);
+        } catch {}
+        if (!Array.isArray(existingCerts)) existingCerts = [];
+
+        // Smart merge certificates: never erase or downgrade approved/pending certificates
+        const certMap = new Map<string, any>();
+        data.certificates.forEach((cert: any) => {
+          if (cert && cert.id) certMap.set(cert.id.toUpperCase(), cert);
+        });
+        existingCerts.forEach((cert: any) => {
+          if (cert && cert.id) {
+            const key = cert.id.toUpperCase();
+            const inc = certMap.get(key);
+            if (cert.approvalStatus === 'approved' || !inc) {
+              certMap.set(key, { ...inc, ...cert, approvalStatus: cert.approvalStatus || inc?.approvalStatus || 'approved' });
+            } else {
+              certMap.set(key, { ...inc, ...cert });
+            }
+          }
+        });
+        const mergedCerts = Array.from(certMap.values());
+        localStorage.setItem('jjf_registered_certificates_registry_v2', JSON.stringify(mergedCerts));
         window.dispatchEvent(new CustomEvent('jjf-certificates-updated'));
       }
 

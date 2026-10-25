@@ -24,8 +24,10 @@ export const AnnualReportCardModal: React.FC<AnnualReportCardModalProps> = ({ is
     if (!cardRef.current || downloading) return;
     setDownloading('jpg');
     try {
+      const highResScale = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5;
       await exportElementAsJpg(cardRef.current, `JJF-Annual-Impact-Card-2025-2026`, {
-        quality: 0.98
+        quality: 0.98,
+        pixelRatio: highResScale
       });
     } finally {
       setDownloading(null);
@@ -36,8 +38,10 @@ export const AnnualReportCardModal: React.FC<AnnualReportCardModalProps> = ({ is
     if (!cardRef.current || downloading) return;
     setDownloading('pdf');
     try {
+      const highResScale = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5;
       await exportElementAsPdf(cardRef.current, `JJF-Annual-Impact-Card-2025-2026_A4`, {
-        orientation: 'portrait'
+        orientation: 'portrait',
+        pixelRatio: highResScale
       });
     } finally {
       setDownloading(null);

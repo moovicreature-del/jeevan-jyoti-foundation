@@ -102,9 +102,10 @@ export const Donation80GReceiptView: React.FC<Props> = ({
 
     try {
       const fileName = `Donation_Receipt_${receiptNumber.replace(/[\/\\]/g, '_')}_${donation.donorName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
       const success = await exportElementAsPdf(receiptRef.current, fileName, {
         orientation: 'portrait',
-        pixelRatio: 2.5,
+        pixelRatio: highResScale,
         backgroundColor: '#FFFFFF',
         isFullBleedA4: true
       });

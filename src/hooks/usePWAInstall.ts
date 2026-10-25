@@ -66,19 +66,22 @@ if (typeof window !== 'undefined') {
 
 export function usePWAInstall() {
   const [, setTick] = useState(0);
-  const [isInstalled, setIsInstalled] = useState<boolean>(() => {
+
+  const checkIsStandalone = () => {
     if (typeof window === 'undefined') return false;
+    // Strictly check for true standalone installed app mode, avoiding false positives from mobile browser UI states
     return (
       window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
-      document.referrer.includes('android-app://')
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true
     );
-  });
+  };
 
+  const [isInstalled, setIsInstalled] = useState<boolean>(checkIsStandalone);
   const [isIOS, setIsIOS] = useState<boolean>(false);
   const [isAndroid, setIsAndroid] = useState<boolean>(false);
   const [isDesktop, setIsDesktop] = useState<boolean>(false);
   const [isInIframe, setIsInIframe] = useState<boolean>(false);
+  const [isWebView, setIsWebView] = useState<boolean>(false);
   const [isSwRegistered, setIsSwRegistered] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
@@ -94,27 +97,23 @@ export function usePWAInstall() {
       onPromptChange();
     }
 
-    // Check standalone mode
-    const checkStandalone = () => {
-      const standalone =
-        window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
-        document.referrer.includes('android-app://');
-      setIsInstalled(standalone);
-    };
-
-    checkStandalone();
+    // Check standalone mode strictly without false positive from android-app:// referrers
+    setIsInstalled(checkIsStandalone());
 
     // Device detection
     const ua = window.navigator.userAgent.toLowerCase();
     const iosDevice = /iphone|ipad|ipod/.test(ua);
     const androidDevice = /android/.test(ua);
     const desktopDevice = !iosDevice && !androidDevice;
+    const webViewDetected =
+      /wv|fbav|instagram|line|micromessenger/i.test(ua) ||
+      (androidDevice && /version\/[0-9\.]+/i.test(ua) && !/chrome\/[0-9\.]+/i.test(ua));
 
     setIsIOS(iosDevice);
     setIsAndroid(androidDevice);
     setIsDesktop(desktopDevice);
     setIsInIframe(window.self !== window.top);
+    setIsWebView(webViewDetected);
 
     // Service worker check
     if ('serviceWorker' in navigator) {
@@ -147,6 +146,22 @@ export function usePWAInstall() {
 
     window.addEventListener('appinstalled', handleAppInstalled);
 
+    // Auto-prompt trigger on ?install=true when user first interacts with page
+    if (typeof window !== 'undefined' && window.location.search.includes('install=true')) {
+      const autoPromptOnTouch = async () => {
+        const p = globalDeferredPrompt || (window as any).__pwaDeferredPrompt;
+        if (p) {
+          window.removeEventListener('click', autoPromptOnTouch);
+          window.removeEventListener('touchstart', autoPromptOnTouch);
+          try {
+            await p.prompt();
+          } catch {}
+        }
+      };
+      window.addEventListener('click', autoPromptOnTouch, { once: true });
+      window.addEventListener('touchstart', autoPromptOnTouch, { once: true });
+    }
+
     return () => {
       listeners.delete(onPromptChange);
       window.removeEventListener('jjf-sw-ready', handleSwReady);
@@ -158,8 +173,25 @@ export function usePWAInstall() {
   }, []);
 
   const install = useCallback(async (): Promise<boolean> => {
-    // If deferredPrompt is available directly
-    const promptEvent = globalDeferredPrompt || ((typeof window !== 'undefined') ? (window as any).__pwaDeferredPrompt : null);
+    let promptEvent = globalDeferredPrompt || (typeof window !== 'undefined' ? (window as any).__pwaDeferredPrompt : null);
+
+    // If deferredPrompt is not ready immediately, wait briefly (up to 1500ms) for beforeinstallprompt event
+    if (!promptEvent && typeof window !== 'undefined') {
+      promptEvent = await new Promise<BeforeInstallPromptEvent | null>((resolve) => {
+        let timer: any;
+        const handler = () => {
+          clearTimeout(timer);
+          window.removeEventListener('jjf-pwa-prompt-ready', handler);
+          resolve(globalDeferredPrompt || (window as any).__pwaDeferredPrompt || null);
+        };
+        window.addEventListener('jjf-pwa-prompt-ready', handler, { once: true });
+        timer = setTimeout(() => {
+          window.removeEventListener('jjf-pwa-prompt-ready', handler);
+          resolve(globalDeferredPrompt || (window as any).__pwaDeferredPrompt || null);
+        }, 1500);
+      });
+    }
+
     if (!promptEvent) {
       return false;
     }
@@ -211,8 +243,10 @@ export function usePWAInstall() {
     isAndroid,
     isDesktop,
     isInIframe,
+    isWebView,
     isSwRegistered,
     install,
+    forceResetInstalledStatus: () => setIsInstalled(false),
     hasDeferredPrompt: !!globalDeferredPrompt,
     getReadinessReport
   };

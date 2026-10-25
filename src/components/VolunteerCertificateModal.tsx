@@ -163,8 +163,12 @@ export const VolunteerCertificateModal: React.FC<Props> = ({ volunteer, onClose 
     if (!certificateRef.current || downloading) return;
     setDownloading('pdf');
     try {
-      const fileName = `Certificate_Of_Appreciation_${volunteerName.replace(/\s+/g, '_')}_A4_300DPI`;
-      await exportElementAsPdf(certificateRef.current, fileName, { orientation: 'landscape' });
+      const fileName = `Certificate_Of_Appreciation_${volunteerName.replace(/\s+/g, '_')}_A4_HD`;
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsPdf(certificateRef.current, fileName, {
+        orientation: 'landscape',
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }
@@ -174,8 +178,12 @@ export const VolunteerCertificateModal: React.FC<Props> = ({ volunteer, onClose 
     if (!certificateRef.current || downloading) return;
     setDownloading('jpg');
     try {
-      const fileName = `Certificate_Of_Appreciation_${volunteerName.replace(/\s+/g, '_')}_300DPI`;
-      await exportElementAsJpg(certificateRef.current, fileName, { quality: 0.96 });
+      const fileName = `Certificate_Of_Appreciation_${volunteerName.replace(/\s+/g, '_')}_HD`;
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsJpg(certificateRef.current, fileName, {
+        quality: 0.98,
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }
@@ -185,8 +193,12 @@ export const VolunteerCertificateModal: React.FC<Props> = ({ volunteer, onClose 
     if (!certificateRef.current || downloading) return;
     setDownloading('png');
     try {
-      const fileName = `Certificate_Of_Appreciation_${volunteerName.replace(/\s+/g, '_')}`;
-      await exportElementAsPng(certificateRef.current, fileName, { backgroundColor: '#FFFFFF' });
+      const fileName = `Certificate_Of_Appreciation_${volunteerName.replace(/\s+/g, '_')}_HD`;
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsPng(certificateRef.current, fileName, {
+        backgroundColor: '#FFFFFF',
+        pixelRatio: highResScale
+      });
     } finally {
       setDownloading(null);
     }

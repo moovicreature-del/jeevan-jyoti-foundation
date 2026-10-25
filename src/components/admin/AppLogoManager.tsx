@@ -845,7 +845,7 @@ export const AppLogoManager: React.FC = () => {
     ? thumbPreviewUrl
     : (content?.appThumbnailUrl && content.appThumbnailUrl.trim() !== '' && content.appThumbnailUrl !== '/pwa-icon-512.png')
     ? content.appThumbnailUrl
-    : '/pwa-icon-512.png';
+    : (content?.appLogoUrl && content.appLogoUrl.trim() !== '' ? content.appLogoUrl : '/uploads/ngo_logo.png');
 
   const resolvedFaviconDisplay = (faviconPreviewUrl && faviconPreviewUrl.trim() !== '' && faviconPreviewUrl !== '/pwa-icon-512.png')
     ? faviconPreviewUrl
@@ -1568,7 +1568,12 @@ export const AppLogoManager: React.FC = () => {
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/pwa-icon-512.png';
+                          const img = e.currentTarget as HTMLImageElement;
+                          if (!img.src.includes('ngo_logo.png')) {
+                            img.src = '/uploads/ngo_logo.png';
+                          } else {
+                            img.src = '/pwa-icon-512.png';
+                          }
                         }}
                       />
                     </div>
@@ -1601,7 +1606,12 @@ export const AppLogoManager: React.FC = () => {
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-contain rounded-xl"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/pwa-icon-512.png';
+                          const img = e.currentTarget as HTMLImageElement;
+                          if (!img.src.includes('ngo_logo.png')) {
+                            img.src = '/uploads/ngo_logo.png';
+                          } else {
+                            img.src = '/pwa-icon-512.png';
+                          }
                         }}
                       />
                     </div>
@@ -1633,7 +1643,12 @@ export const AppLogoManager: React.FC = () => {
                       referrerPolicy="no-referrer"
                       className="w-4 h-4 rounded-sm object-contain shrink-0"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/pwa-icon-512.png';
+                        const img = e.currentTarget as HTMLImageElement;
+                        if (!img.src.includes('ngo_logo.png')) {
+                          img.src = '/uploads/ngo_logo.png';
+                        } else {
+                          img.src = '/pwa-icon-512.png';
+                        }
                       }}
                     />
                     <span className="text-[11px] font-bold text-slate-800 truncate max-w-[200px]">
@@ -1986,7 +2001,12 @@ export const AppLogoManager: React.FC = () => {
                       referrerPolicy="no-referrer"
                       className="w-4 h-4 rounded-xs object-contain shrink-0"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/pwa-icon-512.png';
+                        const img = e.currentTarget as HTMLImageElement;
+                        if (!img.src.includes('ngo_logo.png')) {
+                          img.src = '/uploads/ngo_logo.png';
+                        } else {
+                          img.src = '/pwa-icon-512.png';
+                        }
                       }}
                     />
                     <span className="text-[11px] font-bold text-slate-900 truncate max-w-[180px]">
@@ -2024,7 +2044,12 @@ export const AppLogoManager: React.FC = () => {
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-contain rounded-xl"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/pwa-icon-512.png';
+                          const img = e.currentTarget as HTMLImageElement;
+                          if (!img.src.includes('ngo_logo.png')) {
+                            img.src = '/uploads/ngo_logo.png';
+                          } else {
+                            img.src = '/pwa-icon-512.png';
+                          }
                         }}
                       />
                     </div>
@@ -2057,7 +2082,12 @@ export const AppLogoManager: React.FC = () => {
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-contain rounded-[18%]"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/pwa-icon-512.png';
+                          const img = e.currentTarget as HTMLImageElement;
+                          if (!img.src.includes('ngo_logo.png')) {
+                            img.src = '/uploads/ngo_logo.png';
+                          } else {
+                            img.src = '/pwa-icon-512.png';
+                          }
                         }}
                       />
                     </div>

@@ -33,36 +33,86 @@ export function getAllStaffMembers(): StaffMember[] {
       return INITIAL_STAFF_MEMBERS;
     }
     const saved = localStorage.getItem(STAFF_STORAGE_KEY);
-    if (!saved) {
+    let parsed: StaffMember[] = [];
+    if (saved) {
+      try {
+        parsed = JSON.parse(saved);
+      } catch {}
+    }
+
+    if (!Array.isArray(parsed) || parsed.length === 0) {
       localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(INITIAL_STAFF_MEMBERS));
-      // Also register initial staff into central public registry
       INITIAL_STAFF_MEMBERS.forEach((staff) => registerStaffIntoCentralRegistry(staff));
       return INITIAL_STAFF_MEMBERS;
     }
-    const parsed: StaffMember[] = JSON.parse(saved);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(INITIAL_STAFF_MEMBERS));
-      return INITIAL_STAFF_MEMBERS;
-    }
-    // Cleanse any old cached occurrences of 9452361666 from stored staff
+
+    // Smart merge: ensure all permanent staff records (especially JJF-STF-2026-009) always exist
+    let updatedList = [...parsed];
     let changed = false;
-    const sanitized = parsed.map((item) => {
-      let mod = { ...item };
-      if (mod.mobile === '9452361666') {
-        mod.mobile = '9838361666';
+
+    INITIAL_STAFF_MEMBERS.forEach((initStaff) => {
+      const existsIdx = updatedList.findIndex((s) => s.id.toLowerCase() === initStaff.id.toLowerCase());
+      if (existsIdx === -1) {
+        updatedList.push(initStaff);
         changed = true;
       }
-      if (mod.emergencyContact === '9452361666') {
-        mod.emergencyContact = '8052361666';
-        changed = true;
-      }
-      return mod;
     });
-    if (changed) {
-      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(sanitized));
-      return sanitized;
+
+    // Enforce official verified attributes for JJF-STF-2026-009 (शैलेश प्रधान, पिता: सर्वदेव प्रधान, प्रबंधक)
+    const idx009 = updatedList.findIndex((s) => s.id === 'JJF-STF-2026-009');
+    if (idx009 >= 0) {
+      const s009 = updatedList[idx009];
+      if (
+        s009.fatherOrHusbandName !== 'सर्वदेव प्रधान' ||
+        s009.designation !== 'Manager / प्रबंधक' ||
+        s009.mobile !== '8052361666' ||
+        s009.status !== 'approved' ||
+        !s009.address?.includes('तुर्की')
+      ) {
+        updatedList[idx009] = {
+          ...s009,
+          fullName: 'शैलेश प्रधान',
+          fullNameHindi: 'शैलेश प्रधान',
+          fatherOrHusbandName: 'सर्वदेव प्रधान',
+          relationType: 'Father',
+          designation: 'Manager / प्रबंधक',
+          designationHindi: 'प्रबंधक',
+          department: 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
+          mobile: '8052361666',
+          bloodGroup: 'B+',
+          dateOfJoining: '2018-08-20',
+          address: 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108',
+          dutyLocation: 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
+          status: 'approved',
+          approvedAt: '2018-08-20T10:00:00.000Z',
+          approvedBy: 'जीवन ज्योति फाउंडेशन (प्रशासन)'
+        };
+        changed = true;
+      }
     }
-    return parsed;
+
+    // Cleanse JJF-STF-2026-001 so it has distinct executive phone 9838061666 and does not hijack 8052361666
+    const idx001 = updatedList.findIndex((s) => s.id === 'JJF-STF-2026-001');
+    if (idx001 >= 0 && (updatedList[idx001].mobile === '8052361666' || updatedList[idx001].emergencyContact === '8052361666')) {
+      updatedList[idx001] = {
+        ...updatedList[idx001],
+        mobile: '9838061666',
+        emergencyContact: '9838061666'
+      };
+      changed = true;
+    }
+
+    if (changed) {
+      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(updatedList));
+    }
+
+    // Always ensure JJF-STF-2026-009 is synced into central verification registry
+    const official009 = updatedList.find((s) => s.id === 'JJF-STF-2026-009');
+    if (official009) {
+      registerStaffIntoCentralRegistry(official009);
+    }
+
+    return updatedList;
   } catch (err) {
     console.warn('Error reading staff registry from storage:', err);
     return INITIAL_STAFF_MEMBERS;
@@ -84,6 +134,9 @@ export function registerStaffIntoCentralRegistry(staff: StaffMember): void {
         ? 'cancelled'
         : 'pending';
 
+    const refNum = staff.id.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '101';
+    const refNoCode = `JJF/APPT-STF/2026/${refNum}`;
+
     // 1. Staff Identity Card (I-Card)
     saveCertificateToRegistry({
       id: staff.id,
@@ -101,7 +154,9 @@ export function registerStaffIntoCentralRegistry(staff: StaffMember): void {
       approvalStatus: effectiveApproval,
       approvedAt: staff.approvedAt,
       approvedBy: staff.approvedBy,
-      rejectionReason: staff.rejectionReason
+      rejectionReason: staff.rejectionReason,
+      rawStaff: staff,
+      address: staff.address
     });
 
     // 2. Staff Official Appointment Letter (नियुक्ति पत्र on Official Letterhead)
@@ -121,7 +176,33 @@ export function registerStaffIntoCentralRegistry(staff: StaffMember): void {
       approvalStatus: effectiveApproval,
       approvedAt: staff.approvedAt,
       approvedBy: staff.approvedBy,
-      rejectionReason: staff.rejectionReason
+      rejectionReason: staff.rejectionReason,
+      refNo: refNoCode,
+      rawStaff: staff,
+      address: staff.address
+    });
+
+    // 3. Direct Reference Number mapping (e.g. JJF/APPT-STF/2026/6009)
+    saveCertificateToRegistry({
+      id: refNoCode,
+      type: 'task_appreciation',
+      titleHindi: 'स्टाफ आधिकारिक नियुक्ति आदेश',
+      titleEnglish: 'Official Staff Appointment Letter',
+      recipientName: staff.fullName,
+      fatherOrHusbandName: staff.fatherOrHusbandName,
+      phone: cleanPhone,
+      issueDate: staff.dateOfJoining,
+      categoryOrPurpose: `${staff.designation} • ${staff.department}`,
+      photoUrl: staff.photoUrl,
+      details: `स्टाफ नियुक्ति आदेश • पत्रांक: ${refNoCode} • पदनाम: ${staff.designation}`,
+      status: 'active',
+      approvalStatus: effectiveApproval,
+      approvedAt: staff.approvedAt,
+      approvedBy: staff.approvedBy,
+      rejectionReason: staff.rejectionReason,
+      refNo: refNoCode,
+      rawStaff: staff,
+      address: staff.address
     });
   } catch (err) {
     console.warn('Failed to sync staff into central verification registry:', err);
@@ -416,19 +497,35 @@ export function findStaffMember(query: string): StaffMember | null {
   const byId = all.find((m) => m.id.toLowerCase() === cleanQuery);
   if (byId) return byId;
 
-  // Search by mobile (last 10 digits)
-  if (digitsOnly.length >= 10) {
-    const searchPhone = digitsOnly.slice(-10);
-    const byPhone = all.find((m) => m.mobile.slice(-10) === searchPhone || (m.emergencyContact && m.emergencyContact.slice(-10) === searchPhone));
-    if (byPhone) return byPhone;
+  // Search by reference code (e.g., 6009 or JJF/APPT-STF/2026/6009)
+  if (cleanQuery.includes('6009') || cleanQuery === 'jjf-stf-2026-009') {
+    const s009 = all.find((m) => m.id === 'JJF-STF-2026-009');
+    if (s009) return s009;
   }
 
-  // Search partial ID or Name
+  // Search by mobile (last 10 digits)
+  if (digitsOnly.length >= 10) {
+    const foundByPhone = findStaffByMobile(digitsOnly.slice(-10));
+    if (foundByPhone) return foundByPhone;
+  }
+
+  // Search partial ID or Name (prioritizing approved official staff)
+  const byPartialApproved = all.find(
+    (m) =>
+      (m.status === 'approved' || m.status === 'active' || m.status === 'verified') &&
+      (m.id.toLowerCase().includes(cleanQuery) ||
+        m.fullName.toLowerCase().includes(cleanQuery) ||
+        m.designation.toLowerCase().includes(cleanQuery) ||
+        (m.fatherOrHusbandName && m.fatherOrHusbandName.toLowerCase().includes(cleanQuery)))
+  );
+  if (byPartialApproved) return byPartialApproved;
+
   const byPartial = all.find(
     (m) =>
       m.id.toLowerCase().includes(cleanQuery) ||
       m.fullName.toLowerCase().includes(cleanQuery) ||
-      m.designation.toLowerCase().includes(cleanQuery)
+      m.designation.toLowerCase().includes(cleanQuery) ||
+      (m.fatherOrHusbandName && m.fatherOrHusbandName.toLowerCase().includes(cleanQuery))
   );
 
   return byPartial || null;
@@ -444,11 +541,31 @@ export function findStaffByMobile(mobile: string): StaffMember | null {
   const searchPhone = digitsOnly.slice(-10);
 
   const all = getAllStaffMembers();
-  return (
-    all.find(
-      (m) =>
-        (m.mobile && m.mobile.replace(/[^0-9]/g, '').slice(-10) === searchPhone) ||
-        (m.emergencyContact && m.emergencyContact.replace(/[^0-9]/g, '').slice(-10) === searchPhone)
-    ) || null
+
+  // 1. Direct priority: 8052361666 belongs to Manager Shailesh Pradhan (JJF-STF-2026-009)
+  if (searchPhone === '8052361666') {
+    const s009 = all.find((m) => m.id === 'JJF-STF-2026-009');
+    if (s009) return s009;
+  }
+
+  // 2. Exact primary mobile match that is approved
+  const approvedExact = all.find(
+    (m) =>
+      m.mobile &&
+      m.mobile.replace(/[^0-9]/g, '').slice(-10) === searchPhone &&
+      (m.status === 'approved' || m.status === 'active' || m.status === 'verified')
   );
+  if (approvedExact) return approvedExact;
+
+  // 3. Exact primary mobile match (any status)
+  const anyExact = all.find(
+    (m) => m.mobile && m.mobile.replace(/[^0-9]/g, '').slice(-10) === searchPhone
+  );
+  if (anyExact) return anyExact;
+
+  // 4. Emergency contact match only as a fallback
+  const byEmergency = all.find(
+    (m) => m.emergencyContact && m.emergencyContact.replace(/[^0-9]/g, '').slice(-10) === searchPhone
+  );
+  return byEmergency || null;
 }

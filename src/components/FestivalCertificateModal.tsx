@@ -135,7 +135,11 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
     setDownloading('jpg');
     try {
       const fileName = `${greeting.recipientName.replace(/\s+/g, '_')}_${greeting.festivalId}_Greeting_Certificate`;
-      await exportElementAsJpg(certificateRef.current, fileName, { quality: 0.98 });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsJpg(certificateRef.current, fileName, {
+        quality: 0.98,
+        pixelRatio: highResScale
+      });
     } catch (err) {
       console.error('Error downloading JPG certificate:', err);
     } finally {
@@ -148,7 +152,11 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
     setDownloading('png');
     try {
       const fileName = `${greeting.recipientName.replace(/\s+/g, '_')}_${greeting.festivalId}_Greeting_Certificate`;
-      await exportElementAsPng(certificateRef.current, fileName, { backgroundColor: '#FFFFFF', pixelRatio: 3.5 });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsPng(certificateRef.current, fileName, {
+        backgroundColor: '#FFFFFF',
+        pixelRatio: highResScale
+      });
     } catch (err) {
       console.error('Error downloading certificate:', err);
     } finally {
@@ -161,7 +169,11 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
     setDownloading('pdf');
     try {
       const fileName = `${greeting.recipientName.replace(/\s+/g, '_')}_${greeting.festivalId}_Greeting_Certificate_A4`;
-      await exportElementAsPdf(certificateRef.current, fileName, { orientation: 'landscape' });
+      const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
+      await exportElementAsPdf(certificateRef.current, fileName, {
+        orientation: 'landscape',
+        pixelRatio: highResScale
+      });
     } catch (err) {
       console.error('Error downloading PDF certificate:', err);
     } finally {

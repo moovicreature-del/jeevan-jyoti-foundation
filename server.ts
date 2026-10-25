@@ -47,16 +47,126 @@ function getAdminFirestore(): admin.firestore.Firestore | null {
 }
 
 // Seed default verified certificates on server boot
+// Persistent certificate store on server disk
+const CERTIFICATES_STORAGE_FILE = path.join(__dirname, 'public', 'uploads', 'persistent_certificates.json');
+
+function saveCertificatesToDisk() {
+  try {
+    const list: any[] = [];
+    const seen = new Set<string>();
+    for (const val of serverCertificateStore.values()) {
+      if (val && val.id && !seen.has(val.id)) {
+        seen.add(val.id);
+        list.push(val);
+      }
+    }
+    const dir = path.dirname(CERTIFICATES_STORAGE_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(CERTIFICATES_STORAGE_FILE, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[Server] Error saving certificates to disk:', err);
+  }
+}
+
+function loadCertificatesFromDisk() {
+  try {
+    if (fs.existsSync(CERTIFICATES_STORAGE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(CERTIFICATES_STORAGE_FILE, 'utf-8'));
+      if (Array.isArray(data)) {
+        data.forEach((cert) => {
+          if (cert && cert.id) {
+            const normId = String(cert.id).toUpperCase().replace(/[\s]/g, '');
+            serverCertificateStore.set(normId, cert);
+            serverCertificateStore.set(normId.replace(/[^A-Z0-9]/g, ''), cert);
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('[Server] Error loading certificates from disk:', err);
+  }
+}
+
+// Seed authentic official certificates on server boot
 const SEED_CERTIFICATES = [
+  // 1. Official Staff Identity Card: शैलेश प्रधान (JJF-STF-2026-009)
+  {
+    id: 'JJF-STF-2026-009',
+    type: 'volunteer_id',
+    titleHindi: 'आधिकारिक स्टाफ डिजिटल पहचान पत्र',
+    titleEnglish: 'Official Staff Identity Card',
+    recipientName: 'शैलेश प्रधान',
+    fatherOrHusbandName: 'सर्वदेव प्रधान',
+    phone: '8052361666',
+    issueDate: '2018-08-20',
+    categoryOrPurpose: 'Manager / प्रबंधक • प्रशासनिक, लेखा व ऑडिट अनुभाग',
+    status: 'active',
+    approvalStatus: 'approved',
+    approvedAt: '2018-08-20T10:00:00.000Z',
+    approvedBy: 'जीवन ज्योति फाउंडेशन (प्रशासन)',
+    bloodGroup: 'B+',
+    designation: 'Manager / प्रबंधक',
+    department: 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
+    dutyLocation: 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
+    details: 'स्टाफ आईडी: JJF-STF-2026-009 • रक्त समूह: B+ • पदनाम: Manager / प्रबंधक • कार्यक्षेत्र: गाजीपुर मुख्य शाखा (Ghazipur HQ)',
+    address: 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108'
+  },
+  // 2. Official Staff Appointment Letter: शैलेश प्रधान (JJF-STF-2026-009-APPT)
+  {
+    id: 'JJF-STF-2026-009-APPT',
+    type: 'task_appreciation',
+    titleHindi: 'स्टाफ आधिकारिक नियुक्ति पत्र',
+    titleEnglish: 'Official Staff Appointment Letter',
+    recipientName: 'शैलेश प्रधान',
+    fatherOrHusbandName: 'सर्वदेव प्रधान',
+    phone: '8052361666',
+    issueDate: '2018-08-20',
+    categoryOrPurpose: 'Manager / प्रबंधक • प्रशासनिक, लेखा व ऑडिट अनुभाग',
+    status: 'active',
+    approvalStatus: 'approved',
+    approvedAt: '2018-08-20T10:00:00.000Z',
+    approvedBy: 'जीवन ज्योति फाउंडेशन (प्रशासन)',
+    refNo: 'JJF/APPT-STF/2026/6009',
+    bloodGroup: 'B+',
+    designation: 'Manager / प्रबंधक',
+    department: 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
+    dutyLocation: 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
+    details: 'स्टाफ नियुक्ति पत्र • पत्रांक: JJF/APPT-STF/2026/6009 • पदनाम: Manager / प्रबंधक • विभाग: प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
+    address: 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108'
+  },
+  // 3. Official Staff Appointment Order Reference Number: JJF/APPT-STF/2026/6009
+  {
+    id: 'JJF/APPT-STF/2026/6009',
+    type: 'task_appreciation',
+    titleHindi: 'स्टाफ आधिकारिक नियुक्ति आदेश',
+    titleEnglish: 'Official Staff Appointment Letter',
+    recipientName: 'शैलेश प्रधान',
+    fatherOrHusbandName: 'सर्वदेव प्रधान',
+    phone: '8052361666',
+    issueDate: '2018-08-20',
+    categoryOrPurpose: 'Manager / प्रबंधक • प्रशासनिक, लेखा व ऑडिट अनुभाग',
+    status: 'active',
+    approvalStatus: 'approved',
+    approvedAt: '2018-08-20T10:00:00.000Z',
+    approvedBy: 'जीवन ज्योति फाउंडेशन (प्रशासन)',
+    refNo: 'JJF/APPT-STF/2026/6009',
+    bloodGroup: 'B+',
+    designation: 'Manager / प्रबंधक',
+    department: 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
+    dutyLocation: 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
+    details: 'स्टाफ नियुक्ति आदेश • पत्रांक: JJF/APPT-STF/2026/6009 • पदनाम: Manager / प्रबंधक',
+    address: 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108'
+  },
   {
     id: 'JJF-VOL-2026-01',
     type: 'volunteer_cert',
     recipientName: 'आकाश वर्मा (Akash Verma)',
     fatherOrHusbandName: 'श्री रामसेवक वर्मा',
-    phone: '8052361666',
+    phone: '9000000001',
     issueDate: '2026-01-15',
     categoryOrPurpose: 'शिक्षा एवं बाल विकास (Education & Child Development)',
     status: 'verified',
+    approvalStatus: 'approved',
     details: '48+ सेवा घंटे • 6 सेवा कार्य पूर्ण'
   },
   {
@@ -64,10 +174,11 @@ const SEED_CERTIFICATES = [
     type: 'volunteer_id',
     recipientName: 'आकाश वर्मा (Akash Verma)',
     fatherOrHusbandName: 'श्री रामसेवक वर्मा',
-    phone: '8052361666',
+    phone: '9000000001',
     issueDate: '2026-01-15',
     categoryOrPurpose: 'Dedicated Swayam Sewak',
     status: 'active',
+    approvalStatus: 'approved',
     details: 'ब्लड ग्रुप: O+ • अधिकृत पहचान पत्र'
   },
   {
@@ -75,57 +186,13 @@ const SEED_CERTIFICATES = [
     type: 'donation_receipt',
     recipientName: 'रमेश कुमार गुप्ता',
     fatherOrHusbandName: 'श्री बद्री प्रसाद गुप्ता',
-    phone: '8052361666',
+    phone: '9000000002',
     issueDate: '2026-02-10',
     amount: 5100,
     categoryOrPurpose: 'गरीब बच्चों की शिक्षा व स्कूल किट वितरण',
     status: 'certified',
+    approvalStatus: 'approved',
     details: 'दान राशि: ₹5,100 (आधिकारिक दान पावती)'
-  },
-  {
-    id: 'JJF/VOL/2026/08/01',
-    type: 'volunteer_cert',
-    recipientName: 'सम्मानित नागरिक',
-    fatherOrHusbandName: 'श्री समाज सेवी',
-    phone: '8052361666',
-    issueDate: '2026-01-15',
-    categoryOrPurpose: 'शिक्षा एवं सामाजिक सेवा',
-    status: 'verified',
-    details: '48 घंटे सक्रिय सेवा • डिजिटल रूप से सत्यापित'
-  },
-  {
-    id: 'JJF/DON/2026/08/01',
-    type: 'donation_receipt',
-    recipientName: 'सम्मानित नागरिक',
-    fatherOrHusbandName: 'दानदाता एवं शुभचिंतक',
-    phone: '8052361666',
-    issueDate: '2026-02-10',
-    amount: 2100,
-    categoryOrPurpose: 'गरीब बच्चों की शिक्षा व जन-कल्याण',
-    status: 'certified',
-    details: 'दान राशि: ₹2,100 • आधिकारिक दान पावती'
-  },
-  {
-    id: 'JJF/ID/2026/08/01',
-    type: 'volunteer_id',
-    recipientName: 'सम्मानित नागरिक',
-    fatherOrHusbandName: 'श्री समाज सेवी',
-    phone: '8052361666',
-    issueDate: '2026-01-15',
-    categoryOrPurpose: 'Dedicated Swayam Sewak',
-    status: 'active',
-    details: 'ब्लड ग्रुप: O+ • अधिकृत पहचान पत्र'
-  },
-  {
-    id: 'JJF/FEST/2026/08/01',
-    type: 'festival_greeting',
-    recipientName: 'सम्मानित नागरिक',
-    fatherOrHusbandName: 'सम्मानित नागरिक',
-    phone: '8052361666',
-    issueDate: '2026-01-15',
-    categoryOrPurpose: 'दीपावली महापर्व 2026',
-    status: 'verified',
-    details: 'फाउंडेशन द्वारा जारी आधिकारिक शुभकामना पत्र'
   }
 ];
 
@@ -135,6 +202,9 @@ SEED_CERTIFICATES.forEach((cert) => {
   // Also index stripped alphanumeric key
   serverCertificateStore.set(normId.replace(/[^A-Z0-9]/g, ''), cert);
 });
+
+// Load persistent certificates from disk (if any previous user saves exist)
+loadCertificatesFromDisk();
 
 // Set payload size limits to 50MB to prevent PayloadTooLargeError for certificates, signatures & base64 images
 app.use(cors());
@@ -219,16 +289,16 @@ function loadPersistentBranding(): { appLogoUrl: string; appThumbnailUrl: string
     if (fs.existsSync(BRANDING_FILE)) {
       const data = JSON.parse(fs.readFileSync(BRANDING_FILE, 'utf-8'));
       return {
-        appLogoUrl: typeof data.appLogoUrl === 'string' ? data.appLogoUrl : '',
-        appThumbnailUrl: typeof data.appThumbnailUrl === 'string' ? data.appThumbnailUrl : '',
-        certificateSealUrl: typeof data.certificateSealUrl === 'string' ? data.certificateSealUrl : ''
+        appLogoUrl: typeof data.appLogoUrl === 'string' && data.appLogoUrl.trim() ? data.appLogoUrl.trim() : '/uploads/ngo_logo.png',
+        appThumbnailUrl: typeof data.appThumbnailUrl === 'string' && data.appThumbnailUrl.trim() ? data.appThumbnailUrl.trim() : '/uploads/ngo_logo.png',
+        certificateSealUrl: typeof data.certificateSealUrl === 'string' && data.certificateSealUrl.trim() ? data.certificateSealUrl.trim() : '/uploads/official_seal.png'
       };
     }
   } catch {}
   return {
-    appLogoUrl: '',
-    appThumbnailUrl: '',
-    certificateSealUrl: ''
+    appLogoUrl: '/uploads/ngo_logo.png',
+    appThumbnailUrl: '/uploads/ngo_logo.png',
+    certificateSealUrl: '/uploads/official_seal.png'
   };
 }
 
@@ -340,6 +410,8 @@ app.post('/api/purge-all-branding', (_req, res) => {
     success: true,
     message: 'सभी लोगो, आधिकारिक मुहर एवं थंबनेल सर्वर व स्टोरेज से स्थायी रूप से हटा दिए गए हैं।'
   });
+});
+
 // GitHub Data Sync Endpoint: Writes latest admin content to public/data/synced_app_data.json
 app.post('/api/admin/sync-github-data', (req, res) => {
   try {
@@ -427,25 +499,7 @@ app.get(['/manifest.json', '/manifest.webmanifest', '/api/manifest.json'], (req,
     }
   ];
 
-  const mime = validCustomIcon.endsWith('.webp') ? 'image/webp' : validCustomIcon.endsWith('.jpg') || validCustomIcon.endsWith('.jpeg') ? 'image/jpeg' : 'image/png';
-
-  const icons = validCustomIcon
-    ? [
-        {
-          src: validCustomIcon,
-          type: mime,
-          sizes: '512x512',
-          purpose: 'any'
-        },
-        {
-          src: validCustomIcon,
-          type: mime,
-          sizes: '192x192',
-          purpose: 'any'
-        },
-        ...baseIcons
-      ]
-    : baseIcons;
+  const icons = baseIcons;
 
   res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -1938,6 +1992,7 @@ app.post('/api/register-certificate', (req, res) => {
 
     serverCertificateStore.set(normId, record);
     serverCertificateStore.set(cleanKey, record);
+    saveCertificatesToDisk();
 
     return res.json({
       success: true,
@@ -1991,6 +2046,7 @@ app.post('/api/verify-certificate-qr', async (req, res) => {
       const mergedRec = { ...clientRecord, id: syncNormId, verifiedInCloud: true, syncedAt: new Date().toISOString() };
       serverCertificateStore.set(syncNormId, mergedRec);
       serverCertificateStore.set(syncClean, mergedRec);
+      saveCertificatesToDisk();
     }
 
     // =========================================================================
