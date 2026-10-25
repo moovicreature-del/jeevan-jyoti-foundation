@@ -29,6 +29,7 @@ export const PwaInstallBanner: React.FC = () => {
     isInstalled,
     isIOS,
     isAndroid,
+    isDesktop,
     isInIframe,
     isWebView,
     isSwRegistered,
@@ -109,25 +110,35 @@ export const PwaInstallBanner: React.FC = () => {
     return !isDismissed;
   });
   const [showModal, setShowModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'android' | 'ios' | 'desktop'>('android');
+  const [activeTab, setActiveTab] = useState<'android' | 'ios' | 'desktop'>(() => {
+    if (typeof navigator !== 'undefined') {
+      const ua = navigator.userAgent.toLowerCase();
+      if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+      if (/android/.test(ua)) return 'android';
+      if (!/android|iphone|ipad|ipod/.test(ua)) return 'desktop';
+    }
+    return 'android';
+  });
   const [isInstalling, setIsInstalling] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [chromeMenuGuideActive, setChromeMenuGuideActive] = useState(false);
+  const [installFeedbackMessage, setInstallFeedbackMessage] = useState<string>('');
 
   useEffect(() => {
     if (isIOS) setActiveTab('ios');
     else if (isAndroid) setActiveTab('android');
-    else setActiveTab('desktop');
-  }, [isIOS, isAndroid]);
+    else if (isDesktop) setActiveTab('desktop');
+  }, [isIOS, isAndroid, isDesktop]);
 
   // Open modal on global custom event
   useEffect(() => {
     const handleOpenCustomModal = async () => {
-      if (hasDeferredPrompt || isInstallable) {
+      if (!isInIframe && !isWebView && (hasDeferredPrompt || isInstallable)) {
         setIsInstalling(true);
         try {
-          const accepted = await install();
-          if (accepted) {
+          const res = await install();
+          if (res.success) {
             setShowBanner(false);
             setShowModal(false);
             return;
@@ -144,14 +155,22 @@ export const PwaInstallBanner: React.FC = () => {
     return () => {
       window.removeEventListener('open-pwa-install-modal', handleOpenCustomModal);
     };
-  }, [isInstallable, hasDeferredPrompt, install]);
+  }, [isInstallable, hasDeferredPrompt, install, isInIframe, isWebView]);
 
   const handleInstallClick = async () => {
+    if (isInIframe) {
+      window.open(directInstallUrl, '_blank');
+      return;
+    }
+    if (isWebView) {
+      window.location.href = chromeIntentUrl;
+      return;
+    }
     if (hasDeferredPrompt || isInstallable) {
       setIsInstalling(true);
       try {
-        const accepted = await install();
-        if (accepted) {
+        const res = await install();
+        if (res.success) {
           setShowBanner(false);
           setShowModal(false);
           return;
@@ -387,19 +406,36 @@ export const PwaInstallBanner: React.FC = () => {
               <button
                 onClick={async () => {
                   setIsInstalling(true);
+                  setInstallFeedbackMessage('');
                   try {
                     if (isInIframe) {
                       window.open(directInstallUrl, '_blank');
                       return;
                     }
-                    const success = await install();
-                    if (success) {
+                    if (isWebView) {
+                      window.location.href = chromeIntentUrl;
+                      return;
+                    }
+                    const res = await install();
+                    if (res.success) {
                       setShowModal(false);
                       setShowBanner(false);
                       return;
                     }
-                    if (!hasDeferredPrompt) {
-                      window.open(directInstallUrl, '_blank');
+                    if (res.outcome === 'no_prompt') {
+                      if (isAndroid) {
+                        setChromeMenuGuideActive(true);
+                        setInstallFeedbackMessage(
+                          'ब्राउज़र ने सीधा पॉपअप नहीं दिया। ऐप इंस्टॉल करने के लिए ऊपर दाईं ओर 3 डॉट्स (⋮) पर टैप करके "Install app" (ऐप इंस्टॉल करें) चुनें।'
+                        );
+                        setActiveTab('android');
+                      } else if (isIOS) {
+                        setActiveTab('ios');
+                      } else {
+                        setActiveTab('desktop');
+                      }
+                    } else if (res.outcome === 'dismissed') {
+                      setInstallFeedbackMessage('आपने इंस्टॉलेशन रद्द किया। आप ऊपर 3 डॉट्स (⋮) से भी इंस्टॉल कर सकते हैं।');
                     }
                   } catch (err) {
                     console.debug('[PWA] Direct install action error:', err);
@@ -418,9 +454,78 @@ export const PwaInstallBanner: React.FC = () => {
                   ? '✓ आधिकारिक Android WebAPK इंस्टॉलेशन तैयार है। ऊपर क्लिक करें।'
                   : isInIframe
                   ? 'ℹ️ पूर्वावलोकन में ऑटो-इंस्टॉल ब्लॉक रहता है। ऊपर टैप करते ही सीधे Chrome में खुलेगा।'
+                  : isWebView
+                  ? 'ℹ️ WhatsApp/Facebook से बाहर निकलकर सीधे Chrome में इंस्टॉल करने हेतु टैप करें।'
                   : '✓ सुरक्षित आधिकारिक ऐप पैकेज (फोन के App Drawer में इंस्टॉल होगा)।'}
               </p>
             </div>
+
+            {/* Visual Guide to Chrome 3 Dots Menu when browser withheld beforeinstallprompt */}
+            {chromeMenuGuideActive && (
+              <div className="mb-4 bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-500 rounded-xl p-3.5 shadow-md animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-9 h-9 rounded-full bg-amber-500 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-xs animate-bounce">
+                    ⋮
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-black text-amber-950 flex items-center gap-1.5">
+                      <span>Chrome मेन्यू से तुरंत ऐप इंस्टॉल करें (2 आसान चरण):</span>
+                      <span className="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-black">
+                        आधिकारिक तरीका
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-amber-900/90 mt-1 leading-relaxed">
+                      ब्राउज़र सुरक्षा नीति के कारण कुछ फ़ोन्स में ऑटो-डायलॉग सीधे नहीं खुलता। आप ऊपर दाईं ओर <strong>तीन डॉट्स (⋮)</strong> पर टैप करके तुरंत इंस्टॉल कर सकते हैं:
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-2.5 space-y-2 bg-white/95 p-3 rounded-xl border border-amber-300 text-xs shadow-2xs">
+                  <div className="flex items-center gap-2.5 text-slate-900 font-bold">
+                    <span className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-[11px] font-black shrink-0">1</span>
+                    <span>Chrome के सबसे ऊपर दाईं ओर <strong>तीन डॉट्स (⋮)</strong> पर टैप करें।</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-emerald-900 font-bold">
+                    <span className="w-5 h-5 rounded-full bg-emerald-700 text-white flex items-center justify-center text-[11px] font-black shrink-0">2</span>
+                    <span>मेन्यू सूची में <strong>'Install app' (ऐप इंस्टॉल करें)</strong> पर टैप करें।</span>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                  <a
+                    href={chromeIntentUrl}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-black text-xs shadow flex items-center justify-center gap-1.5 text-center cursor-pointer"
+                  >
+                    <span>🌐 Chrome में फ्रेश रीलोड करें</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsInstalling(true);
+                      try {
+                        const res = await install();
+                        if (res.success) {
+                          setShowModal(false);
+                          setShowBanner(false);
+                        }
+                      } finally {
+                        setIsInstalling(false);
+                      }
+                    }}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs shadow flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>पुनः प्रयास करें</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {installFeedbackMessage && !chromeMenuGuideActive && (
+              <div className="mb-4 bg-amber-50 border border-amber-300 rounded-xl p-2.5 text-xs text-amber-900 font-semibold text-center">
+                {installFeedbackMessage}
+              </div>
+            )}
 
             {/* PRIMARY ACTION 2: If inside iframe (AI Studio preview or embedded frame) */}
             {isInIframe && (

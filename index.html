@@ -9,6 +9,14 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" id="app-pwa-manifest" />
     <script>
+      // Early Service Worker Registration for Instant PWA Compliance
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(function(reg) {
+          window.__jjf_sw_reg = reg;
+          window.dispatchEvent(new CustomEvent('jjf-sw-ready', { detail: { scope: reg.scope } }));
+        }).catch(function() {});
+      }
+
       // Early PWA Install Prompt Capturer - Never miss beforeinstallprompt event
       window.__pwaDeferredPrompt = null;
       window.addEventListener('beforeinstallprompt', function(e) {

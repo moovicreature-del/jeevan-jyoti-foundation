@@ -64,6 +64,35 @@ if (typeof window !== 'undefined') {
   });
 }
 
+export interface PWAInstallResult {
+  outcome: 'accepted' | 'dismissed' | 'no_prompt';
+  success: boolean;
+  message?: string;
+}
+
+function detectPlatform() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return {
+      isIOS: false,
+      isAndroid: false,
+      isDesktop: true,
+      isInIframe: false,
+      isWebView: false
+    };
+  }
+  const ua = navigator.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /android/.test(ua);
+  const isDesktop = !isIOS && !isAndroid;
+  const isWebView =
+    /wv|fbav|instagram|line|micromessenger|snapchat|pinterest|whatsapp/i.test(ua) ||
+    (isAndroid && /version\/[0-9\.]+/i.test(ua) && !/chrome\/[0-9\.]+/i.test(ua)) ||
+    (typeof window !== 'undefined' && (window as any).Android !== undefined);
+  const isInIframe = window.self !== window.top;
+
+  return { isIOS, isAndroid, isDesktop, isInIframe, isWebView };
+}
+
 export function usePWAInstall() {
   const [, setTick] = useState(0);
 
@@ -76,12 +105,13 @@ export function usePWAInstall() {
     );
   };
 
+  const [initialPlatform] = useState(detectPlatform);
   const [isInstalled, setIsInstalled] = useState<boolean>(checkIsStandalone);
-  const [isIOS, setIsIOS] = useState<boolean>(false);
-  const [isAndroid, setIsAndroid] = useState<boolean>(false);
-  const [isDesktop, setIsDesktop] = useState<boolean>(false);
-  const [isInIframe, setIsInIframe] = useState<boolean>(false);
-  const [isWebView, setIsWebView] = useState<boolean>(false);
+  const [isIOS, setIsIOS] = useState<boolean>(initialPlatform.isIOS);
+  const [isAndroid, setIsAndroid] = useState<boolean>(initialPlatform.isAndroid);
+  const [isDesktop, setIsDesktop] = useState<boolean>(initialPlatform.isDesktop);
+  const [isInIframe, setIsInIframe] = useState<boolean>(initialPlatform.isInIframe);
+  const [isWebView, setIsWebView] = useState<boolean>(initialPlatform.isWebView);
   const [isSwRegistered, setIsSwRegistered] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
@@ -100,20 +130,13 @@ export function usePWAInstall() {
     // Check standalone mode strictly without false positive from android-app:// referrers
     setIsInstalled(checkIsStandalone());
 
-    // Device detection
-    const ua = window.navigator.userAgent.toLowerCase();
-    const iosDevice = /iphone|ipad|ipod/.test(ua);
-    const androidDevice = /android/.test(ua);
-    const desktopDevice = !iosDevice && !androidDevice;
-    const webViewDetected =
-      /wv|fbav|instagram|line|micromessenger/i.test(ua) ||
-      (androidDevice && /version\/[0-9\.]+/i.test(ua) && !/chrome\/[0-9\.]+/i.test(ua));
-
-    setIsIOS(iosDevice);
-    setIsAndroid(androidDevice);
-    setIsDesktop(desktopDevice);
-    setIsInIframe(window.self !== window.top);
-    setIsWebView(webViewDetected);
+    // Refresh device detection in case user resized or changed modes
+    const currentPlatform = detectPlatform();
+    setIsIOS(currentPlatform.isIOS);
+    setIsAndroid(currentPlatform.isAndroid);
+    setIsDesktop(currentPlatform.isDesktop);
+    setIsInIframe(currentPlatform.isInIframe);
+    setIsWebView(currentPlatform.isWebView);
 
     // Service worker check
     if ('serviceWorker' in navigator) {
@@ -172,10 +195,10 @@ export function usePWAInstall() {
     };
   }, []);
 
-  const install = useCallback(async (): Promise<boolean> => {
+  const install = useCallback(async (): Promise<PWAInstallResult> => {
     let promptEvent = globalDeferredPrompt || (typeof window !== 'undefined' ? (window as any).__pwaDeferredPrompt : null);
 
-    // If deferredPrompt is not ready immediately, wait briefly (up to 1500ms) for beforeinstallprompt event
+    // If deferredPrompt is not ready immediately, wait briefly (up to 800ms) for beforeinstallprompt event
     if (!promptEvent && typeof window !== 'undefined') {
       promptEvent = await new Promise<BeforeInstallPromptEvent | null>((resolve) => {
         let timer: any;
@@ -188,12 +211,16 @@ export function usePWAInstall() {
         timer = setTimeout(() => {
           window.removeEventListener('jjf-pwa-prompt-ready', handler);
           resolve(globalDeferredPrompt || (window as any).__pwaDeferredPrompt || null);
-        }, 1500);
+        }, 800);
       });
     }
 
     if (!promptEvent) {
-      return false;
+      return {
+        outcome: 'no_prompt',
+        success: false,
+        message: 'ब्राउज़र ने स्वचालित पॉपअप उपलब्ध नहीं कराया। कृपया ऊपर 3 डॉट्स (⋮) से "Install app" चुनें।'
+      };
     }
 
     try {
@@ -206,12 +233,24 @@ export function usePWAInstall() {
         }
         setIsInstalled(true);
         notifyPromptListeners();
-        return true;
+        return {
+          outcome: 'accepted',
+          success: true,
+          message: 'ऐप सफलतापूर्वक इंस्टॉल हो रहा है!'
+        };
       }
-      return false;
-    } catch (err) {
+      return {
+        outcome: 'dismissed',
+        success: false,
+        message: 'ऐप इंस्टॉलेशन रद्द किया गया।'
+      };
+    } catch (err: any) {
       console.debug('[PWA] Error prompting installation:', err);
-      return false;
+      return {
+        outcome: 'no_prompt',
+        success: false,
+        message: err?.message || 'इंस्टॉलेशन में समस्या'
+      };
     }
   }, []);
 
