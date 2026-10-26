@@ -79,19 +79,43 @@ export function isDummyCertificate(item?: Partial<RegisteredCertificateItem> | n
     id === 'JJF/FEST/2026/08/01' ||
     id === 'JJF/APP/2026/08/01' ||
     id === 'SAMPLE-CERT-000' ||
-    id === 'DUMMY-CERT-000'
+    id === 'DUMMY-CERT-000' ||
+    id === 'JJF-STF-2026-009' ||
+    id === 'JJF-STF-2026-009-APPT' ||
+    id === 'JJF/APPT-STF/2026/6009' ||
+    id === 'JJF-STF-2026-001' ||
+    id === 'JJF-STF-2026-001-APPT' ||
+    id === 'JJF-VOL-2026-659' ||
+    id === 'JJF-VOL-2026-001' ||
+    id === 'JJF-VOL-2026-01' ||
+    id === 'JJF-ID-2026-01' ||
+    id === 'JJF-DON-2026-01' ||
+    id === 'JJF-VOL-01' ||
+    id === 'VOL-01' ||
+    id === 'VOL-02' ||
+    id === 'VOL-03' ||
+    id === 'VOL-04' ||
+    id === 'VOL-05'
   ) {
-    // If recipient is a genuine person (not placeholder sample), don't mark as dummy
-    if (name && name !== 'सम्मानित नागरिक' && !name.includes('Verified User')) {
-      return false;
-    }
+    return true;
+  }
+
+  // Any dummy staff seed cards or dummy appointment letters
+  if (
+    id.startsWith('JJF-STF-2026-00') &&
+    (name.includes('शैलेश') || name.includes('अरविन्द') || name.includes('पूनम') || !item.createdAt)
+  ) {
     return true;
   }
 
   // Placeholder recipient names WITHOUT genuine identity or phone
   if (
-    (name === 'सम्मानित नागरिक' || name.includes('Verified User') || name.includes('प्रिय देशवासी')) &&
-    !item.phone
+    name === 'सम्मानित नागरिक' ||
+    name.includes('Verified User') ||
+    name.includes('प्रिय देशवासी') ||
+    name === 'सत्यापित सेवा सदस्य' ||
+    name === 'Aakash Verma' ||
+    name.includes('Verified Member')
   ) {
     return true;
   }
@@ -100,7 +124,7 @@ export function isDummyCertificate(item?: Partial<RegisteredCertificateItem> | n
 }
 
 /**
- * Purge all dummy and fake sample certificates from localStorage and offline cache
+ * Purge all dummy and fake sample certificates, I-cards & appointment letters permanently
  */
 export function purgeAllDummyCertificates(): number {
   if (typeof window === 'undefined' || !window.localStorage) return 0;
@@ -118,6 +142,51 @@ export function purgeAllDummyCertificates(): number {
         });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
       }
+    }
+
+    // Also purge dummy staff from staff storage key
+    const rawStaff = localStorage.getItem('jjf_staff_registry_v3');
+    if (rawStaff) {
+      try {
+        const staffList: any[] = JSON.parse(rawStaff);
+        if (Array.isArray(staffList)) {
+          const cleanStaff = staffList.filter((s) => {
+            if (!s || !s.id) return false;
+            const sid = s.id.toUpperCase();
+            return !sid.startsWith('JJF-STF-2026-00') && sid !== 'JJF-STF-2026-009';
+          });
+          if (cleanStaff.length !== staffList.length) {
+            localStorage.setItem('jjf_staff_registry_v3', JSON.stringify(cleanStaff));
+          }
+        }
+      } catch {}
+    }
+
+    // Also purge dummy volunteers from volunteer storage key
+    const rawVol = localStorage.getItem('jjf_volunteers');
+    if (rawVol) {
+      try {
+        const volList: any[] = JSON.parse(rawVol);
+        if (Array.isArray(volList)) {
+          const cleanVols = volList.filter((v) => {
+            if (!v || !v.id) return false;
+            const vid = v.id.toUpperCase();
+            return (
+              vid !== 'VOL-01' &&
+              vid !== 'VOL-02' &&
+              vid !== 'VOL-03' &&
+              vid !== 'VOL-04' &&
+              vid !== 'VOL-05' &&
+              vid !== 'JJF-VOL-2026-001' &&
+              vid !== 'JJF-VOL-2026-659' &&
+              v.name !== 'Aakash Verma'
+            );
+          });
+          if (cleanVols.length !== volList.length) {
+            localStorage.setItem('jjf_volunteers', JSON.stringify(cleanVols));
+          }
+        }
+      } catch {}
     }
 
     // Clean offline certificate cache keys that contain dummy data
@@ -151,7 +220,13 @@ export function purgeAllDummyCertificates(): number {
   return purgedCount;
 }
 
-// Auto-purge dummy records on initial script execution has been disabled to prevent accidental data loss
+// Automatically execute purge on module load in browser
+if (typeof window !== 'undefined') {
+  try {
+    purgeAllDummyCertificates();
+  } catch {}
+}
+
 // Safe initialization:
 function getSeedCertificates(): RegisteredCertificateItem[] {
   return [];
@@ -163,9 +238,12 @@ export function getAllRegisteredCertificates(): RegisteredCertificateItem[] {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) {
-        // Strict filter: exclude any dummy certificates and sanitize any old 80G mentions
-        return parsed
-          .filter((item) => !isDummyCertificate(item))
+        // Strict filter: exclude any dummy certificates permanently
+        const filtered = parsed.filter((item) => !isDummyCertificate(item));
+        if (filtered.length !== parsed.length) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+        }
+        return filtered
           .map((item) => {
             const cleanedTitleHindi = (item.titleHindi || '')
               .replace(/धारा\s*80G\s*आयकर\s*/gi, '')
@@ -722,7 +800,7 @@ export function getCertificatesByPhone(phone: string): RegisteredCertificateItem
     if (!hasVolCert) {
       // Synthesize companion official volunteer certificate
       const rawId = existingVol.id;
-      const certId = rawId.includes('ID') ? rawId.replace(/\/ID\//, '/VOL/').replace(/-ID-/, '-VOL-') : (rawId.includes('VOL') ? rawId : `JJF-VOL-2026-${rawId.replace(/\D/g, '').slice(-4) || '101'}`);
+      const certId = rawId.includes('ID') ? rawId.replace(/\/ID\//, '/VOL/').replace(/-ID-/, '-VOL-') : (rawId.includes('VOL') ? rawId : `JJF-VOL-2026-${rawId.replace(/\D/g, '').slice(-4).padStart(4, '0') || '0001'}`);
       result.unshift({
         ...existingVol,
         id: certId,
@@ -738,7 +816,7 @@ export function getCertificatesByPhone(phone: string): RegisteredCertificateItem
     if (!hasVolId) {
       // Synthesize companion official volunteer ID card
       const rawId = existingVol.id;
-      const cardId = rawId.includes('VOL') ? rawId.replace(/\/VOL\//, '/ID/').replace(/-VOL-/, '-ID-') : (rawId.includes('ID') ? rawId : `JJF-ID-2026-${rawId.replace(/\D/g, '').slice(-4) || '101'}`);
+      const cardId = rawId.includes('VOL') ? rawId.replace(/\/VOL\//, '/ID/').replace(/-VOL-/, '-ID-') : (rawId.includes('ID') ? rawId : `JJF-ID-2026-${rawId.replace(/\D/g, '').slice(-4).padStart(4, '0') || '0001'}`);
       result.push({
         ...existingVol,
         id: cardId,
@@ -764,9 +842,9 @@ export function getCertificatesByPhone(phone: string): RegisteredCertificateItem
           const effectiveApproval = foundVol.approvalStatus || (foundVol.status === 'certified' ? 'approved' : 'pending');
           const hasVolCert = result.some(isVolCertItem);
           const hasVolId = result.some(isVolIdItem);
-          const baseId = foundVol.id || `JJF-VOL-2026-001`;
-          const certId = baseId.includes('ID') ? baseId.replace(/ID/g, 'VOL') : (baseId.includes('VOL') ? baseId : `JJF-VOL-2026-${baseId.replace(/\D/g, '').slice(-3) || '101'}`);
-          const cardId = baseId.includes('VOL') ? baseId.replace(/VOL/g, 'ID') : (baseId.includes('ID') ? baseId : `JJF-ID-2026-${baseId.replace(/\D/g, '').slice(-3) || '101'}`);
+          const baseId = foundVol.id || `JJF-VOL-2026-0001`;
+          const certId = baseId.includes('ID') ? baseId.replace(/ID/g, 'VOL') : (baseId.includes('VOL') ? baseId : `JJF-VOL-2026-${baseId.replace(/\D/g, '').slice(-4).padStart(4, '0') || '0001'}`);
+          const cardId = baseId.includes('VOL') ? baseId.replace(/VOL/g, 'ID') : (baseId.includes('ID') ? baseId : `JJF-ID-2026-${baseId.replace(/\D/g, '').slice(-4).padStart(4, '0') || '0001'}`);
 
           if (!hasVolCert) {
             result.unshift({

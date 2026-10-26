@@ -193,7 +193,7 @@ export const AnnualReportCardModal: React.FC<AnnualReportCardModalProps> = ({ is
               <div className="flex items-center gap-2 p-2 bg-[#FFFDF8] border border-amber-300/80 rounded-xl shadow-2xs text-left max-w-[240px]">
                 <div className="shrink-0 p-1 bg-white border border-amber-400 rounded-lg shadow-2xs">
                   <CertificateVerificationQR
-                    certificateId="JJF-REP-2026-001"
+                    certificateId="JJF-REP-2026-0001"
                     size={62}
                     showId={false}
                     subText=""
@@ -205,7 +205,7 @@ export const AnnualReportCardModal: React.FC<AnnualReportCardModalProps> = ({ is
                   </div>
                   <div className="truncate">
                     <strong className="text-black font-black">ID:</strong>{' '}
-                    <span className="font-mono font-bold text-[#8B0000] text-[7.5pt] block truncate">JJF-REP-2026-001</span>
+                    <span className="font-mono font-bold text-[#8B0000] text-[7.5pt] block truncate">JJF-REP-2026-0001</span>
                   </div>
                   <div>
                     <strong className="text-black font-black">Date:</strong>{' '}

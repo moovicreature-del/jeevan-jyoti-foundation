@@ -68,12 +68,39 @@ function saveCertificatesToDisk() {
   }
 }
 
+function isServerDummyCert(cert: any): boolean {
+  if (!cert || !cert.id) return true;
+  const id = String(cert.id).toUpperCase().replace(/[\s]/g, '');
+  if (
+    id === 'JJF-STF-2026-009' ||
+    id === 'JJF-STF-2026-009-APPT' ||
+    id === 'JJF/APPT-STF/2026/6009' ||
+    id === 'JJF-STF-2026-001' ||
+    id === 'JJF-STF-2026-001-APPT' ||
+    id === 'JJF-VOL-2026-659' ||
+    id === 'JJF-VOL-2026-001' ||
+    id === 'JJF-VOL-2026-01' ||
+    id === 'JJF-ID-2026-01' ||
+    id === 'JJF-DON-2026-01' ||
+    id === 'JJF-VOL-01' ||
+    id.startsWith('SAMPLE-') ||
+    id.startsWith('DUMMY-')
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function loadCertificatesFromDisk() {
   try {
     if (fs.existsSync(CERTIFICATES_STORAGE_FILE)) {
       const data = JSON.parse(fs.readFileSync(CERTIFICATES_STORAGE_FILE, 'utf-8'));
       if (Array.isArray(data)) {
-        data.forEach((cert) => {
+        const clean = data.filter((c) => !isServerDummyCert(c));
+        if (clean.length !== data.length) {
+          fs.writeFileSync(CERTIFICATES_STORAGE_FILE, JSON.stringify(clean, null, 2), 'utf-8');
+        }
+        clean.forEach((cert) => {
           if (cert && cert.id) {
             const normId = String(cert.id).toUpperCase().replace(/[\s]/g, '');
             serverCertificateStore.set(normId, cert);
@@ -87,119 +114,12 @@ function loadCertificatesFromDisk() {
   }
 }
 
-// Seed authentic official certificates on server boot
-const SEED_CERTIFICATES = [
-  // 1. Official Staff Identity Card: शैलेश प्रधान (JJF-STF-2026-009)
-  {
-    id: 'JJF-STF-2026-009',
-    type: 'volunteer_id',
-    titleHindi: 'आधिकारिक स्टाफ डिजिटल पहचान पत्र',
-    titleEnglish: 'Official Staff Identity Card',
-    recipientName: 'शैलेश प्रधान',
-    fatherOrHusbandName: 'सर्वदेव प्रधान',
-    phone: '8052361666',
-    issueDate: '2018-08-20',
-    categoryOrPurpose: 'Manager / प्रबंधक • प्रशासनिक, लेखा व ऑडिट अनुभाग',
-    status: 'active',
-    approvalStatus: 'approved',
-    approvedAt: '2018-08-20T10:00:00.000Z',
-    approvedBy: 'जीवन ज्योति फाउंडेशन (प्रशासन)',
-    bloodGroup: 'B+',
-    designation: 'Manager / प्रबंधक',
-    department: 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
-    dutyLocation: 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
-    details: 'स्टाफ आईडी: JJF-STF-2026-009 • रक्त समूह: B+ • पदनाम: Manager / प्रबंधक • कार्यक्षेत्र: गाजीपुर मुख्य शाखा (Ghazipur HQ)',
-    address: 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108'
-  },
-  // 2. Official Staff Appointment Letter: शैलेश प्रधान (JJF-STF-2026-009-APPT)
-  {
-    id: 'JJF-STF-2026-009-APPT',
-    type: 'task_appreciation',
-    titleHindi: 'स्टाफ आधिकारिक नियुक्ति पत्र',
-    titleEnglish: 'Official Staff Appointment Letter',
-    recipientName: 'शैलेश प्रधान',
-    fatherOrHusbandName: 'सर्वदेव प्रधान',
-    phone: '8052361666',
-    issueDate: '2018-08-20',
-    categoryOrPurpose: 'Manager / प्रबंधक • प्रशासनिक, लेखा व ऑडिट अनुभाग',
-    status: 'active',
-    approvalStatus: 'approved',
-    approvedAt: '2018-08-20T10:00:00.000Z',
-    approvedBy: 'जीवन ज्योति फाउंडेशन (प्रशासन)',
-    refNo: 'JJF/APPT-STF/2026/6009',
-    bloodGroup: 'B+',
-    designation: 'Manager / प्रबंधक',
-    department: 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
-    dutyLocation: 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
-    details: 'स्टाफ नियुक्ति पत्र • पत्रांक: JJF/APPT-STF/2026/6009 • पदनाम: Manager / प्रबंधक • विभाग: प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
-    address: 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108'
-  },
-  // 3. Official Staff Appointment Order Reference Number: JJF/APPT-STF/2026/6009
-  {
-    id: 'JJF/APPT-STF/2026/6009',
-    type: 'task_appreciation',
-    titleHindi: 'स्टाफ आधिकारिक नियुक्ति आदेश',
-    titleEnglish: 'Official Staff Appointment Letter',
-    recipientName: 'शैलेश प्रधान',
-    fatherOrHusbandName: 'सर्वदेव प्रधान',
-    phone: '8052361666',
-    issueDate: '2018-08-20',
-    categoryOrPurpose: 'Manager / प्रबंधक • प्रशासनिक, लेखा व ऑडिट अनुभाग',
-    status: 'active',
-    approvalStatus: 'approved',
-    approvedAt: '2018-08-20T10:00:00.000Z',
-    approvedBy: 'जीवन ज्योति फाउंडेशन (प्रशासन)',
-    refNo: 'JJF/APPT-STF/2026/6009',
-    bloodGroup: 'B+',
-    designation: 'Manager / प्रबंधक',
-    department: 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
-    dutyLocation: 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
-    details: 'स्टाफ नियुक्ति आदेश • पत्रांक: JJF/APPT-STF/2026/6009 • पदनाम: Manager / प्रबंधक',
-    address: 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108'
-  },
-  {
-    id: 'JJF-VOL-2026-01',
-    type: 'volunteer_cert',
-    recipientName: 'आकाश वर्मा (Akash Verma)',
-    fatherOrHusbandName: 'श्री रामसेवक वर्मा',
-    phone: '9000000001',
-    issueDate: '2026-01-15',
-    categoryOrPurpose: 'शिक्षा एवं बाल विकास (Education & Child Development)',
-    status: 'verified',
-    approvalStatus: 'approved',
-    details: '48+ सेवा घंटे • 6 सेवा कार्य पूर्ण'
-  },
-  {
-    id: 'JJF-ID-2026-01',
-    type: 'volunteer_id',
-    recipientName: 'आकाश वर्मा (Akash Verma)',
-    fatherOrHusbandName: 'श्री रामसेवक वर्मा',
-    phone: '9000000001',
-    issueDate: '2026-01-15',
-    categoryOrPurpose: 'Dedicated Swayam Sewak',
-    status: 'active',
-    approvalStatus: 'approved',
-    details: 'ब्लड ग्रुप: O+ • अधिकृत पहचान पत्र'
-  },
-  {
-    id: 'JJF-DON-2026-01',
-    type: 'donation_receipt',
-    recipientName: 'रमेश कुमार गुप्ता',
-    fatherOrHusbandName: 'श्री बद्री प्रसाद गुप्ता',
-    phone: '9000000002',
-    issueDate: '2026-02-10',
-    amount: 5100,
-    categoryOrPurpose: 'गरीब बच्चों की शिक्षा व स्कूल किट वितरण',
-    status: 'certified',
-    approvalStatus: 'approved',
-    details: 'दान राशि: ₹5,100 (आधिकारिक दान पावती)'
-  }
-];
+// Seed authentic official certificates on server boot (empty by default; only real issued records persist)
+const SEED_CERTIFICATES: any[] = [];
 
 SEED_CERTIFICATES.forEach((cert) => {
   const normId = cert.id.toUpperCase().replace(/[\s]/g, '');
   serverCertificateStore.set(normId, cert);
-  // Also index stripped alphanumeric key
   serverCertificateStore.set(normId.replace(/[^A-Z0-9]/g, ''), cert);
 });
 

@@ -212,6 +212,8 @@
   #annual-report-card-capture *,
   #appointment-letter-a4,
   #appointment-letter-a4 *,
+  #appointment-letter-export-wrapper,
+  #appointment-letter-export-wrapper *,
   .printable-appointment-letter,
   .printable-appointment-letter *,
   .official-letterhead-a4,
@@ -219,7 +221,25 @@
   #printable-80g-receipt,
   #printable-80g-receipt *,
   .printable-id-card,
-  .printable-id-card * {
+  .printable-id-card *,
+  #staff-id-card-rendered,
+  #staff-id-card-rendered *,
+  #staff-card-export-front,
+  #staff-card-export-front *,
+  #staff-card-export-back,
+  #staff-card-export-back *,
+  #hidden-volunteer-cert,
+  #hidden-volunteer-cert *,
+  #hidden-id-card,
+  #hidden-id-card *,
+  #hidden-donation-cert,
+  #hidden-donation-cert *,
+  #hidden-task-cert,
+  #hidden-task-cert *,
+  #hidden-festival-cert,
+  #hidden-festival-cert *,
+  .isolated-print-wrapper,
+  .isolated-print-wrapper * {
     visibility: visible !important;
   }
 
@@ -231,10 +251,20 @@
   #festival-certificate-card,
   #annual-report-card-capture,
   #appointment-letter-a4,
+  #appointment-letter-export-wrapper,
   .printable-appointment-letter,
   .official-letterhead-a4,
   #printable-80g-receipt,
-  .printable-id-card {
+  .printable-id-card,
+  #staff-id-card-rendered,
+  #staff-card-export-front,
+  #staff-card-export-back,
+  #hidden-volunteer-cert,
+  #hidden-id-card,
+  #hidden-donation-cert,
+  #hidden-task-cert,
+  #hidden-festival-cert,
+  .isolated-print-wrapper {
     position: relative !important;
     display: block !important;
     margin: 0 auto !important;

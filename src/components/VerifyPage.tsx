@@ -52,7 +52,7 @@ interface VerifyPageProps {
 }
 
 export const VerifyPage: React.FC<VerifyPageProps> = ({
-  initialCertId = 'JJF-VOL-2026-659',
+  initialCertId = '',
   onBack
 }) => {
   const [certIdInput, setCertIdInput] = useState(initialCertId);
@@ -66,7 +66,9 @@ export const VerifyPage: React.FC<VerifyPageProps> = ({
   useEffect(() => {
     // Background sync from Firestore to get latest certificates
     syncCertificatesFromFirestore().catch(() => {});
-    handleVerify(initialCertId);
+    if (initialCertId && initialCertId.trim()) {
+      handleVerify(initialCertId);
+    }
   }, [initialCertId]);
 
   // Real-time Firestore onSnapshot listener for instant verification status updates
@@ -178,94 +180,37 @@ export const VerifyPage: React.FC<VerifyPageProps> = ({
       return;
     }
 
-    // 3. Fallback: Parse dynamic ID pattern for rich display
-    const isDonation = query.includes('80G') || query.includes('DON');
-    const isTask = query.includes('APP') || query.includes('TASK');
-    const isFest = query.includes('FEST');
+    // 3. Fallback: Check festival greetings saved in local storage
+    let savedFestivals: any[] = [];
+    try {
+      const saved = localStorage.getItem('jjf_festival_greetings_v1');
+      if (saved) savedFestivals = JSON.parse(saved);
+    } catch {}
 
-    if (isDonation) {
-      const don = DONORS_DATA[0];
+    const foundFest = Array.isArray(savedFestivals)
+      ? savedFestivals.find((g) => g.id && g.id.toUpperCase() === query)
+      : null;
+
+    if (foundFest) {
       setRecord({
-        id: query,
-        certNumber: query,
-        name: don.donorName,
-        fatherName: don.fatherName || 'दानदाता एवं भामाशाह',
-        categoryTitle: 'दान रसीद व सम्मान प्रमाण पत्र',
-        categoryEnglish: 'Official Donation Receipt & Citation',
-        type: 'donation_80g',
-        role: 'सम्मानित दानदाता / भामाशाह',
-        phone: '+91 80523 61666',
-        issueDate: don.date || '10/02/2026',
-        address: 'गाज़ीपुर, उत्तर प्रदेश, भारत',
-        photoUrl: don.photoUrl,
-        amount: don.amount || 5100,
-        paymentMode: 'UPI / Online Banking',
-        transactionRef: `UPI-JJF-${query.replace(/[^0-9]/g, '').slice(-8) || '87492163'}`,
-        purpose: don.purposeHindi || 'गरीब बच्चों की शिक्षा व जन-कल्याण',
-        taxExemptEligible: false,
-        status: '100% OFFICIALLY VERIFIED & ACTIVE (डिजिटल रूप से प्रमाणित)'
-      });
-    } else if (isTask) {
-      const t = INITIAL_TASKS[0];
-      setRecord({
-        id: query,
-        certNumber: query,
-        name: 'आकाश वर्मा',
-        fatherName: 'श्री समाज सेवी',
-        categoryTitle: 'विशेष सेवा कार्य प्रशंसा पत्र',
-        categoryEnglish: 'Social Service Appreciation Certificate',
-        type: 'task_appreciation',
-        role: 'सक्रिय सेवा सारथी',
-        phone: '+91 80523 61666',
-        issueDate: '01/02/2026',
-        address: 'गाज़ीपुर, उत्तर प्रदेश, भारत',
-        photoUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-        taskTitle: t.titleHindi,
-        taskLocation: t.location,
-        taskPoints: t.points,
-        status: '100% OFFICIALLY VERIFIED & ACTIVE (डिजिटल रूप से प्रमाणित)'
-      });
-    } else if (isFest) {
-      const g = INITIAL_FESTIVAL_GREETINGS[0];
-      setRecord({
-        id: query,
-        certNumber: query,
-        name: g.recipientName,
-        fatherName: g.recipientTitle,
-        categoryTitle: `पावन पर्व शुभकामना प्रमाण पत्र (${g.festivalNameHindi})`,
+        id: foundFest.id,
+        certNumber: foundFest.id,
+        name: foundFest.recipientName,
+        fatherName: foundFest.recipientTitle,
+        categoryTitle: `पावन पर्व शुभकामना प्रमाण पत्र (${foundFest.festivalNameHindi || ''})`,
         categoryEnglish: 'Festival Greeting Certificate',
         type: 'festival_greeting',
-        role: g.recipientTitle,
-        phone: '+91 80523 61666',
-        issueDate: g.date,
-        address: `${g.city}, उत्तर प्रदेश`,
-        festivalName: g.festivalNameHindi,
-        festivalMessage: g.customMessage,
-        photoUrl: g.photoUrl,
+        role: foundFest.recipientTitle,
+        phone: foundFest.phone ? `+91 ${foundFest.phone}` : '+91 80523 61666',
+        issueDate: foundFest.date,
+        address: `${foundFest.city || 'गाज़ीपुर'}, उत्तर प्रदेश`,
+        festivalName: foundFest.festivalNameHindi,
+        festivalMessage: foundFest.customMessage,
+        photoUrl: foundFest.photoUrl,
         status: '100% OFFICIALLY VERIFIED & ACTIVE (डिजिटल रूप से प्रमाणित)'
       });
     } else {
-      const vol = INITIAL_VOLUNTEERS[0];
-      setRecord({
-        id: query || 'JJF-VOL-2026-659',
-        certNumber: query || 'JJF-VOL-2026-659',
-        name: vol.name,
-        fatherName: vol.fatherName,
-        categoryTitle: 'आधिकारिक स्वयंसेवक प्रमाण पत्र (Volunteer Certificate)',
-        categoryEnglish: 'Official Volunteer Certificate',
-        type: 'volunteer_cert',
-        role: vol.role,
-        phone: '+91 80523 61666',
-        issueDate: vol.joinDate || '15/01/2026',
-        address: `${vol.areaHindi} (${vol.area}), गाज़ीपुर, उत्तर प्रदेश`,
-        photoUrl: vol.photoUrl,
-        hours: vol.hoursContributed || 120,
-        tasks: vol.tasksCompleted || 25,
-        bloodGroup: vol.bloodGroup || 'O+',
-        joinDate: vol.joinDate || '15/01/2026',
-        area: vol.areaHindi,
-        status: '100% OFFICIALLY VERIFIED & ACTIVE (डिजिटल रूप से प्रमाणित)'
-      });
+      setRecord(null);
     }
 
     setIsVerifying(false);
@@ -354,7 +299,7 @@ export const VerifyPage: React.FC<VerifyPageProps> = ({
                 type="text"
                 value={certIdInput}
                 onChange={(e) => setCertIdInput(e.target.value)}
-                placeholder="प्रमाण पत्र / रसीद संख्या दर्ज करें (जैसे JJF-VOL-2026-659, JJF/DON/2026/08/01)"
+                placeholder="प्रमाण पत्र / रसीद संख्या दर्ज करें (जैसे JJF-VOL-2026-0001, JJF/DON/2026/08/0001)"
                 className="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-sm font-bold text-slate-900 focus:outline-none focus:border-amber-600 focus:bg-white transition-all uppercase placeholder:normal-case placeholder:font-normal placeholder:text-xs sm:placeholder:text-sm"
               />
             </div>
@@ -789,12 +734,6 @@ export const VerifyPage: React.FC<VerifyPageProps> = ({
               <p className="text-sm text-slate-700 mt-2 max-w-md mx-auto">
                 दर्ज किया गया आईडी &quot;<strong>{searchedId}</strong>&quot; हमारे मुख्य डेटाबेस में उपलब्ध नहीं है। कृपया सही प्रमाण पत्र संख्या की जांच करें।
               </p>
-              <button
-                onClick={() => handleVerify('JJF-VOL-2026-659')}
-                className="mt-5 px-5 py-2.5 bg-[#8B0000] text-white font-bold text-xs rounded-xl shadow-xs hover:bg-[#6b0000] cursor-pointer"
-              >
-                डेमो स्वयंसेवक प्रमाण पत्र जांचें (Demo Verify)
-              </button>
             </div>
           )}
         </div>

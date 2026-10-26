@@ -35,7 +35,6 @@ import { ProfessionalFormsPortal } from './components/ProfessionalFormsPortal';
 import { MotivationalQuotesPosterStudio } from './components/quotes/MotivationalQuotesPosterStudio';
 
 import { Volunteer, TaskRecord, DonationRecord, FestivalGreetingRecord } from './types';
-import { INITIAL_VOLUNTEERS } from './data/taskData';
 import { initAutomatedPublicArchiveBackgroundSync } from './services/publicVerifiedArchiveService';
 import { autoHydrateFromGitHubSyncedData } from './services/adminService';
 import { useHomeContent } from './context/HomeContentContext';

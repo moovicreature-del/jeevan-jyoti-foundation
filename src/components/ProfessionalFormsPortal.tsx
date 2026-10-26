@@ -2363,7 +2363,18 @@ export const ProfessionalFormsPortal: React.FC<Props> = ({
                         if (onOpenVerifyModal) {
                           onOpenVerifyModal(verResult.certId);
                         } else {
-                          onOpenVolunteerCert(INITIAL_VOLUNTEERS[0]);
+                          onOpenVolunteerCert({
+                            id: verResult.certId || 'JJF-VOL-2026-0001',
+                            name: verResult.holder || 'सम्मानित स्वयंसेवक',
+                            fatherName: '',
+                            role: 'Dedicated Swayam Sewak',
+                            area: 'गाज़ीपुर',
+                            areaHindi: 'गाज़ीपुर',
+                            hoursContributed: 0,
+                            tasksCompleted: 0,
+                            joinDate: new Date().toISOString().slice(0, 10),
+                            status: 'certified'
+                          });
                         }
                       }}
                       className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"

@@ -112,41 +112,54 @@ export function getAllVolunteers(): Volunteer[] {
   try {
     const raw = localStorage.getItem(VOLUNTEER_STORAGE_KEY);
     if (!raw) {
-      // Seed with initial volunteers (all pre-approved)
-      const seeded: Volunteer[] = INITIAL_VOLUNTEERS.map((v, i) => ({
-        ...v,
-        id: v.id.startsWith('JJF-VOL') ? v.id : `JJF-VOL-2026-${String(i + 1).padStart(3, '0')}`,
-        approvalStatus: 'approved',
-        status: (v.status || 'certified') as any,
-        approvedAt: '2026-01-15T10:00:00.000Z',
-        approvedBy: 'संस्थापक मंडल'
-      }));
-      localStorage.setItem(VOLUNTEER_STORAGE_KEY, JSON.stringify(seeded));
-      // Sync seeded volunteers into central registry
-      seeded.forEach((v) => syncVolunteerIntoCentralRegistry(v));
-      return seeded;
+      return [];
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      return parsed;
+      // Permanently remove dummy volunteer records
+      const clean = parsed.filter((v) => {
+        if (!v || !v.id) return false;
+        const idUpper = v.id.toUpperCase();
+        if (
+          idUpper === 'VOL-01' ||
+          idUpper === 'VOL-02' ||
+          idUpper === 'VOL-03' ||
+          idUpper === 'VOL-04' ||
+          idUpper === 'VOL-05' ||
+          idUpper === 'JJF-VOL-2026-001' ||
+          idUpper === 'JJF-VOL-2026-01' ||
+          idUpper === 'JJF-ID-2026-01' ||
+          idUpper === 'JJF-VOL-01' ||
+          idUpper === 'JJF-VOL-2026-659'
+        ) {
+          return false;
+        }
+        if (v.name === 'Aakash Verma' && v.phone === '+91-9876543211') return false;
+        return true;
+      });
+
+      if (clean.length !== parsed.length) {
+        localStorage.setItem(VOLUNTEER_STORAGE_KEY, JSON.stringify(clean));
+      }
+      return clean;
     }
-    return INITIAL_VOLUNTEERS;
+    return [];
   } catch (err) {
     console.warn('Error reading volunteers from localStorage:', err);
-    return INITIAL_VOLUNTEERS;
+    return [];
   }
 }
 
 /**
- * Generate unique sequential Volunteer ID e.g. JJF-VOL-2026-005
+ * Generate unique sequential Volunteer ID starting from 0001: e.g. JJF-VOL-2026-0001
  */
 export function generateNextVolunteerId(): string {
   const current = getAllVolunteers();
   const year = new Date().getFullYear();
-  let maxSeq = 4;
+  let maxSeq = 0;
 
   current.forEach((v) => {
-    const match = v.id.match(/JJF-VOL-\d+-(\d+)/i) || v.id.match(/VOL-(\d+)/i);
+    const match = v.id.match(/JJF-VOL-\d+-(\d+)/i) || v.id.match(/VOL-(\d+)/i) || v.id.match(/JJF-ID-\d+-(\d+)/i);
     if (match && match[1]) {
       const num = parseInt(match[1], 10);
       if (!isNaN(num) && num > maxSeq) {
@@ -155,7 +168,7 @@ export function generateNextVolunteerId(): string {
     }
   });
 
-  const nextSeq = String(maxSeq + 1).padStart(3, '0');
+  const nextSeq = String(maxSeq + 1).padStart(4, '0');
   return `JJF-VOL-${year}-${nextSeq}`;
 }
 

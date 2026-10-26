@@ -18,7 +18,7 @@ export type CertificateTypePrefix = 'VOL' | 'ID' | 'APP' | 'FEST' | 'DON' | 'REP
 const inMemoryCounters: Record<string, number> = {};
 
 /**
- * Get next sequential issue serial number starting from 01
+ * Get next sequential issue serial number starting from 0001
  */
 export function getNextCertificateSeq(type: string = 'GEN'): string {
   try {
@@ -26,16 +26,16 @@ export function getNextCertificateSeq(type: string = 'GEN'): string {
     const current = parseInt(localStorage.getItem(key) || '0', 10);
     const next = current + 1;
     localStorage.setItem(key, String(next));
-    return String(next).padStart(2, '0');
+    return String(next).padStart(4, '0');
   } catch {
     inMemoryCounters[type] = (inMemoryCounters[type] || 0) + 1;
-    return String(inMemoryCounters[type]).padStart(2, '0');
+    return String(inMemoryCounters[type]).padStart(4, '0');
   }
 }
 
 /**
  * Format official Certificate Number with Issued Number / Month / Year
- * Sequence numbers strictly start from 01 (01, 02, 03...)
+ * Sequence numbers strictly start from 0001 (0001, 0002, 0003...)
  */
 export function formatCertificateNumber(
   type: CertificateTypePrefix | string,
@@ -47,13 +47,13 @@ export function formatCertificateNumber(
   const year = validDate.getFullYear();
   const month = String(validDate.getMonth() + 1).padStart(2, '0');
 
-  let issuedSeq = '01';
+  let issuedSeq = '0001';
   if (rawIdOrNumber !== undefined && rawIdOrNumber !== null) {
     const rawStr = String(rawIdOrNumber).trim();
     const digits = rawStr.replace(/[^0-9]/g, '');
     if (digits.length > 0) {
       const num = parseInt(digits, 10);
-      issuedSeq = !isNaN(num) && num > 0 ? String(num).padStart(2, '0') : '01';
+      issuedSeq = !isNaN(num) && num > 0 ? String(num).padStart(4, '0') : '0001';
     }
   } else {
     issuedSeq = getNextCertificateSeq(type);

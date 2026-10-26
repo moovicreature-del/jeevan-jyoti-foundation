@@ -13,5 +13,5 @@ export function getVerificationUrl(certId: string): string {
 
 export function formatCertificateId(type: 'VOL' | 'DON' | 'TSK' | 'CRD' | 'REP', index: number = 1): string {
   const currentYear = new Date().getFullYear();
-  return `JJF-${type}-${currentYear}-${index.toString().padStart(2, '0')}`;
+  return `JJF-${type}-${currentYear}-${index.toString().padStart(4, '0')}`;
 }

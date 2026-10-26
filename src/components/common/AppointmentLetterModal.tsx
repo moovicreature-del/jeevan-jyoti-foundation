@@ -96,8 +96,8 @@ export const AppointmentLetterDocument: React.FC<AppointmentLetterDocumentProps>
     : staffData?.fatherOrHusbandName || 'श्री अभिभावक';
 
   const candidateId = isVolunteer
-    ? volunteerData?.id || 'JJF-VOL-2026-001'
-    : staffData?.id || 'JJF-STF-2026-001';
+    ? volunteerData?.id || 'JJF-VOL-2026-0001'
+    : staffData?.id || 'JJF-STF-2026-0001';
 
   const candidatePhone = isVolunteer
     ? volunteerData?.phone || FOUNDATION_INFO.phone
@@ -117,8 +117,8 @@ export const AppointmentLetterDocument: React.FC<AppointmentLetterDocumentProps>
 
   // Reference Number
   const refNo = isVolunteer
-    ? `JJF/APPT-VOL/2026/${candidateId.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '101'}`
-    : `JJF/APPT-STF/2026/${candidateId.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '101'}`;
+    ? `JJF/APPT-VOL/2026/${candidateId.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '0001'}`
+    : `JJF/APPT-STF/2026/${candidateId.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '0001'}`;
 
   // Subject line
   const subject = isVolunteer

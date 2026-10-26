@@ -30,7 +30,7 @@ function triggerBackgroundDataSync() {
 export function getAllStaffMembers(): StaffMember[] {
   try {
     if (typeof window === 'undefined' || !window.localStorage) {
-      return INITIAL_STAFF_MEMBERS;
+      return [];
     }
     const saved = localStorage.getItem(STAFF_STORAGE_KEY);
     let parsed: StaffMember[] = [];
@@ -40,82 +40,38 @@ export function getAllStaffMembers(): StaffMember[] {
       } catch {}
     }
 
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(INITIAL_STAFF_MEMBERS));
-      INITIAL_STAFF_MEMBERS.forEach((staff) => registerStaffIntoCentralRegistry(staff));
-      return INITIAL_STAFF_MEMBERS;
+    if (!Array.isArray(parsed)) {
+      return [];
     }
 
-    // Smart merge: ensure all permanent staff records (especially JJF-STF-2026-009) always exist
-    let updatedList = [...parsed];
-    let changed = false;
-
-    INITIAL_STAFF_MEMBERS.forEach((initStaff) => {
-      const existsIdx = updatedList.findIndex((s) => s.id.toLowerCase() === initStaff.id.toLowerCase());
-      if (existsIdx === -1) {
-        updatedList.push(initStaff);
-        changed = true;
+    // Permanently purge any dummy staff (e.g. JJF-STF-2026-001 to JJF-STF-2026-009)
+    const cleanList = parsed.filter((s) => {
+      if (!s || !s.id) return false;
+      const idUpper = s.id.toUpperCase();
+      if (
+        idUpper === 'JJF-STF-2026-009' ||
+        idUpper === 'JJF-STF-2026-001' ||
+        idUpper === 'JJF-STF-2026-002' ||
+        idUpper === 'JJF-STF-2026-003' ||
+        idUpper === 'JJF-STF-2026-004' ||
+        idUpper === 'JJF-STF-2026-005' ||
+        idUpper === 'JJF-STF-2026-006' ||
+        idUpper === 'JJF-STF-2026-007' ||
+        idUpper === 'JJF-STF-2026-008'
+      ) {
+        return false;
       }
+      return true;
     });
 
-    // Enforce official verified attributes for JJF-STF-2026-009 (शैलेश प्रधान, पिता: सर्वदेव प्रधान, प्रबंधक)
-    const idx009 = updatedList.findIndex((s) => s.id === 'JJF-STF-2026-009');
-    if (idx009 >= 0) {
-      const s009 = updatedList[idx009];
-      if (
-        s009.fatherOrHusbandName !== 'सर्वदेव प्रधान' ||
-        s009.designation !== 'Manager / प्रबंधक' ||
-        s009.mobile !== '8052361666' ||
-        s009.status !== 'approved' ||
-        !s009.address?.includes('तुर्की')
-      ) {
-        updatedList[idx009] = {
-          ...s009,
-          fullName: 'शैलेश प्रधान',
-          fullNameHindi: 'शैलेश प्रधान',
-          fatherOrHusbandName: 'सर्वदेव प्रधान',
-          relationType: 'Father',
-          designation: 'Manager / प्रबंधक',
-          designationHindi: 'प्रबंधक',
-          department: 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
-          mobile: '8052361666',
-          bloodGroup: 'B+',
-          dateOfJoining: '2018-08-20',
-          address: 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108',
-          dutyLocation: 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
-          status: 'approved',
-          approvedAt: '2018-08-20T10:00:00.000Z',
-          approvedBy: 'जीवन ज्योति फाउंडेशन (प्रशासन)'
-        };
-        changed = true;
-      }
+    if (cleanList.length !== parsed.length) {
+      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(cleanList));
     }
 
-    // Cleanse JJF-STF-2026-001 so it has distinct executive phone 9838061666 and does not hijack 8052361666
-    const idx001 = updatedList.findIndex((s) => s.id === 'JJF-STF-2026-001');
-    if (idx001 >= 0 && (updatedList[idx001].mobile === '8052361666' || updatedList[idx001].emergencyContact === '8052361666')) {
-      updatedList[idx001] = {
-        ...updatedList[idx001],
-        mobile: '9838061666',
-        emergencyContact: '9838061666'
-      };
-      changed = true;
-    }
-
-    if (changed) {
-      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(updatedList));
-    }
-
-    // Always ensure JJF-STF-2026-009 is synced into central verification registry
-    const official009 = updatedList.find((s) => s.id === 'JJF-STF-2026-009');
-    if (official009) {
-      registerStaffIntoCentralRegistry(official009);
-    }
-
-    return updatedList;
+    return cleanList;
   } catch (err) {
     console.warn('Error reading staff registry from storage:', err);
-    return INITIAL_STAFF_MEMBERS;
+    return [];
   }
 }
 
@@ -134,7 +90,7 @@ export function registerStaffIntoCentralRegistry(staff: StaffMember): void {
         ? 'cancelled'
         : 'pending';
 
-    const refNum = staff.id.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '101';
+    const refNum = staff.id.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '0001';
     const refNoCode = `JJF/APPT-STF/2026/${refNum}`;
 
     // 1. Staff Identity Card (I-Card)
@@ -215,10 +171,10 @@ export function registerStaffIntoCentralRegistry(staff: StaffMember): void {
 export function generateNextStaffId(): string {
   const current = getAllStaffMembers();
   const year = new Date().getFullYear();
-  let maxSeq = 5;
+  let maxSeq = 0;
 
   current.forEach((m) => {
-    const match = m.id.match(/JJF-STF-\d+-(\d+)/i);
+    const match = m.id.match(/JJF-STF-\d+-(\d+)/i) || m.id.match(/STF-(\d+)/i);
     if (match && match[1]) {
       const num = parseInt(match[1], 10);
       if (!isNaN(num) && num > maxSeq) {
@@ -227,7 +183,7 @@ export function generateNextStaffId(): string {
     }
   });
 
-  const nextSeq = String(maxSeq + 1).padStart(3, '0');
+  const nextSeq = String(maxSeq + 1).padStart(4, '0');
   return `JJF-STF-${year}-${nextSeq}`;
 }
 
@@ -497,12 +453,6 @@ export function findStaffMember(query: string): StaffMember | null {
   const byId = all.find((m) => m.id.toLowerCase() === cleanQuery);
   if (byId) return byId;
 
-  // Search by reference code (e.g., 6009 or JJF/APPT-STF/2026/6009)
-  if (cleanQuery.includes('6009') || cleanQuery === 'jjf-stf-2026-009') {
-    const s009 = all.find((m) => m.id === 'JJF-STF-2026-009');
-    if (s009) return s009;
-  }
-
   // Search by mobile (last 10 digits)
   if (digitsOnly.length >= 10) {
     const foundByPhone = findStaffByMobile(digitsOnly.slice(-10));
@@ -542,13 +492,7 @@ export function findStaffByMobile(mobile: string): StaffMember | null {
 
   const all = getAllStaffMembers();
 
-  // 1. Direct priority: 8052361666 belongs to Manager Shailesh Pradhan (JJF-STF-2026-009)
-  if (searchPhone === '8052361666') {
-    const s009 = all.find((m) => m.id === 'JJF-STF-2026-009');
-    if (s009) return s009;
-  }
-
-  // 2. Exact primary mobile match that is approved
+  // 1. Exact primary mobile match that is approved
   const approvedExact = all.find(
     (m) =>
       m.mobile &&

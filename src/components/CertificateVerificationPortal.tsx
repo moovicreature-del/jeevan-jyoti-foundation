@@ -144,20 +144,6 @@ export const CertificateVerificationPortal: React.FC = () => {
       return;
     }
 
-    // 5. Default verified response for structured JJF prefixes
-    if (query.includes('JJF') || query.includes('VOL') || query.includes('DON') || query.includes('ID')) {
-      setSearchResult({
-        type: 'volunteer',
-        certNo: query,
-        holderName: isHindi ? 'सत्यापित सेवा सदस्य (Verified Citizen/Member)' : 'Verified Member',
-        fatherName: 'श्री समाज सेवी',
-        details: isHindi ? 'शिक्षा, सामाजिक सेवा व जनकल्याण योगदान' : 'Education & Social Service Contribution',
-        issueDate: '2026-01-15',
-        status: 'VALID & AUTHENTICATED'
-      });
-      return;
-    }
-
     setSearchResult(null);
   };
 
@@ -188,7 +174,7 @@ export const CertificateVerificationPortal: React.FC = () => {
               type="text"
               value={searchId}
               onChange={(e) => setSearchId(e.target.value)}
-              placeholder={t('verify.placeholder', 'e.g. JJF-VOL-001 or JJF-DON-2025-001', 'e.g. JJF-VOL-001 or JJF-DON-2025-001')}
+              placeholder={t('verify.placeholder', 'e.g. JJF-VOL-2026-0001 or JJF/DON/2026/08/0001', 'e.g. JJF-VOL-2026-0001 or JJF/DON/2026/08/0001')}
               className="w-full pl-11 pr-4 py-3 bg-white border-2 border-amber-300 rounded-xl focus:outline-none focus:border-amber-600 font-mono text-sm font-semibold shadow-xs"
             />
           </div>

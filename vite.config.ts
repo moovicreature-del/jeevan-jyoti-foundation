@@ -576,36 +576,8 @@ function apiDevServerPlugin(): Plugin {
               } catch {}
             }
 
-            // Smart merge staff members
+            // Keep authentic staff members
             let mergedStaff = payload.staffMembers || existingJson.staffMembers || [];
-            const has009 = Array.isArray(mergedStaff) && mergedStaff.some((s: any) => s.id === 'JJF-STF-2026-009');
-            if (!has009 && Array.isArray(mergedStaff)) {
-              mergedStaff.push({
-                id: 'JJF-STF-2026-009',
-                fullName: 'शैलेश प्रधान',
-                fullNameHindi: 'शैलेश प्रधान',
-                fatherOrHusbandName: 'सर्वदेव प्रधान',
-                relationType: 'Father',
-                designation: 'Manager / प्रबंधक',
-                designationHindi: 'प्रबंधक',
-                department: 'प्रशासनिक, लेखा व ऑडिट अनुभाग (Administration & Accounts)',
-                mobile: '8052361666',
-                email: 'manager@jeevanjyotifoundation.org',
-                bloodGroup: 'B+',
-                dateOfJoining: '2018-08-20',
-                dateOfBirth: '1986-04-10',
-                emergencyContact: '8052361666',
-                aadhaarOrIdRef: 'XXXX-XXXX-6009',
-                address: 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108',
-                photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
-                status: 'approved',
-                approvedAt: '2018-08-20T10:00:00.000Z',
-                approvedBy: 'जीवन ज्योति फाउंडेशन (प्रशासन)',
-                staffBadgeLevel: 'वरिष्ठ अधिकारी (Lead Officer)',
-                dutyLocation: 'गाजीपुर मुख्य शाखा (Ghazipur HQ)',
-                createdAt: '2018-08-20T10:00:00.000Z'
-              });
-            }
 
             const syncedData = {
               ...existingJson,

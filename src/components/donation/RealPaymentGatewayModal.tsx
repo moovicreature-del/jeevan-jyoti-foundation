@@ -336,9 +336,7 @@ export const RealPaymentGatewayModal: React.FC<Props> = ({
     await new Promise((r) => setTimeout(r, 500));
 
     // Generate official authentic donation record
-    const year = new Date().getFullYear();
-    const seq = Math.floor(1000 + Math.random() * 9000);
-    const receiptNo = `JJF/DON/${year}/${seq}`;
+    const receiptNo = formatCertificateNumber('DON', new Date());
 
     const newDonation: DonationRecord = {
       id: receiptNo,

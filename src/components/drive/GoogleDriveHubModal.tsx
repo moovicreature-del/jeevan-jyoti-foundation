@@ -40,7 +40,7 @@ import {
 } from '../../services/googleDriveService';
 import { useLanguage } from '../../context/LanguageContext';
 import { DONORS_DATA } from '../../data/donorsData';
-import { INITIAL_VOLUNTEERS } from '../../data/taskData';
+import { getAllVolunteers } from '../../services/volunteerService';
 import { FOUNDATION_INFO } from '../../data/foundationData';
 
 interface GoogleDriveHubModalProps {
@@ -301,8 +301,9 @@ export const GoogleDriveHubModal: React.FC<GoogleDriveHubModalProps> = ({ isOpen
         });
       } else if (type === 'volunteers') {
         // Generate clean CSV
+        const currentVolunteers = getAllVolunteers();
         const headers = 'ID,Name,Father_Husband,Contact,Role,Date_Joined,Status\n';
-        const rows = INITIAL_VOLUNTEERS.map(
+        const rows = currentVolunteers.map(
           (v) =>
             `"${v.id}","${v.name}","${v.fatherName || ''}","${v.phone || ''}","${v.role}","${v.joinDate}","${v.status}"`
         ).join('\n');
@@ -318,11 +319,12 @@ export const GoogleDriveHubModal: React.FC<GoogleDriveHubModalProps> = ({ isOpen
         });
       } else {
         // Full Foundation Audit Snapshot
+        const currentVolunteers = getAllVolunteers();
         const fullContent = JSON.stringify(
           {
             organization: FOUNDATION_INFO,
             donorsCount: DONORS_DATA.length,
-            volunteersCount: INITIAL_VOLUNTEERS.length,
+            volunteersCount: currentVolunteers.length,
             exportedAt: new Date().toISOString(),
             status: 'Verified NGO Archive Snapshot',
           },

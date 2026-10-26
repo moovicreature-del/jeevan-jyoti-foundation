@@ -6,22 +6,28 @@ import { getActiveOfficialSealUrl, OFFICIAL_SEAL_BASE64_DATA_URL, DEFAULT_OFFICI
 export const PUBLIC_LOGO_URL = '/uploads/ngo_logo.png';
 export const FALLBACK_LOGO_URL = '/logo.png';
 
+const dataUrlCache = new Map<string, string>();
+
 /**
  * Converts an image URL to a clean base64 data URL via canvas/fetch at full native resolution.
- * This guarantees cross-origin compliance (CORS bypass for local assets),
- * prevents html2canvas / html-to-image from failing or omitting images,
- * and maintains maximum pixel clarity without downsampling blur.
+ * Uses an in-memory cache so repeated calls for logos, seals, and avatars are instantaneous.
  */
 export async function convertImageToDataUrl(url: string): Promise<string> {
+  if (!url) return '';
+  if (url.startsWith('data:')) return url;
+  if (dataUrlCache.has(url)) return dataUrlCache.get(url)!;
+
   try {
     const response = await fetch(url, { mode: 'cors' });
     const blob = await response.blob();
-    return new Promise((resolve, reject) => {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
+    dataUrlCache.set(url, dataUrl);
+    return dataUrl;
   } catch (err) {
     // Fallback using an Image object drawn to an offscreen canvas at full natural resolution
     return new Promise((resolve) => {
@@ -40,7 +46,9 @@ export async function convertImageToDataUrl(url: string): Promise<string> {
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, 0, 0, naturalW, naturalH);
-            resolve(canvas.toDataURL('image/png'));
+            const dataUrl = canvas.toDataURL('image/png');
+            dataUrlCache.set(url, dataUrl);
+            resolve(dataUrl);
             return;
           }
         } catch {

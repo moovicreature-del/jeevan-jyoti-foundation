@@ -39,24 +39,24 @@ export const VolunteerCertificateModal: React.FC<Props> = ({ volunteer, onClose 
   const [certLanguage, setCertLanguage] = useState<CertificateLanguage>('bilingual');
 
   // Editable text states with issued number/month/year
-  const initialCertNo = formatCertificateNumber('VOL', volunteer.joinDate || new Date(), volunteer.id || '01');
+  const initialCertNo = formatCertificateNumber('VOL', volunteer.joinDate || new Date(), volunteer.id || '0001');
   const initialIssueDate = formatCertificateIssueDate(volunteer.joinDate || new Date());
   const initialDurationText = formatCertificateDuration(volunteer.joinDate || '2026-01-01', new Date());
 
   const [certNumber, setCertNumber] = useState(initialCertNo);
   const [issueDate, setIssueDate] = useState(initialIssueDate);
-  const [volunteerName, setVolunteerName] = useState(volunteer.name || 'Pratima Kumari Rai');
+  const [volunteerName, setVolunteerName] = useState(volunteer.name || '');
   const [fatherTitle, setFatherTitle] = useState(
     volunteer.fatherName
       ? volunteer.fatherName.startsWith('Shri') || volunteer.fatherName.startsWith('श्री') || volunteer.fatherName.startsWith('Smt') || volunteer.fatherName.startsWith('श्रीमती')
         ? volunteer.fatherName
         : `Shri ${volunteer.fatherName}`
-      : 'Shri Ramakant Rai'
+      : ''
   );
   const [areaContribution, setAreaContribution] = useState(volunteer.area || 'SHIKSHA (FREE EDUCATION & EVENING SCHOOL)');
   const [areaHindi, setAreaHindi] = useState(volunteer.areaHindi || 'शिक्षा एवं निःशुल्क संध्या पाठशाला');
   const [durationText, setDurationText] = useState(initialDurationText);
-  const [volunteerId, setVolunteerId] = useState(volunteer.id || 'JJF-VOL-01');
+  const [volunteerId, setVolunteerId] = useState(volunteer.id || 'JJF-VOL-2026-0001');
   const [customPhotoUrl, setCustomPhotoUrl] = useState(volunteer.photoUrl || '');
   
   // Dynamic Matter based on Language

@@ -56,30 +56,7 @@ export const CameraQrScannerModal: React.FC<CameraQrScannerModalProps> = ({
             </div>
           </div>
 
-          {/* Quick Demo Scan Buttons */}
-          <div className="mb-6 space-y-2">
-            <p className="text-[11px] text-slate-400 font-semibold">त्वरित परीक्षण हेतु चयन करें (Demo Quick Scan):</p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              <button
-                onClick={() => {
-                  onScanResult('JJF-VOL-2026-659');
-                  onClose();
-                }}
-                className="px-3 py-1 bg-slate-800 hover:bg-orange-600 rounded-lg text-xs font-mono font-bold text-orange-200 border border-slate-700 transition-colors cursor-pointer"
-              >
-                JJF-VOL-2026-659
-              </button>
-              <button
-                onClick={() => {
-                  onScanResult('JJF-DON-2026-001');
-                  onClose();
-                }}
-                className="px-3 py-1 bg-slate-800 hover:bg-orange-600 rounded-lg text-xs font-mono font-bold text-orange-200 border border-slate-700 transition-colors cursor-pointer"
-              >
-                JJF-DON-2026-001
-              </button>
-            </div>
-          </div>
+
 
           {/* Manual Input Fallback */}
           <form onSubmit={handleManualSubmit} className="flex gap-2">

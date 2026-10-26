@@ -59,7 +59,7 @@ export const DonationLetterheadA4Document: React.FC<DonationLetterheadProps> = (
   // Donor Photo Fallback (high-res authentic Indian donor portrait or foundation emblem)
   const photo = donorPhotoUrl || donation.photoUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&auto=format&fit=crop&q=80';
 
-  const refNo = `JJF/DON-80G/2026/${donation.id.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '0101'}`;
+  const refNo = `JJF/DON-80G/2026/${donation.id.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '0001'}`;
   const subject = 'आयकर अधिनियम 80G एवं 12A के अंतर्गत आधिकारिक दान रसीद व प्रशस्ति सम्मान पत्र (Donation Receipt & Certificate of Honor)';
 
   return (

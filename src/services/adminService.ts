@@ -2460,13 +2460,18 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
         } catch {}
         if (!Array.isArray(existingStaff)) existingStaff = [];
 
-        // Smart merge: keep all existing staff, overlay incoming without wiping user approvals
+        const isDummyStaffId = (id: string) => {
+          const u = String(id || '').toUpperCase();
+          return u.startsWith('JJF-STF-2026-00') || u === 'JJF-STF-2026-009';
+        };
+
+        // Smart merge: keep genuine existing staff, omit dummy staff
         const staffMap = new Map<string, any>();
         data.staffMembers.forEach((sm: any) => {
-          if (sm && sm.id) staffMap.set(sm.id.toUpperCase(), sm);
+          if (sm && sm.id && !isDummyStaffId(sm.id)) staffMap.set(sm.id.toUpperCase(), sm);
         });
         existingStaff.forEach((sm: any) => {
-          if (sm && sm.id) {
+          if (sm && sm.id && !isDummyStaffId(sm.id)) {
             const key = sm.id.toUpperCase();
             const inc = staffMap.get(key);
             if (sm.status === 'approved' || !inc) {
@@ -2495,13 +2500,29 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
         } catch {}
         if (!Array.isArray(existingCerts)) existingCerts = [];
 
-        // Smart merge certificates: never erase or downgrade approved/pending certificates
+        const isDummyCertId = (id: string) => {
+          const u = String(id || '').toUpperCase();
+          return (
+            u === 'JJF-STF-2026-009' ||
+            u === 'JJF-STF-2026-009-APPT' ||
+            u === 'JJF/APPT-STF/2026/6009' ||
+            u === 'JJF-STF-2026-001' ||
+            u === 'JJF-STF-2026-001-APPT' ||
+            u === 'JJF-VOL-2026-659' ||
+            u === 'JJF-VOL-2026-001' ||
+            u === 'JJF-VOL-2026-01' ||
+            u === 'JJF-ID-2026-01' ||
+            u === 'JJF-DON-2026-01'
+          );
+        };
+
+        // Smart merge certificates: filter out any dummy certificates
         const certMap = new Map<string, any>();
         data.certificates.forEach((cert: any) => {
-          if (cert && cert.id) certMap.set(cert.id.toUpperCase(), cert);
+          if (cert && cert.id && !isDummyCertId(cert.id)) certMap.set(cert.id.toUpperCase(), cert);
         });
         existingCerts.forEach((cert: any) => {
-          if (cert && cert.id) {
+          if (cert && cert.id && !isDummyCertId(cert.id)) {
             const key = cert.id.toUpperCase();
             const inc = certMap.get(key);
             if (cert.approvalStatus === 'approved' || !inc) {
