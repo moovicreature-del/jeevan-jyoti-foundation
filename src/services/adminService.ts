@@ -68,27 +68,43 @@ function sanitizePaymentSettings(raw: any): DonationPaymentSettings {
 export const DEFAULT_SLIDER_PHOTOS: SliderPhotoItem[] = [
   {
     id: 'hero-slide-1',
-    url: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1000&auto=format&fit=crop&q=75',
-    title: 'निःशुल्क सांध्यकालीन शिक्षा सेवा',
-    description: 'ग़ाज़ीपुर के ग्रामीण व वंचित बच्चों को समर्पित आधुनिक व संस्कारयुक्त शिक्षा अभियान'
+    url: '/uploads/jjf_media_1793250700283_83f32964.jpg',
+    title: 'निःशुल्क सांध्यकालीन शिक्षा सेवा - नौनिहालों की पाठशाला',
+    description: 'ग़ाज़ीपुर के ग्रामीण व वंचित बच्चों को समर्पित आधुनिक, संस्कारयुक्त एवं निःशुल्क शिक्षा अभियान',
+    category: 'शिक्षा सेवा',
+    location: 'मोहम्मदाबाद, ग़ाज़ीपुर'
   },
   {
     id: 'hero-slide-2',
-    url: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1000&auto=format&fit=crop&q=75',
-    title: 'अन्नपूर्णा भोजन सेवा एवं पोषण किट वितरण',
-    description: 'निराश्रितों, दैनिक मजदूरों एवं जरूरतमंद परिवारों को ताजा पौष्टिक भोजन व सूखा राशन'
+    url: '/uploads/jjf_media_1793250697644_9b7cd9be.jpg',
+    title: 'संस्था प्रबंधक एवं कार्यकर्ताओं द्वारा बाल विकास व सेवा अभियान',
+    description: 'ग्रामीण विद्यार्थियों को निःशुल्क शिक्षण सामग्री, स्कूल बैग व मार्गदर्शन प्रदान करते प्रबंधक व स्वयंसेवक',
+    category: 'बाल विकास',
+    location: 'मीरानपुर, ग़ाज़ीपुर'
   },
   {
     id: 'hero-slide-3',
-    url: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1000&auto=format&fit=crop&q=75',
-    title: 'निःशुल्क ग्रामीण स्वास्थ्य एवं नेत्र शिविर',
-    description: 'वरिष्ठ डॉक्टरों द्वारा विशेषज्ञ चिकित्सीय परामर्श, चश्मा व जीवनरक्षक दवा वितरण'
+    url: '/uploads/jjf_media_1793250696936_585f911c.jpg',
+    title: 'जीवन ज्योति फाउंडेशन ग़ाज़ीपुर - सेवा दल एवं स्वयंसेवक समूह',
+    description: 'जन-सेवा, स्वच्छता एवं सामाजिक समरसता के संकल्प के साथ ग़ाज़ीपुर के समर्पित स्वयंसेवकों का समूह',
+    category: 'स्वयंसेवक दल',
+    location: 'ग़ाज़ीपुर सदर'
   },
   {
     id: 'hero-slide-4',
-    url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1000&auto=format&fit=crop&q=75',
-    title: 'पर्यावरण संरक्षण एवं वृहद पौधरोपण महाभियान',
-    description: 'हरित ग़ाज़ीपुर संकल्प: 1000+ फलदार व औषधीय पौधों का रोपण व संरक्षण'
+    url: '/uploads/jjf_media_1793250699745_ff3bcd1a.jpg',
+    title: 'ग्रामीण अंचलों में सामाजिक उत्थान व सहायता कार्य',
+    description: 'सुदूर ग्रामीण बस्तियों में जरूरतमंद परिवारों से सीधा संपर्क कर उनकी आवश्यकताओं की पूर्ति व सहायता',
+    category: 'ग्रामीण उत्थान',
+    location: 'रेवतीपुर व भांवरकोल'
+  },
+  {
+    id: 'hero-slide-5',
+    url: '/uploads/jjf_media_1793250694886_6819b5c4.jpg',
+    title: 'संस्था कार्यकारिणी बैठक एवं सेवा संकल्प',
+    description: 'वार्षिक लोक-कल्याणकारी योजनाओं, शिक्षा विस्तार एवं स्वास्थ्य शिविरों के क्रियान्वयन हेतु रणनीति सत्र',
+    category: 'कार्यकारिणी',
+    location: 'केंद्रीय कार्यालय, दाउदपुर'
   }
 ];
 
@@ -96,33 +112,51 @@ export const DEFAULT_SLIDER_PHOTOS: SliderPhotoItem[] = [
 export const DEFAULT_CAMPAIGN_GALLERY_PHOTOS: SliderPhotoItem[] = [
   {
     id: 'camp-slide-1',
-    url: 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=1000&auto=format&fit=crop&q=75',
-    title: 'शीतकालीन वस्त्र एवं कंबल वितरण अभियान',
-    description: 'ठंड से बचाव हेतु सुदूर गांवों में 500+ वृद्धों व बच्चों को गर्म वस्त्र व कंबल भेंट'
+    url: '/uploads/jjf_media_1793250700283_83f32964.jpg',
+    title: 'सांध्यकालीन बाल संस्कार एवं निःशुल्क अध्ययन केंद्र',
+    description: 'शिक्षा से वंचित नौनिहालों को क, ख, ग से लेकर डिजिटल साक्षरता व संस्कारयुक्त शिक्षण',
+    category: 'शिक्षा सेवा',
+    location: 'मोहम्मदाबाद'
   },
   {
     id: 'camp-slide-2',
-    url: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1000&auto=format&fit=crop&q=75',
-    title: 'सांध्यकालीन बाल संस्कार एवं अध्ययन केंद्र',
-    description: 'शिक्षा से वंचित नौनिहालों को क, ख, ग से लेकर डिजिटल साक्षरता की रोशनी'
+    url: '/uploads/jjf_media_1793250697644_9b7cd9be.jpg',
+    title: 'मेधावी व जरूरतमंद छात्र-छात्राओं को पाठ्य सामग्री वितरण',
+    description: 'संस्था प्रबंधक शैलेश प्रधान जी एवं कार्यकर्ताओं की उपस्थिति में बाल सेवा अभियान',
+    category: 'बाल कल्याण',
+    location: 'मीरानपुर'
   },
   {
     id: 'camp-slide-3',
-    url: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=1000&auto=format&fit=crop&q=75',
-    title: 'मोबाइल मेडिकल वैन एवं प्राथमिक उपचार सेवा',
-    description: 'गांव-गांव पहुंचकर ब्लड प्रेशर, शुगर व सामान्य बीमारियों की मुफ्त जांच'
+    url: '/uploads/jjf_media_1793250696936_585f911c.jpg',
+    title: 'ग़ाज़ीपुर सेवा दल एवं युवा स्वयंसेवक महासम्मेलन',
+    description: 'राष्ट्र निर्माण व जन-कल्याण हेतु संगठित जीवन ज्योति फाउंडेशन के समर्पित युवा',
+    category: 'युवा शक्ति',
+    location: 'ग़ाज़ीपुर सदर'
   },
   {
     id: 'camp-slide-4',
-    url: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=1000&auto=format&fit=crop&q=75',
-    title: 'महिला स्वावलंबन एवं कौशल विकास कार्यशाला',
-    description: 'ग्रामीण बहनों को सिलाई, हस्तकला व आत्मनिर्भरता का निःशुल्क प्रशिक्षण'
+    url: '/uploads/jjf_media_1793251014300_0792dd75.jpg',
+    title: 'सामुदायिक जन-जागरूकता एवं अधिकार चेतना अभियान',
+    description: 'ग्रामीण नागरिकों एवं माताओं-बहनों को जनकल्याणकारी योजनाओं की सीधी जानकारी',
+    category: 'जन-जागरूकता',
+    location: 'जमानियां'
   },
   {
     id: 'camp-slide-5',
-    url: 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=1000&auto=format&fit=crop&q=75',
-    title: 'स्वच्छ गंगा व जल संरक्षण जन-जागरूकता',
-    description: 'घाटों की सफाई एवं स्वच्छ पेयजल संरक्षण हेतु स्वयंसेवकों का साप्ताहिक श्रमदान'
+    url: '/uploads/jjf_media_1793251016980_5fc0cb9a.jpg',
+    title: 'ग़ाज़ीपुर सेवा अभियानों की कर्मठ टीम',
+    description: 'निःस्वार्थ भाव से समाज के अंतिम व्यक्ति तक सहायता पहुँचाने हेतु कृतसंकल्पित स्वयंसेवक',
+    category: 'सेवा दल',
+    location: 'ग़ाज़ीपुर'
+  },
+  {
+    id: 'camp-slide-6',
+    url: '/uploads/jjf_media_1793250699745_ff3bcd1a.jpg',
+    title: 'धरातलीय सर्वेक्षण एवं राहत वितरण',
+    description: 'गाजीपुर के अभावग्रस्त क्षेत्रों में मौके पर पहुंचकर वस्तुस्थिति का आकलन व मदद',
+    category: 'राहत कार्य',
+    location: 'रेवतीपुर व भांवरकोल'
   }
 ];
 
@@ -130,38 +164,38 @@ export const DEFAULT_CAMPAIGN_GALLERY_PHOTOS: SliderPhotoItem[] = [
 export const DEFAULT_RECENT_EVENTS_PHOTOS: SliderPhotoItem[] = [
   {
     id: 'event-slide-1',
-    url: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1000&auto=format&fit=crop&q=75',
-    title: 'सांध्यकालीन पाठशाला एवं डिजिटल शिक्षण सामग्री वितरण',
-    description: 'मीरानपुर ग्राम में 150 से अधिक निर्धन बच्चों को स्कूल बैग, पाठ्य सामग्री एवं डिजिटल टेबलेट द्वारा आधुनिक बुनियादी शिक्षा प्रदान की गई।',
+    url: '/uploads/jjf_media_1793250700283_83f32964.jpg',
+    title: 'सांध्यकालीन पाठशाला एवं डिजिटल शिक्षण सामग्री सत्र',
+    description: 'मीरानपुर ग्राम में 150 से अधिक निर्धन बच्चों को स्कूल बैग, पाठ्य सामग्री एवं डिजिटल शिक्षण सामग्री प्रदान की गई।',
     category: 'शिक्षा सेवा',
     location: 'मीरानपुर, मोहम्मदाबाद',
     date: '2026-03-24'
   },
   {
     id: 'event-slide-2',
-    url: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1000&auto=format&fit=crop&q=75',
-    title: 'ग्रामीण समग्र नेत्र जांच एवं निःशुल्क दवा वितरण शिविर',
-    description: 'वरिष्ठ नेत्र विशेषज्ञों द्वारा 200+ ग्रामीण बुजुर्गों की निशुल्क जांच कर चश्मे व आवश्यक दवाइयां वितरित की गईं।',
-    category: 'स्वास्थ्य रक्षा',
+    url: '/uploads/jjf_media_1793250697644_9b7cd9be.jpg',
+    title: 'बाल विकास एवं प्रेरणा सम्मान समारोह',
+    description: 'उत्कृष्ट प्रदर्शन करने वाले नौनिहालों को सम्मानित कर उनका उत्साहवर्धन किया गया।',
+    category: 'बाल विकास',
     location: 'जमानियां ब्लॉक, ग़ाज़ीपुर',
     date: '2026-03-12'
   },
   {
     id: 'event-slide-3',
-    url: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1000&auto=format&fit=crop&q=75',
-    title: 'अन्नपूर्णा साप्ताहिक पोषण आहार वितरण अभियान',
-    description: 'ग़ाज़ीपुर गंगा घाट एवं रेलवे स्टेशन के समीप रहने वाले 400+ दैनिक श्रमिकों व असहायों को पौष्टिक गर्म भोजन वितरित किया गया।',
-    category: 'अन्नपूर्णा सेवा',
+    url: '/uploads/jjf_media_1793250696936_585f911c.jpg',
+    title: 'स्वयंसेवक दल संवाद एवं वार्षिक सेवा विस्तार योजना',
+    description: 'गाजीपुर के विभिन्न क्षेत्रों से आए सेवाभावी कार्यकर्ताओं के साथ संवाद गोष्ठी संपन्न।',
+    category: 'सेवा संगोष्ठी',
     location: 'ग़ाज़ीपुर सदर',
     date: '2026-03-02'
   },
   {
     id: 'event-slide-4',
-    url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1000&auto=format&fit=crop&q=75',
-    title: 'पर्यावरण संरक्षण एवं 1000+ फलदार पौधरोपण अभियान',
-    description: 'गाजीपुर के विभिन्न ग्रामों और सार्वजनिक परिसरों में हरियाली एवं छायादार वृक्षारोपण संपन्न हुआ।',
-    category: 'पर्यावरण संरक्षण',
-    location: 'रेवतीपुर व सैदपुर अंचल',
+    url: '/uploads/jjf_media_1793250694886_6819b5c4.jpg',
+    title: 'संस्था कार्यकारिणी बैठक एवं सेवा संकल्प',
+    description: 'गाजीपुर के विभिन्न ग्रामों में सेवा प्रकल्पों के विस्तार पर सहमति बनी।',
+    category: 'कार्यकारिणी',
+    location: 'केंद्रीय कार्यालय',
     date: '2026-02-20'
   }
 ];
@@ -170,31 +204,31 @@ export const DEFAULT_RECENT_EVENTS_PHOTOS: SliderPhotoItem[] = [
 export const DEFAULT_RURAL_WORK_PHOTOS: SliderPhotoItem[] = [
   {
     id: 'rural-slide-1',
-    url: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1000&auto=format&fit=crop&q=75',
+    url: '/uploads/jjf_media_1793250699745_ff3bcd1a.jpg',
     title: 'सुदूर पुरवों में जरूरतमंद परिवारों तक सीधी सहायता',
-    description: 'रेवतीपुर एवं भांवरकोल के बाढ़ प्रभावित क्षेत्रों में राशन सामग्री व स्वच्छ पेयजल का घर-घर वितरण',
+    description: 'रेवतीपुर एवं भांवरकोल के अभावग्रस्त क्षेत्रों में राशन सामग्री व सहायता का घर-घर वितरण',
     category: 'राहत कार्य',
     location: 'भांवरकोल एवं रेवतीपुर'
   },
   {
     id: 'rural-slide-2',
-    url: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1000&auto=format&fit=crop&q=75',
+    url: '/uploads/jjf_media_1793250700283_83f32964.jpg',
     title: 'झोपड़पट्टी व मजरों में बुनियादी अक्षर ज्ञान की ज्योति',
-    description: 'ईंट भट्ठों व मजदूरी करने वाले परिवारों के बच्चों को प्रतिदिन 2 घंटे नियमित शिक्षण',
+    description: 'ईंट भट्ठों व मजदूरी करने वाले परिवारों के बच्चों को प्रतिदिन नियमित शिक्षण',
     category: 'बाल शिक्षा',
     location: 'करंडा एवं सैदपुर'
   },
   {
     id: 'rural-slide-3',
-    url: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1000&auto=format&fit=crop&q=75',
-    title: 'अशक्त व वृद्ध ग्रामीणों को घर पर स्वास्थ्य जांच व दवा',
-    description: 'अस्पताल जाने में असमर्थ वृद्धजनों के लिए चलंत स्वास्थ्य टीम द्वारा नियमित फॉलो-अप',
+    url: '/uploads/jjf_media_1793251014300_0792dd75.jpg',
+    title: 'अशक्त व वृद्ध ग्रामीणों को आवश्यक परामर्श व सहायता',
+    description: 'अस्पताल जाने में असमर्थ वृद्धजनों के लिए चलंत सहायता टीम द्वारा नियमित फॉलो-अप',
     category: 'स्वास्थ्य सेवा',
     location: 'कासिमाबाद एवं जहूराबाद'
   },
   {
     id: 'rural-slide-4',
-    url: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=1000&auto=format&fit=crop&q=75',
+    url: '/uploads/jjf_media_1793251016980_5fc0cb9a.jpg',
     title: 'ग्रामीण कन्याओं को स्वावलंबन एवं डिजिटल ज्ञान',
     description: 'सिलाई-कढ़ाई केंद्र तथा कंप्यूटर साक्षरता द्वारा बेटियों को आत्मनिर्भर बनाने का सशक्त प्रयास',
     category: 'महिला सशक्तीकरण',
@@ -420,8 +454,18 @@ function sanitizeContentData(raw: any): AppHomeContent {
     if (!Array.isArray(input) || input.length === 0) {
       return defaultList;
     }
-    const valid = input
-      .filter((item: any) => item && typeof item.url === 'string' && item.url.trim().length > 0)
+    // Filter out old Unsplash dummy stock photos so real uploaded photos take precedence
+    const filteredInput = input.filter(
+      (item: any) =>
+        item &&
+        typeof item.url === 'string' &&
+        item.url.trim().length > 0 &&
+        !item.url.includes('images.unsplash.com')
+    );
+
+    const source = filteredInput.length > 0 ? filteredInput : defaultList;
+
+    const valid = source
       .slice(0, 15) // Limit strictly to 15 photos per section
       .map((item: any, idx: number) => ({
         id: item.id || `photo-${Date.now()}-${idx}`,
@@ -2321,8 +2365,13 @@ export async function getHomeContent(): Promise<AppHomeContent> {
 
   // 3. Fallback to bundled synced JSON file (from GitHub commits)
   try {
-    const res = await fetch('/data/synced_app_data.json');
-    if (res.ok) {
+    const rawBase = (import.meta as any).env?.BASE_URL || './';
+    const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+    let res = await fetch(`${cleanBase}data/synced_app_data.json`).catch(() => null);
+    if (!res || !res.ok) {
+      res = await fetch('/data/synced_app_data.json').catch(() => null);
+    }
+    if (res && res.ok) {
       const synced = await res.json();
       if (synced && synced.homeContent) {
         const data = sanitizeContentData(synced.homeContent);
@@ -2438,8 +2487,13 @@ export async function syncCurrentAdminDataToGitHub(triggerDownloadIfOffline: boo
 export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   try {
-    const res = await fetch(`/data/synced_app_data.json?t=${Date.now()}`, { cache: 'no-cache' });
-    if (!res.ok) return false;
+    const rawBase = (import.meta as any).env?.BASE_URL || './';
+    const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+    let res = await fetch(`${cleanBase}data/synced_app_data.json?t=${Date.now()}`, { cache: 'no-cache' }).catch(() => null);
+    if (!res || !res.ok) {
+      res = await fetch(`/data/synced_app_data.json?t=${Date.now()}`, { cache: 'no-cache' }).catch(() => null);
+    }
+    if (!res || !res.ok) return false;
     const data = await res.json();
     if (!data || !data.syncedAt) return false;
 

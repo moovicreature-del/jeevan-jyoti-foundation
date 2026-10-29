@@ -65,6 +65,27 @@ export function getOptimizedImageUrl(
   }
 
   // 4. Local uploads or API media endpoint
+  // Handles GitHub Pages subpaths (e.g. https://user.github.io/repo/) where leading '/'
+  // would incorrectly resolve to domain root instead of the repository base path.
+  if (
+    trimmed.startsWith('/uploads/') ||
+    trimmed.startsWith('/assets/') ||
+    trimmed.startsWith('/data/') ||
+    (trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.startsWith('/api/'))
+  ) {
+    try {
+      const rawBase = (import.meta as any).env?.BASE_URL || './';
+      const cleanPath = trimmed.replace(/^\/+/, '');
+      if (rawBase === './' || rawBase === '') {
+        return `./${cleanPath}`;
+      }
+      const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+      return `${cleanBase}${cleanPath}`;
+    } catch {
+      return trimmed;
+    }
+  }
+
   return trimmed;
 }
 

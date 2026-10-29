@@ -185,7 +185,7 @@ export const CampaignGallerySlider: React.FC<CampaignGallerySliderProps> = ({
                     decoding="async"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src =
-                        'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=1000&auto=format&fit=crop&q=75';
+                        getOptimizedImageUrl('/uploads/jjf_media_1793250697644_9b7cd9be.jpg');
                     }}
                   />
 
