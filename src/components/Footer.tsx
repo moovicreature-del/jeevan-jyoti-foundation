@@ -169,8 +169,21 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
                 <Mail className="w-4 h-4 text-amber-500 shrink-0" />
                 <a href={`mailto:${FOUNDATION_INFO.email}`} className="hover:text-amber-400 transition-colors">{FOUNDATION_INFO.email}</a>
               </div>
-              <div className="pt-2 text-[11px] text-amber-400 font-bold">
-                {t('footer.manager', 'प्रबंधक / सचिव', 'Manager / Secretary')}: {FOUNDATION_INFO.presidentName}
+              <div className="pt-2 flex items-center gap-2.5 bg-gray-900/60 p-2 rounded-xl border border-gray-800">
+                <img
+                  src="/assets/aistudio/869845680_2238650036692471_2813899680013756397_n_202169ed.webp"
+                  alt="Shailesh Pradhan - Manager / Secretary"
+                  className="w-10 h-10 rounded-full object-cover object-top border-2 border-amber-400 shadow-xs shrink-0"
+                  loading="lazy"
+                />
+                <div>
+                  <div className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">
+                    Manager / Secretary (प्रबंधक / सचिव)
+                  </div>
+                  <div className="text-xs font-black text-white">
+                    {FOUNDATION_INFO.presidentName}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

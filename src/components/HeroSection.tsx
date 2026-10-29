@@ -34,7 +34,7 @@ export const HeroSection: React.FC<Props> = ({
 }) => {
   const { t, isHindi } = useLanguage();
   const { content } = useHomeContent();
-  const [activeHeroTab, setActiveHeroTab] = useState<'info' | 'slides'>('slides');
+  const [activeHeroTab, setActiveHeroTab] = useState<'slides' | 'manager' | 'info'>('slides');
 
   const displayTitle = isHindi
     ? (content.heroTitle || FOUNDATION_INFO.nameHindi)
@@ -255,19 +255,31 @@ export const HeroSection: React.FC<Props> = ({
                 <div className="flex items-center gap-1.5 p-1 bg-amber-50 rounded-2xl border border-amber-200">
                   <button
                     onClick={() => setActiveHeroTab('slides')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition cursor-pointer ${
                       activeHeroTab === 'slides'
                         ? 'bg-[#8B0000] text-white shadow-sm'
                         : 'text-gray-700 hover:text-red-800'
                     }`}
                   >
                     <Camera className="w-3.5 h-3.5" />
-                    <span>{isHindi ? `लाइव फ़ोटो स्लाइड्स (${slideCount})` : `Live Photos (${slideCount})`}</span>
+                    <span>{isHindi ? `लाइव फ़ोटो (${slideCount})` : `Live Photos (${slideCount})`}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveHeroTab('manager')}
+                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition cursor-pointer ${
+                      activeHeroTab === 'manager'
+                        ? 'bg-[#8B0000] text-white shadow-sm'
+                        : 'text-gray-700 hover:text-red-800'
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5 text-amber-300" />
+                    <span>{isHindi ? 'प्रबंधक / सचिव' : 'Manager / Secretary'}</span>
                   </button>
 
                   <button
                     onClick={() => setActiveHeroTab('info')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black transition cursor-pointer ${
                       activeHeroTab === 'info'
                         ? 'bg-[#8B0000] text-white shadow-sm'
                         : 'text-gray-700 hover:text-red-800'
@@ -302,7 +314,68 @@ export const HeroSection: React.FC<Props> = ({
                 </div>
               )}
 
-              {/* View 2: Foundation Registration Info */}
+              {/* View 2: Manager / Secretary Executive Showcase */}
+              {activeHeroTab === 'manager' && (
+                <div className="space-y-3 pt-1 animate-in fade-in duration-300 text-center">
+                  <div className="relative mx-auto max-w-[240px] rounded-2xl overflow-hidden border-2 border-amber-400 shadow-md bg-slate-900 group">
+                    <div className="h-1 bg-gradient-to-r from-orange-500 via-white to-green-600 w-full" />
+                    <img
+                      src="/assets/aistudio/869845680_2238650036692471_2813899680013756397_n_202169ed.webp"
+                      alt="शैलेश प्रधान - Manager / Secretary"
+                      className="w-full h-56 object-cover object-top"
+                      loading="eager"
+                    />
+                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-xs text-white px-2 py-0.5 rounded-md border border-white/30 text-[9px] font-black flex items-center gap-1 shadow-xs">
+                      <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                      <span>Verified</span>
+                    </div>
+                  </div>
+
+                  {/* Name and Exact Requested Title below the image */}
+                  <div className="bg-amber-50/80 p-3 rounded-2xl border border-amber-300 shadow-2xs">
+                    <h3 className="text-base sm:text-lg font-black text-slate-950 font-serif leading-tight">
+                      शैलेश प्रधान (Shailesh Pradhan)
+                    </h3>
+
+                    {/* Exact Title Below Photo */}
+                    <div className="mt-1.5 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-[#8B0000] to-[#A00000] text-white shadow-xs">
+                      <Sparkles className="w-3 h-3 text-amber-300" />
+                      <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider">
+                        Manager / Secretary
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] font-bold text-[#8B0000] mt-1">
+                      {isHindi ? 'प्रबंधक / राष्ट्रीय सचिव' : 'Manager / National Secretary'}
+                    </div>
+
+                    <div className="text-[10px] text-slate-600 font-medium">
+                      जीवन ज्योति फाउंडेशन (रजि. ग़ाज़ीपुर, उ.प्र.)
+                    </div>
+                  </div>
+
+                  {/* Quick Connect & Navigation */}
+                  <div className="grid grid-cols-2 gap-2 text-xs font-bold pt-1">
+                    <a
+                      href={`tel:${FOUNDATION_INFO.phone}`}
+                      className="p-2 rounded-xl bg-white border border-amber-300 hover:bg-amber-50 text-slate-900 transition flex items-center justify-center gap-1 shadow-2xs"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{FOUNDATION_INFO.phone}</span>
+                    </a>
+
+                    <button
+                      onClick={() => onOpenStaff ? onOpenStaff('options') : window.dispatchEvent(new CustomEvent('open-staff-modal', { detail: { tab: 'options' } }))}
+                      className="p-2 rounded-xl bg-[#8B0000] hover:bg-[#6b0000] text-white transition flex items-center justify-center gap-1 shadow-xs cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5 text-amber-300" />
+                      <span>{isHindi ? 'नियुक्ति / स्टाफ' : 'Staff Portal'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* View 3: Foundation Registration Info */}
               {activeHeroTab === 'info' && (
                 <div className="text-center space-y-3 pt-1 animate-in fade-in duration-300">
                   <div className="flex flex-col items-center justify-center">

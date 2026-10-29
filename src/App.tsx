@@ -33,6 +33,7 @@ import { FloatingShareToolbar } from './components/FloatingShareToolbar';
 import { FestivalGreetingsPortal } from './components/FestivalGreetingsPortal';
 import { ProfessionalFormsPortal } from './components/ProfessionalFormsPortal';
 import { MotivationalQuotesPosterStudio } from './components/quotes/MotivationalQuotesPosterStudio';
+import { ManagerSecretarySpotlight } from './components/ManagerSecretarySpotlight';
 
 import { Volunteer, TaskRecord, DonationRecord, FestivalGreetingRecord } from './types';
 import { initAutomatedPublicArchiveBackgroundSync } from './services/publicVerifiedArchiveService';
@@ -355,6 +356,16 @@ export function App() {
             setStaffModalTab(tab || 'options');
             setShowStaffModal(true);
           }}
+        />
+
+        {/* Manager / Secretary Executive Leadership Spotlight & Message */}
+        <ManagerSecretarySpotlight
+          onOpenStaff={(tab) => {
+            setStaffModalTab(tab || 'options');
+            setShowStaffModal(true);
+          }}
+          onOpenVolunteerPortal={() => handleOpenFormTab('volunteer')}
+          onOpenDonate={() => handleOpenFormTab('donation')}
         />
 
         {/* Home Page Photo Slider Showcase (Automatic Smooth Slideshow) */}
