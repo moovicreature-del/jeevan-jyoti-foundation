@@ -2,6 +2,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { toPng } from 'html-to-image';
 import { getActiveOfficialSealUrl, OFFICIAL_SEAL_BASE64_DATA_URL, DEFAULT_OFFICIAL_SEAL_URL } from '../data/officialSealData';
+import { getOptimizedImageUrl } from './imageOptimizer';
 
 export const PUBLIC_LOGO_URL = '/uploads/ngo_logo.png';
 export const FALLBACK_LOGO_URL = '/logo.png';
@@ -15,10 +16,11 @@ const dataUrlCache = new Map<string, string>();
 export async function convertImageToDataUrl(url: string): Promise<string> {
   if (!url) return '';
   if (url.startsWith('data:')) return url;
-  if (dataUrlCache.has(url)) return dataUrlCache.get(url)!;
+  const resolvedUrl = getOptimizedImageUrl(url);
+  if (dataUrlCache.has(resolvedUrl)) return dataUrlCache.get(resolvedUrl)!;
 
   try {
-    const response = await fetch(url, { mode: 'cors' });
+    const response = await fetch(resolvedUrl, { mode: 'cors' });
     const blob = await response.blob();
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -121,13 +123,13 @@ export async function forceResolvePublicAssets(element: HTMLElement): Promise<()
       // Strip any cache-busting query parameter (?t=...) to access the pristine 1200x1193 master asset
       const cleanSrc = origSrc ? origSrc.split('?')[0] : '';
       if (cleanSrc && !cleanSrc.includes('old') && !cleanSrc.includes('76347e15')) {
-        targetSrc = cleanSrc;
+        targetSrc = getOptimizedImageUrl(cleanSrc);
       } else {
         const activeSeal = getActiveOfficialSealUrl();
-        targetSrc = activeSeal ? activeSeal.split('?')[0] : '/uploads/official_seal.png';
+        targetSrc = getOptimizedImageUrl(activeSeal ? activeSeal.split('?')[0] : '/uploads/official_seal.png');
       }
-      if (!targetSrc || targetSrc === '/uploads/official_seal.png') {
-        targetSrc = '/uploads/official_seal.png';
+      if (!targetSrc) {
+        targetSrc = getOptimizedImageUrl('/uploads/official_seal.png');
       }
       img.src = targetSrc;
     } else if (isLogoImg) {
@@ -136,10 +138,12 @@ export async function forceResolvePublicAssets(element: HTMLElement): Promise<()
       if (!cleanSrc || cleanSrc.includes('placeholder')) {
         cleanSrc = PUBLIC_LOGO_URL;
       }
-      targetSrc = cleanSrc;
+      targetSrc = getOptimizedImageUrl(cleanSrc);
       img.src = targetSrc;
     } else if (!targetSrc && PUBLIC_LOGO_URL) {
-      targetSrc = PUBLIC_LOGO_URL;
+      targetSrc = getOptimizedImageUrl(PUBLIC_LOGO_URL);
+    } else if (targetSrc) {
+      targetSrc = getOptimizedImageUrl(targetSrc);
     }
 
     try {

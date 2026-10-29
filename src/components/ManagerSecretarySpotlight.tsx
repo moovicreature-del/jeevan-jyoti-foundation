@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { FOUNDATION_INFO } from '../data/foundationData';
 import { useLanguage } from '../context/LanguageContext';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface Props {
   onOpenStaff?: (tab?: 'options' | 'registration' | 'download') => void;
@@ -29,7 +30,7 @@ export const ManagerSecretarySpotlight: React.FC<Props> = ({
 }) => {
   const { isHindi } = useLanguage();
 
-  const managerPhotoUrl = '/assets/aistudio/869845680_2238650036692471_2813899680013756397_n_202169ed.webp';
+  const managerPhotoUrl = getOptimizedImageUrl('/uploads/manager_secretary.webp');
   const whatsappUrl = `https://api.whatsapp.com/send?phone=918052361666&text=${encodeURIComponent(
     'नमस्ते शैलेश जी, मैं जीवन ज्योति फाउंडेशन ग़ाज़ीपुर के संबंध में जानकारी व सहयोग हेतु संपर्क कर रहा हूँ।'
   )}`;
@@ -82,6 +83,16 @@ export const ManagerSecretarySpotlight: React.FC<Props> = ({
                       alt="शैलेश प्रधान - Manager / Secretary"
                       className="w-full h-full object-cover object-top transform group-hover:scale-102 transition-transform duration-500"
                       loading="eager"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (!target.dataset.tried) {
+                          target.dataset.tried = '1';
+                          target.src = getOptimizedImageUrl('/assets/aistudio/869845680_2238650036692471_2813899680013756397_n_202169ed.webp');
+                        } else if (target.dataset.tried === '1') {
+                          target.dataset.tried = '2';
+                          target.src = getOptimizedImageUrl('/manager_secretary.webp');
+                        }
+                      }}
                     />
 
                     {/* Verified Digital Seal Watermark badge */}

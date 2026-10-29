@@ -268,9 +268,10 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     ? { width: `${resolvedSize}px`, height: `${resolvedSize}px` } 
     : { width: resolvedSize, height: resolvedSize };
 
-  const logoSourceUrl = currentSrc.startsWith('http')
-    ? getOptimizedImageUrl(currentSrc, { width: typeof resolvedSize === 'number' ? resolvedSize * 4 : 512, quality: 95 })
-    : currentSrc;
+  const logoSourceUrl = getOptimizedImageUrl(currentSrc, {
+    width: typeof resolvedSize === 'number' ? resolvedSize * 4 : 512,
+    quality: 95
+  });
 
   return (
     <img

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Camera, Image as ImageIcon, UploadCloud, Trash2, CheckCircle2, AlertCircle, RefreshCw, X, Video } from 'lucide-react';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface CandidatePhotoUploaderProps {
   photoUrl: string;
@@ -248,7 +249,7 @@ export const CandidatePhotoUploader: React.FC<CandidatePhotoUploaderProps> = ({
             {photoUrl ? (
               <div className="relative w-14 h-16 sm:w-16 sm:h-20 rounded-xl overflow-hidden border-2 border-emerald-500 shadow-md bg-white">
                 <img
-                  src={photoUrl}
+                  src={getOptimizedImageUrl(photoUrl)}
                   alt="Candidate"
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"

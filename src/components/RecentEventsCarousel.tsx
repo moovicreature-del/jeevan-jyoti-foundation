@@ -232,7 +232,7 @@ export const RecentEventsCarousel: React.FC<RecentEventsCarouselProps> = ({ onOp
                 decoding="async"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src =
-                    'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1000&auto=format&fit=crop&q=75';
+                    getOptimizedImageUrl('/uploads/jjf_media_1793250700283_83f32964.jpg');
                 }}
               />
             ) : (

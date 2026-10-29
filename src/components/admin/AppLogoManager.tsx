@@ -54,6 +54,7 @@ import {
 import { BrandLogo } from '../common/BrandLogo';
 import { RoyalCertificateSeal } from '../common/RoyalCertificateSeal';
 import { CertificateOfficialSealManager } from './CertificateOfficialSealManager';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 import toast from 'react-hot-toast';
 
 export const AppLogoManager: React.FC = () => {
@@ -841,15 +842,19 @@ export const AppLogoManager: React.FC = () => {
     (thumbPreviewUrl && thumbPreviewUrl.trim() !== '' && thumbPreviewUrl !== '/pwa-icon-512.png')
   );
 
-  const resolvedThumbDisplay = (thumbPreviewUrl && thumbPreviewUrl.trim() !== '' && thumbPreviewUrl !== '/pwa-icon-512.png')
+  const rawThumb = (thumbPreviewUrl && thumbPreviewUrl.trim() !== '' && thumbPreviewUrl !== '/pwa-icon-512.png')
     ? thumbPreviewUrl
     : (content?.appThumbnailUrl && content.appThumbnailUrl.trim() !== '' && content.appThumbnailUrl !== '/pwa-icon-512.png')
     ? content.appThumbnailUrl
     : (content?.appLogoUrl && content.appLogoUrl.trim() !== '' ? content.appLogoUrl : '/uploads/ngo_logo.png');
 
-  const resolvedFaviconDisplay = (faviconPreviewUrl && faviconPreviewUrl.trim() !== '' && faviconPreviewUrl !== '/pwa-icon-512.png')
+  const resolvedThumbDisplay = getOptimizedImageUrl(rawThumb);
+
+  const rawFavicon = (faviconPreviewUrl && faviconPreviewUrl.trim() !== '' && faviconPreviewUrl !== '/pwa-icon-512.png')
     ? faviconPreviewUrl
-    : resolvedThumbDisplay;
+    : rawThumb;
+
+  const resolvedFaviconDisplay = getOptimizedImageUrl(rawFavicon);
 
   return (
     <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200 space-y-6">

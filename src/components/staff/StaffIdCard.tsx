@@ -10,6 +10,7 @@ import { FOUNDATION_INFO } from '../../data/foundationData';
 import { CertificateVerificationQR } from '../CertificateVerificationQR';
 import { ShaileshPradhanSignature, NgoRoundSeal } from '../DigitalSignature';
 import { BrandLogo } from '../common/BrandLogo';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 import { Droplet, Phone, Calendar, MapPin, ShieldCheck, Award, CheckCircle2 } from 'lucide-react';
 
 interface StaffIdCardProps {
@@ -450,12 +451,15 @@ export const StaffIdCard: React.FC<StaffIdCardProps> = ({
               {/* Photo Frame (clipped to rounded corners) */}
               <div className="w-full h-full rounded-xl p-1 bg-gradient-to-b from-amber-400 via-yellow-200 to-amber-500 shadow-md border border-amber-300 overflow-hidden">
                 <img
-                  src={staff.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80'}
+                  src={getOptimizedImageUrl(staff.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80')}
                   alt={staff.fullName}
                   className="w-full h-full object-cover rounded-lg bg-gray-100"
                   crossOrigin="anonymous"
                   onError={(e) => {
-                    e.currentTarget.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80';
+                    const fallback = getOptimizedImageUrl('/uploads/official_stamp.png');
+                    if (e.currentTarget.src !== fallback) {
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80';
+                    }
                   }}
                 />
               </div>
@@ -469,10 +473,12 @@ export const StaffIdCard: React.FC<StaffIdCardProps> = ({
                 }}
               >
                 <img
-                  src="/assets/aistudio/IMG_20261020_133052_0b52a993.png"
+                  src={getOptimizedImageUrl('/assets/aistudio/IMG_20261020_133052_0b52a993.png')}
                   onError={(e) => {
-                    if (e.currentTarget.src !== '/uploads/official_stamp.png') {
-                      e.currentTarget.src = '/uploads/official_stamp.png';
+                    const target = e.currentTarget;
+                    const stampFallback = getOptimizedImageUrl('/uploads/official_stamp.png');
+                    if (target.src !== stampFallback) {
+                      target.src = stampFallback;
                     }
                   }}
                   alt="Official Seal"

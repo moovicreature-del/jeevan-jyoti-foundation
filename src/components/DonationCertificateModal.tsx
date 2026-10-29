@@ -22,6 +22,7 @@ import { CertificateLanguage, getDonationCertMatter } from '../utils/certificate
 import { CertificateLanguageToggle } from './common/CertificateLanguageToggle';
 import { OfficialVerifiedBadge } from './common/OfficialVerifiedBadge';
 import { DonationLetterheadA4Document } from './common/DonationLetterheadA4Document';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface Props {
   donation: DonationRecord;
@@ -450,10 +451,16 @@ export const DonationCertificateModal: React.FC<Props> = ({ donation, onClose })
                       {donorPhotoUrl ? (
                         <>
                           <img
-                            src={donorPhotoUrl}
+                            src={getOptimizedImageUrl(donorPhotoUrl)}
                             alt={donation.donorName}
                             crossOrigin="anonymous"
                             className="w-full h-full object-cover rounded"
+                            onError={(e) => {
+                              const fallback = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80';
+                              if (e.currentTarget.src !== fallback) {
+                                e.currentTarget.src = fallback;
+                              }
+                            }}
                           />
                           <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md z-25">
                             <Check className="w-3 h-3 stroke-[3]" />
@@ -485,10 +492,12 @@ export const DonationCertificateModal: React.FC<Props> = ({ donation, onClose })
                         }}
                       >
                         <img
-                          src="/assets/aistudio/IMG_20261020_133052_0b52a993.png"
+                          src={getOptimizedImageUrl('/assets/aistudio/IMG_20261020_133052_0b52a993.png')}
                           onError={(e) => {
-                            if (e.currentTarget.src !== '/uploads/official_stamp.png') {
-                              e.currentTarget.src = '/uploads/official_stamp.png';
+                            const target = e.currentTarget;
+                            const stampFallback = getOptimizedImageUrl('/uploads/official_stamp.png');
+                            if (target.src !== stampFallback) {
+                              target.src = stampFallback;
                             }
                           }}
                           alt="Official Seal"

@@ -3,6 +3,7 @@ import { CheckCircle2, ShieldCheck } from 'lucide-react';
 import { FOUNDATION_INFO } from '../data/foundationData';
 import { BrandLogo } from './common/BrandLogo';
 import { RoyalCertificateSeal } from './common/RoyalCertificateSeal';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface DigitalSignatureProps {
   className?: string;
@@ -45,7 +46,7 @@ export const ShaileshPradhanSignature: React.FC<{
   return (
     <div className="inline-flex items-center justify-center select-none w-full">
       <img
-        src="/signature-shailesh-overlay.png"
+        src={getOptimizedImageUrl('/signature-shailesh-overlay.png')}
         alt={alt}
         referrerPolicy="no-referrer"
         crossOrigin="anonymous"
@@ -55,9 +56,9 @@ export const ShaileshPradhanSignature: React.FC<{
           // Fallback to SVG or royalblue PNG if needed
           const target = e.currentTarget;
           if (target.src.includes('signature-shailesh-overlay.png')) {
-            target.src = '/signature-shailesh-overlay.svg';
+            target.src = getOptimizedImageUrl('/signature-shailesh-overlay.svg');
           } else if (target.src.includes('signature-shailesh-overlay.svg')) {
-            target.src = '/signature-shailesh-royalblue.png';
+            target.src = getOptimizedImageUrl('/signature-shailesh-royalblue.png');
           }
         }}
       />
@@ -96,7 +97,7 @@ export const ShaileshPradhanSignatureBlock: React.FC<{
   return (
     <div className={containerClass}>
       <img
-        src="/signature-shailesh-overlay.png"
+        src={getOptimizedImageUrl('/signature-shailesh-overlay.png')}
         alt="Signature"
         referrerPolicy="no-referrer"
         crossOrigin="anonymous"
@@ -104,9 +105,9 @@ export const ShaileshPradhanSignatureBlock: React.FC<{
         onError={(e) => {
           const target = e.currentTarget;
           if (target.src.includes('signature-shailesh-overlay.png')) {
-            target.src = '/signature-shailesh-overlay.svg';
+            target.src = getOptimizedImageUrl('/signature-shailesh-overlay.svg');
           } else if (target.src.includes('signature-shailesh-overlay.svg')) {
-            target.src = '/signature-shailesh-royalblue.png';
+            target.src = getOptimizedImageUrl('/signature-shailesh-royalblue.png');
           }
         }}
       />
@@ -184,7 +185,7 @@ export const DigitalSignature: React.FC<DigitalSignatureProps> = ({
         {/* Shailesh Pradhan Royal Blue Signature */}
         <div className="my-0.5 py-0.5 flex items-center justify-center">
           <img
-            src="/signature-shailesh-overlay.png"
+            src={getOptimizedImageUrl('/signature-shailesh-overlay.png')}
             alt="Shailesh Pradhan Signature"
             referrerPolicy="no-referrer"
             crossOrigin="anonymous"
@@ -192,9 +193,9 @@ export const DigitalSignature: React.FC<DigitalSignatureProps> = ({
             onError={(e) => {
               const target = e.currentTarget;
               if (target.src.includes('signature-shailesh-overlay.png')) {
-                target.src = '/signature-shailesh-overlay.svg';
+                target.src = getOptimizedImageUrl('/signature-shailesh-overlay.svg');
               } else if (target.src.includes('signature-shailesh-overlay.svg')) {
-                target.src = '/signature-shailesh-royalblue.png';
+                target.src = getOptimizedImageUrl('/signature-shailesh-royalblue.png');
               }
             }}
           />

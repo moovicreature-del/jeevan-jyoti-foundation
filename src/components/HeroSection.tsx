@@ -18,6 +18,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useHomeContent } from '../context/HomeContentContext';
 import { BrandLogo } from './common/BrandLogo';
 import { HomePhotoSlider } from './HomePhotoSlider';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface Props {
   onOpenDonate: () => void;
@@ -320,10 +321,20 @@ export const HeroSection: React.FC<Props> = ({
                   <div className="relative mx-auto max-w-[240px] rounded-2xl overflow-hidden border-2 border-amber-400 shadow-md bg-slate-900 group">
                     <div className="h-1 bg-gradient-to-r from-orange-500 via-white to-green-600 w-full" />
                     <img
-                      src="/assets/aistudio/869845680_2238650036692471_2813899680013756397_n_202169ed.webp"
+                      src={getOptimizedImageUrl('/uploads/manager_secretary.webp')}
                       alt="शैलेश प्रधान - Manager / Secretary"
                       className="w-full h-56 object-cover object-top"
                       loading="eager"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        if (!target.dataset.tried) {
+                          target.dataset.tried = '1';
+                          target.src = getOptimizedImageUrl('/assets/aistudio/869845680_2238650036692471_2813899680013756397_n_202169ed.webp');
+                        } else if (target.dataset.tried === '1') {
+                          target.dataset.tried = '2';
+                          target.src = getOptimizedImageUrl('/manager_secretary.webp');
+                        }
+                      }}
                     />
                     <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-xs text-white px-2 py-0.5 rounded-md border border-white/30 text-[9px] font-black flex items-center gap-1 shadow-xs">
                       <ShieldCheck className="w-3 h-3 text-emerald-400" />

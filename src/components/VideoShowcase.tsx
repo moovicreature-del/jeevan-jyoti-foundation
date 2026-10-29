@@ -388,7 +388,7 @@ export const VideoShowcase: React.FC<VideoShowcaseProps> = ({ onOpenAdmin }) => 
                       decoding="async"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src =
-                          'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=1000&auto=format&fit=crop&q=75';
+                          getOptimizedImageUrl('/uploads/jjf_media_1793250699745_ff3bcd1a.jpg');
                       }}
                     />
 
@@ -486,7 +486,7 @@ export const VideoShowcase: React.FC<VideoShowcaseProps> = ({ onOpenAdmin }) => 
                     }`}
                     title={slide.title || `फ़ोटो ${idx + 1}`}
                   >
-                    <img src={slide.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    <img src={getOptimizedImageUrl(slide.url)} alt="" className="w-full h-full object-cover" loading="lazy" />
                     <span className="absolute bottom-0.5 right-0.5 px-1 py-0.2 bg-black/70 text-[9px] font-mono text-white rounded">
                       {idx + 1}
                     </span>
@@ -540,7 +540,7 @@ export const VideoShowcase: React.FC<VideoShowcaseProps> = ({ onOpenAdmin }) => 
 
             <div className="w-full flex-1 max-h-[70vh] flex items-center justify-center p-2 bg-black">
               <img
-                src={zoomPhoto.url}
+                src={getOptimizedImageUrl(zoomPhoto.url)}
                 alt={zoomPhoto.title || 'ग्रामीण सेवा फ़ोटो'}
                 className="max-w-full max-h-[68vh] object-contain rounded-lg"
               />

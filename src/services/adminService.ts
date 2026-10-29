@@ -30,7 +30,7 @@ import {
 } from 'firebase/storage';
 import { db, storage, isMockFirebase } from '../lib/firebase';
 import { AdminUser, AppHomeContent, NoticeItem, AdminActivityLog, DonationPaymentSettings, SliderPhotoItem } from '../types';
-import { compressImageFile } from '../utils/imageOptimizer';
+import { compressImageFile, getAppBasePath } from '../utils/imageOptimizer';
 import { refreshBrandingCacheBuster } from './offlineCertificateCache';
 
 // डिफ़ॉल्ट दान एवं बैंक/UPI भुगतान सेटिंग्स (Default Donation Payment & Bank Settings)
@@ -2365,9 +2365,8 @@ export async function getHomeContent(): Promise<AppHomeContent> {
 
   // 3. Fallback to bundled synced JSON file (from GitHub commits)
   try {
-    const rawBase = (import.meta as any).env?.BASE_URL || './';
-    const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
-    let res = await fetch(`${cleanBase}data/synced_app_data.json`).catch(() => null);
+    const basePath = getAppBasePath();
+    let res = await fetch(`${basePath}data/synced_app_data.json`).catch(() => null);
     if (!res || !res.ok) {
       res = await fetch('/data/synced_app_data.json').catch(() => null);
     }
@@ -2487,9 +2486,8 @@ export async function syncCurrentAdminDataToGitHub(triggerDownloadIfOffline: boo
 export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   try {
-    const rawBase = (import.meta as any).env?.BASE_URL || './';
-    const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
-    let res = await fetch(`${cleanBase}data/synced_app_data.json?t=${Date.now()}`, { cache: 'no-cache' }).catch(() => null);
+    const basePath = getAppBasePath();
+    let res = await fetch(`${basePath}data/synced_app_data.json?t=${Date.now()}`, { cache: 'no-cache' }).catch(() => null);
     if (!res || !res.ok) {
       res = await fetch(`/data/synced_app_data.json?t=${Date.now()}`, { cache: 'no-cache' }).catch(() => null);
     }

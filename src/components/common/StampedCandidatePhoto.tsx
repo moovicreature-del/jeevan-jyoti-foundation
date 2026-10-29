@@ -1,5 +1,6 @@
 import React from 'react';
 import { Camera, Check, ShieldCheck } from 'lucide-react';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 
 export const OFFICIAL_STAMP_IMG_PATH = '/assets/aistudio/IMG_20261020_133052_0b52a993.png';
 export const OFFICIAL_STAMP_FALLBACK_PATH = '/uploads/official_stamp.png';
@@ -73,10 +74,16 @@ export const StampedCandidatePhoto: React.FC<StampedCandidatePhotoProps> = ({
         {photoUrl ? (
           <>
             <img
-              src={photoUrl}
+              src={getOptimizedImageUrl(photoUrl)}
               alt={name}
               crossOrigin="anonymous"
               className="w-full h-full object-cover"
+              onError={(e) => {
+                const fallback = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80';
+                if (e.currentTarget.src !== fallback) {
+                  e.currentTarget.src = fallback;
+                }
+              }}
             />
 
             {/* Editable Hover Camera Overlay */}
@@ -121,11 +128,12 @@ export const StampedCandidatePhoto: React.FC<StampedCandidatePhotoProps> = ({
           {/* Rubber Stamp Image with Realistic Ink Multiply Blending */}
           <div className="relative flex items-center justify-center w-full">
             <img
-              src={OFFICIAL_STAMP_IMG_PATH}
+              src={getOptimizedImageUrl(OFFICIAL_STAMP_IMG_PATH)}
               onError={(e) => {
-                // Fallback to /uploads/official_stamp.png
-                if (e.currentTarget.src !== OFFICIAL_STAMP_FALLBACK_PATH) {
-                  e.currentTarget.src = OFFICIAL_STAMP_FALLBACK_PATH;
+                const target = e.currentTarget;
+                const fallback = getOptimizedImageUrl(OFFICIAL_STAMP_FALLBACK_PATH);
+                if (target.src !== fallback) {
+                  target.src = fallback;
                 }
               }}
               alt="Jeevan Jyoti Foundation Attestation Seal"

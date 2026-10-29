@@ -82,6 +82,7 @@ import { OfficialVerifiedBadge } from './common/OfficialVerifiedBadge';
 import { AppointmentLetterModal } from './common/AppointmentLetterModal';
 import { DonationLetterheadA4Document } from './common/DonationLetterheadA4Document';
 import { findStaffMember } from '../services/staffService';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface DownloadCertificatesModalProps {
   isOpen: boolean;
@@ -1552,10 +1553,16 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
                             {/* Photo / Avatar */}
                             <div className="relative shrink-0">
                               <img
-                                src={item.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                                src={getOptimizedImageUrl(item.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80')}
                                 alt={item.recipientName}
                                 className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border-2 border-amber-400 shadow-xs"
                                 crossOrigin="anonymous"
+                                onError={(e) => {
+                                  const fallback = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+                                  if (e.currentTarget.src !== fallback) {
+                                    e.currentTarget.src = fallback;
+                                  }
+                                }}
                               />
                               <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-600 text-white rounded-full flex items-center justify-center border-2 border-white text-[10px]">
                                 ✓
@@ -2269,10 +2276,16 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
                 <div className="w-full my-4 flex items-center justify-center gap-6 px-10 text-center">
                   {activeExportItem.photoUrl && (
                     <img
-                      src={activeExportItem.photoUrl}
+                      src={getOptimizedImageUrl(activeExportItem.photoUrl)}
                       alt={activeExportItem.recipientName}
                       className="w-24 h-28 object-cover rounded-xl border-2 border-amber-600 shadow-md"
                       crossOrigin="anonymous"
+                      onError={(e) => {
+                        const fallback = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+                        if (e.currentTarget.src !== fallback) {
+                          e.currentTarget.src = fallback;
+                        }
+                      }}
                     />
                   )}
                   <div className="space-y-2 flex-1">
@@ -2395,10 +2408,16 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
                   <div className="relative w-22 h-26 overflow-visible flex items-center justify-center">
                     <div className="relative w-full h-full rounded-xl p-1 bg-gradient-to-b from-amber-400 via-yellow-200 to-amber-500 shadow-md border border-amber-300 flex items-center justify-center overflow-hidden">
                       <img
-                        src={activeExportItem.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                        src={getOptimizedImageUrl(activeExportItem.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80')}
                         alt={activeExportItem.recipientName}
                         crossOrigin="anonymous"
                         className="w-full h-full object-cover rounded-lg"
+                        onError={(e) => {
+                          const fallback = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+                          if (e.currentTarget.src !== fallback) {
+                            e.currentTarget.src = fallback;
+                          }
+                        }}
                       />
                       <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md border border-white">
                         <Check className="w-2.5 h-2.5 stroke-[3]" />
@@ -2414,10 +2433,12 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
                       }}
                     >
                       <img
-                        src="/assets/aistudio/IMG_20261020_133052_0b52a993.png"
+                        src={getOptimizedImageUrl('/assets/aistudio/IMG_20261020_133052_0b52a993.png')}
                         onError={(e) => {
-                          if (e.currentTarget.src !== '/uploads/official_stamp.png') {
-                            e.currentTarget.src = '/uploads/official_stamp.png';
+                          const target = e.currentTarget;
+                          const stampFallback = getOptimizedImageUrl('/uploads/official_stamp.png');
+                          if (target.src !== stampFallback) {
+                            target.src = stampFallback;
                           }
                         }}
                         alt="Official Seal"

@@ -50,6 +50,7 @@ import {
 import { AppLogoManager } from './AppLogoManager';
 import { SliderPhotoItem } from '../../types';
 import { extractYouTubeId } from '../VideoShowcase';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 import toast from 'react-hot-toast';
 
 type ActiveSectionTab =
@@ -1158,7 +1159,7 @@ export const TabBannerMediaManager: React.FC = () => {
                       {/* Image Preview */}
                       <div className="relative w-28 h-20 rounded-xl overflow-hidden bg-slate-900 border border-slate-300 group shrink-0">
                         <img
-                          src={item.url}
+                          src={getOptimizedImageUrl(item.url)}
                           alt={item.title || 'Slide'}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                           onError={(e) => {
@@ -1323,7 +1324,7 @@ export const TabBannerMediaManager: React.FC = () => {
 
                 <div className="relative w-full h-64 sm:h-80 md:h-96 rounded-2xl overflow-hidden bg-black border-2 border-amber-400/60 shadow-lg group">
                   <img
-                    src={currentPreviewItem?.url}
+                    src={getOptimizedImageUrl(currentPreviewItem?.url || '')}
                     alt={currentPreviewItem?.title || 'Preview'}
                     className="w-full h-full object-cover transition-all duration-300"
                     onError={(e) => {
@@ -1376,7 +1377,7 @@ export const TabBannerMediaManager: React.FC = () => {
                       }`}
                       title={`स्लाइड #${idx + 1}: ${it.title}`}
                     >
-                      <img src={it.url} alt="" className="w-full h-full object-cover" />
+                      <img src={getOptimizedImageUrl(it.url)} alt="" className="w-full h-full object-cover" />
                       <span className="absolute bottom-0 right-0 px-1 py-0.2 bg-black/70 text-white font-mono text-[9px] font-bold rounded-tl">
                         #{idx + 1}
                       </span>
@@ -1685,7 +1686,7 @@ export const TabBannerMediaManager: React.FC = () => {
             </div>
             <div className="py-3 flex items-center justify-center max-h-[70vh]">
               <img
-                src={previewZoomPhoto.url}
+                src={getOptimizedImageUrl(previewZoomPhoto.url)}
                 alt={previewZoomPhoto.title || 'Slide'}
                 className="max-w-full max-h-[65vh] object-contain rounded-lg"
               />

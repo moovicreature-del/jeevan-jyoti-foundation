@@ -19,6 +19,7 @@ import { saveCertificateToRegistry, getCertificateById } from '../services/certi
 import { CertificateLanguage, getVolunteerCertMatter } from '../utils/certificateLanguageUtils';
 import { CertificateLanguageToggle } from './common/CertificateLanguageToggle';
 import { OfficialVerifiedBadge } from './common/OfficialVerifiedBadge';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface Props {
   volunteer: Volunteer;
@@ -571,10 +572,16 @@ export const VolunteerCertificateModal: React.FC<Props> = ({ volunteer, onClose 
                         {customPhotoUrl ? (
                           <>
                             <img
-                              src={customPhotoUrl}
+                              src={getOptimizedImageUrl(customPhotoUrl)}
                               alt={volunteerName}
                               crossOrigin="anonymous"
                               className="w-full h-full object-cover rounded"
+                              onError={(e) => {
+                                const fallback = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80';
+                                if (e.currentTarget.src !== fallback) {
+                                  e.currentTarget.src = fallback;
+                                }
+                              }}
                             />
                             {/* Green verified check badge */}
                             <div className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md z-25">
@@ -611,14 +618,16 @@ export const VolunteerCertificateModal: React.FC<Props> = ({ volunteer, onClose 
                           }}
                         >
                           <img
-                            src="/assets/aistudio/IMG_20261020_133052_0b52a993.png"
+                            src={getOptimizedImageUrl('/assets/aistudio/IMG_20261020_133052_0b52a993.png')}
                             onError={(e) => {
-                              if (e.currentTarget.src !== '/uploads/official_stamp.png') {
-                                e.currentTarget.src = '/uploads/official_stamp.png';
+                              const target = e.currentTarget;
+                              const stampFallback = getOptimizedImageUrl('/uploads/official_stamp.png');
+                              if (target.src !== stampFallback) {
+                                target.src = stampFallback;
                               }
                             }}
                             alt="Official Seal"
-                            className="w-[112px] max-w-none h-auto max-h-12 object-contain filter contrast-160 brightness-95 mix-blend-multiply drop-shadow-[0_1px_2px_rgba(20,40,100,0.3)]"
+                            className="w-[108px] max-w-none h-auto max-h-12 object-contain filter contrast-160 brightness-95 mix-blend-multiply drop-shadow-[0_1px_2px_rgba(20,40,100,0.3)]"
                           />
                         </div>
                       )}

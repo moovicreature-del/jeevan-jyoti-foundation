@@ -18,6 +18,58 @@ export interface CompressOptions {
 }
 
 /**
+ * Resolves the absolute application root base URL for any hosting environment.
+ * On GitHub Pages (e.g. username.github.io/repo-name/), it automatically detects the repo
+ * prefix and returns "/repo-name/" so that image paths NEVER resolve to 404 domain root!
+ */
+export function getAppBasePath(): string {
+  if (typeof window === 'undefined') return '/';
+
+  try {
+    const hostname = window.location.hostname || '';
+    const pathname = window.location.pathname || '';
+
+    // 1. Detect GitHub Pages (e.g., https://username.github.io/repo-name/ or https://username.github.io/repo-name)
+    if (hostname.endsWith('.github.io')) {
+      const segments = pathname.split('/').filter(Boolean);
+      // If there's a repository path segment (and it's not a root index.html or empty)
+      if (segments.length > 0 && !segments[0].includes('.') && segments[0] !== 'index.html') {
+        return `/${segments[0]}/`;
+      }
+    }
+
+    // 2. Check if Vite BASE_URL was passed at build time (e.g., process.env.VITE_BASE_PATH)
+    const envBase = (import.meta as any).env?.BASE_URL;
+    if (envBase && envBase !== './' && envBase !== '.' && envBase !== '/') {
+      return envBase.endsWith('/') ? envBase : `${envBase}/`;
+    }
+  } catch {}
+
+  return '/';
+}
+
+/**
+ * Normalizes any relative or local image asset URL with the correct base path.
+ */
+export function resolveAssetUrl(url: string | null | undefined): string {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (
+    trimmed.startsWith('data:') ||
+    trimmed.startsWith('blob:') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://')
+  ) {
+    return trimmed;
+  }
+
+  // Strip leading relative notations like './' or leading slashes
+  const cleanPath = trimmed.replace(/^(\.\/|\/)+/, '');
+  const basePath = getAppBasePath();
+  return `${basePath}${cleanPath}`;
+}
+
+/**
  * Returns an optimized image URL with CDN scaling/format parameters where supported.
  * Falls back gracefully for local, base64, SVG, or server-proxy paths.
  */
@@ -64,26 +116,23 @@ export function getOptimizedImageUrl(
     }
   }
 
-  // 4. Local uploads or API media endpoint
-  // Handles GitHub Pages subpaths (e.g. https://user.github.io/repo/) where leading '/'
-  // would incorrectly resolve to domain root instead of the repository base path.
+  // 4. Local uploads, assets, or media paths
+  // Bulletproof resolution for GitHub Pages (https://user.github.io/repo-name/)
+  // Ensures that all images have the correct repository base path and never 404
   if (
     trimmed.startsWith('/uploads/') ||
     trimmed.startsWith('/assets/') ||
     trimmed.startsWith('/data/') ||
+    trimmed.startsWith('uploads/') ||
+    trimmed.startsWith('assets/') ||
+    trimmed.startsWith('./uploads/') ||
+    trimmed.startsWith('./assets/') ||
+    trimmed.startsWith('/manager_secretary') ||
+    trimmed.startsWith('./manager_secretary') ||
+    trimmed.startsWith('manager_secretary') ||
     (trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.startsWith('/api/'))
   ) {
-    try {
-      const rawBase = (import.meta as any).env?.BASE_URL || './';
-      const cleanPath = trimmed.replace(/^\/+/, '');
-      if (rawBase === './' || rawBase === '') {
-        return `./${cleanPath}`;
-      }
-      const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
-      return `${cleanBase}${cleanPath}`;
-    } catch {
-      return trimmed;
-    }
+    return resolveAssetUrl(trimmed);
   }
 
   return trimmed;

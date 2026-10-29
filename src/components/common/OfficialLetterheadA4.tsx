@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { FOUNDATION_INFO } from '../../data/foundationData';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 
 export interface OfficialLetterheadA4Props {
   id?: string;
@@ -28,7 +29,7 @@ export const OfficialLetterheadA4: React.FC<OfficialLetterheadA4Props> = ({
   hideLetterheadBackground = false,
   letterheadImageUrl = '/assets/aistudio/letterhead.png'
 }) => {
-  const [imgSrc, setImgSrc] = useState(letterheadImageUrl);
+  const [imgSrc, setImgSrc] = useState(() => getOptimizedImageUrl(letterheadImageUrl));
 
   return (
     <div
@@ -52,8 +53,9 @@ export const OfficialLetterheadA4: React.FC<OfficialLetterheadA4Props> = ({
           <img
             src={imgSrc}
             onError={() => {
-              if (imgSrc !== '/letterhead.png') {
-                setImgSrc('/letterhead.png');
+              const fallbackUrl = getOptimizedImageUrl('/letterhead.png');
+              if (imgSrc !== fallbackUrl) {
+                setImgSrc(fallbackUrl);
               }
             }}
             alt="Jeevan Jyoti Foundation Official A4 Letterhead"

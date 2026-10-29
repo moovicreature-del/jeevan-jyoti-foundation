@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useHomeContent } from '../context/HomeContentContext';
 import { BrandLogo } from './common/BrandLogo';
 import { NewsletterSignup } from './NewsletterSignup';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface FooterProps {
   onOpenAdmin?: () => void;
@@ -171,10 +172,20 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdmin }) => {
               </div>
               <div className="pt-2 flex items-center gap-2.5 bg-gray-900/60 p-2 rounded-xl border border-gray-800">
                 <img
-                  src="/assets/aistudio/869845680_2238650036692471_2813899680013756397_n_202169ed.webp"
+                  src={getOptimizedImageUrl('/uploads/manager_secretary.webp')}
                   alt="Shailesh Pradhan - Manager / Secretary"
                   className="w-10 h-10 rounded-full object-cover object-top border-2 border-amber-400 shadow-xs shrink-0"
                   loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (!target.dataset.tried) {
+                      target.dataset.tried = '1';
+                      target.src = getOptimizedImageUrl('/assets/aistudio/869845680_2238650036692471_2813899680013756397_n_202169ed.webp');
+                    } else if (target.dataset.tried === '1') {
+                      target.dataset.tried = '2';
+                      target.src = getOptimizedImageUrl('/manager_secretary.webp');
+                    }
+                  }}
                 />
                 <div>
                   <div className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">

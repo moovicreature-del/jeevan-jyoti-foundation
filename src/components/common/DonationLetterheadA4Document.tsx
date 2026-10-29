@@ -12,6 +12,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Check, Award, Heart, ShieldCheck, FileCheck } from 'lucide-react';
 import { amountToWordsIndian } from '../../utils/numberToWords';
 import { getDonorTier } from '../../utils/donorTiers';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 
 export interface DonationLetterheadProps {
   id?: string;
@@ -107,10 +108,16 @@ export const DonationLetterheadA4Document: React.FC<DonationLetterheadProps> = (
               {/* Photo Box with rounded corners and border */}
               <div className="w-[62px] h-[76px] rounded-lg border-2 border-amber-500 overflow-hidden shadow-2xs bg-slate-100">
                 <img
-                  src={photo}
+                  src={getOptimizedImageUrl(photo)}
                   alt={donation.donorName}
                   className="w-full h-full object-cover"
                   crossOrigin="anonymous"
+                  onError={(e) => {
+                    const fallback = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80';
+                    if (e.currentTarget.src !== fallback) {
+                      e.currentTarget.src = fallback;
+                    }
+                  }}
                 />
               </div>
 
@@ -128,10 +135,12 @@ export const DonationLetterheadA4Document: React.FC<DonationLetterheadProps> = (
                 }}
               >
                 <img
-                  src="/assets/aistudio/IMG_20261020_133052_0b52a993.png"
+                  src={getOptimizedImageUrl('/assets/aistudio/IMG_20261020_133052_0b52a993.png')}
                   onError={(e) => {
-                    if (e.currentTarget.src !== '/uploads/official_stamp.png') {
-                      e.currentTarget.src = '/uploads/official_stamp.png';
+                    const target = e.currentTarget;
+                    const stampFallback = getOptimizedImageUrl('/uploads/official_stamp.png');
+                    if (target.src !== stampFallback) {
+                      target.src = stampFallback;
                     }
                   }}
                   alt="Official Seal"
@@ -241,7 +250,7 @@ export const DonationLetterheadA4Document: React.FC<DonationLetterheadProps> = (
           {/* Left: Official Round Seal Image */}
           <div className="flex flex-col items-center justify-center">
             <img
-              src="/official-seal.png"
+              src={getOptimizedImageUrl('/official-seal.png')}
               alt="Official Foundation Seal"
               className="w-[66px] h-[66px] object-contain drop-shadow-xs"
               crossOrigin="anonymous"
@@ -270,10 +279,13 @@ export const DonationLetterheadA4Document: React.FC<DonationLetterheadProps> = (
           {/* Right: Authorized Signatory Block */}
           <div className="flex flex-col items-center justify-center text-center">
             <img
-              src="/signature-shailesh-royalblue.png"
+              src={getOptimizedImageUrl('/signature-shailesh-royalblue.png')}
               alt="Shailesh Pradhan Signature"
               className="h-[38px] object-contain"
               crossOrigin="anonymous"
+              onError={(e) => {
+                e.currentTarget.src = getOptimizedImageUrl('/signature-shailesh-overlay.png');
+              }}
             />
             <div className="border-t border-[#8B0000] pt-0.5 mt-0.5 w-full max-w-[155px]">
               <div className="text-[10px] font-black text-[#8B0000] tracking-wide leading-tight">

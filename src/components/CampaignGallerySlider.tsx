@@ -184,8 +184,14 @@ export const CampaignGallerySlider: React.FC<CampaignGallerySliderProps> = ({
                     loading={index === 0 ? 'eager' : 'lazy'}
                     decoding="async"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        getOptimizedImageUrl('/uploads/jjf_media_1793250697644_9b7cd9be.jpg');
+                      const target = e.target as HTMLImageElement;
+                      if (!target.dataset.tried) {
+                        target.dataset.tried = '1';
+                        target.src = getOptimizedImageUrl('/uploads/jjf_media_1793250697644_9b7cd9be.jpg');
+                      } else if (target.dataset.tried === '1') {
+                        target.dataset.tried = '2';
+                        target.src = getOptimizedImageUrl('./uploads/jjf_media_1793250697644_9b7cd9be.jpg');
+                      }
                     }}
                   />
 

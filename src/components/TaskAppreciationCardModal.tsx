@@ -19,6 +19,7 @@ import { saveCertificateToRegistry } from '../services/certificateRegistryServic
 import { CertificateLanguage, getTaskAppreciationMatter } from '../utils/certificateLanguageUtils';
 import { CertificateLanguageToggle } from './common/CertificateLanguageToggle';
 import { OfficialVerifiedBadge } from './common/OfficialVerifiedBadge';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 interface Props {
   task: TaskRecord;
@@ -408,10 +409,16 @@ export const TaskAppreciationCardModal: React.FC<Props> = ({ task, volunteerName
                   {photoUrl ? (
                     <>
                       <img
-                        src={photoUrl}
+                        src={getOptimizedImageUrl(photoUrl)}
                         alt={volunteerName}
                         crossOrigin="anonymous"
                         className="w-full h-full object-cover rounded"
+                        onError={(e) => {
+                          const fallback = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80';
+                          if (e.currentTarget.src !== fallback) {
+                            e.currentTarget.src = fallback;
+                          }
+                        }}
                       />
                       <div className="absolute top-0.5 right-0.5 bg-emerald-600 text-white rounded-full p-0.5 shadow-md">
                         <Check className="w-2.5 h-2.5 stroke-[3]" />
