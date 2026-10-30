@@ -44,28 +44,38 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
             localStorage.removeItem('jjf_custom_logo');
           }
 
-          if (parsed.appLogoUrl) {
-            localStorage.removeItem('jjf_logo_permanently_deleted');
+          if (parsed.appLogoUrl && !parsed.appLogoUrl.includes('ngo_logo.png')) {
+            const isLogoDeleted = localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
+            if (isLogoDeleted) {
+              parsed.appLogoUrl = '';
+            } else {
+              localStorage.removeItem('jjf_logo_permanently_deleted');
+            }
           } else {
             const isLogoDeleted = localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
             const customLogo = isLogoDeleted ? '' : (localStorage.getItem('jjf_custom_logo') || '');
-            if (customLogo && !customLogo.includes('1791445209912') && !customLogo.includes('1791445272050')) {
+            if (customLogo && !customLogo.includes('1791445209912') && !customLogo.includes('1791445272050') && !customLogo.includes('ngo_logo.png')) {
               parsed.appLogoUrl = customLogo;
               localStorage.removeItem('jjf_logo_permanently_deleted');
-            } else if (isLogoDeleted) {
+            } else {
               parsed.appLogoUrl = '';
             }
           }
 
-          if (parsed.appThumbnailUrl && parsed.appThumbnailUrl !== '/pwa-icon-512.png') {
-            localStorage.removeItem('jjf_thumb_permanently_deleted');
+          if (parsed.appThumbnailUrl && parsed.appThumbnailUrl !== '/pwa-icon-512.png' && !parsed.appThumbnailUrl.includes('ngo_logo.png')) {
+            const isThumbDeleted = localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
+            if (isThumbDeleted) {
+              parsed.appThumbnailUrl = '';
+            } else {
+              localStorage.removeItem('jjf_thumb_permanently_deleted');
+            }
           } else {
             const isThumbDeleted = localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
             const customThumb = isThumbDeleted ? '' : (localStorage.getItem('jjf_custom_thumbnail') || '');
-            if (customThumb && customThumb !== '/pwa-icon-512.png' && !customThumb.includes('1791445209912') && !customThumb.includes('1791445272050')) {
+            if (customThumb && customThumb !== '/pwa-icon-512.png' && !customThumb.includes('1791445209912') && !customThumb.includes('1791445272050') && !customThumb.includes('ngo_logo.png')) {
               parsed.appThumbnailUrl = customThumb;
               localStorage.removeItem('jjf_thumb_permanently_deleted');
-            } else if (isThumbDeleted) {
+            } else {
               parsed.appThumbnailUrl = '';
             }
           }
@@ -85,18 +95,21 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
           if (customSealVariant) parsed.certificateSealVariant = customSealVariant as any;
           return parsed;
         }
-        const customLogo = localStorage.getItem('jjf_custom_logo');
+        const isLogoDeleted = localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
+        const customLogo = isLogoDeleted ? '' : (localStorage.getItem('jjf_custom_logo') || '');
+        const validLogo = !isLogoDeleted && customLogo && !customLogo.includes('ngo_logo.png') && !customLogo.includes('1791445209912') && !customLogo.includes('1791445272050') ? customLogo.trim() : '';
         const isThumbDeleted = localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
-        const customThumb = isThumbDeleted ? '' : localStorage.getItem('jjf_custom_thumbnail');
+        const customThumb = isThumbDeleted ? '' : (localStorage.getItem('jjf_custom_thumbnail') || '');
+        const validThumb = !isThumbDeleted && customThumb && customThumb !== '/pwa-icon-512.png' && !customThumb.includes('ngo_logo.png') && !customThumb.includes('1791445209912') && !customThumb.includes('1791445272050') ? customThumb.trim() : '';
         const customSealStored = localStorage.getItem('jjf_custom_certificate_seal');
         const isSealDeleted = localStorage.getItem('jjf_seal_permanently_deleted') === 'true';
         const validSeal = !isSealDeleted && customSealStored && !customSealStored.includes('old') && !customSealStored.includes('76347e15') ? customSealStored.trim() : '';
         const customSealVariant = localStorage.getItem('jjf_custom_certificate_seal_variant');
-        if (customLogo || customThumb || validSeal) {
+        if (validLogo || validThumb || validSeal) {
           return {
             ...DEFAULT_HOME_CONTENT,
-            appLogoUrl: customLogo || '/uploads/ngo_logo.png',
-            appThumbnailUrl: (customThumb && customThumb !== '/pwa-icon-512.png') ? customThumb : '/uploads/ngo_logo.png',
+            appLogoUrl: validLogo,
+            appThumbnailUrl: validThumb,
             certificateSealUrl: validSeal || '/uploads/official_seal.png',
             certificateSealVariant: (customSealVariant as any) || 'gold-crimson'
           };

@@ -694,8 +694,11 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
       } catch {
         // Ignore
       }
-      if (!customLogoUrl) {
-        customLogoUrl = '/uploads/ngo_logo.png';
+      const isLogoDeleted = typeof window !== 'undefined' && localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
+      if (!isLogoDeleted && !customLogoUrl) {
+        customLogoUrl = '/logo.png';
+      } else if (isLogoDeleted) {
+        customLogoUrl = '';
       }
 
       if (customLogoUrl) {

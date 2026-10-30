@@ -139,12 +139,14 @@ export function App() {
         if (homeContentStr) {
           const hc = JSON.parse(homeContentStr);
           let changed = false;
-          if (hc.appLogoUrl && (hc.appLogoUrl.includes('1791445209912') || hc.appLogoUrl.includes('1791445272050') || hc.appLogoUrl.includes('old'))) {
-            hc.appLogoUrl = '/uploads/ngo_logo.png';
+          const isLogoPermanentlyDeleted = localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
+          if (isLogoPermanentlyDeleted || (hc.appLogoUrl && (hc.appLogoUrl.includes('ngo_logo') || hc.appLogoUrl.includes('1791445209912') || hc.appLogoUrl.includes('1791445272050') || hc.appLogoUrl.includes('old')))) {
+            hc.appLogoUrl = '';
             changed = true;
           }
-          if (hc.appThumbnailUrl && (hc.appThumbnailUrl.includes('1791445209912') || hc.appThumbnailUrl.includes('1791445272050') || hc.appThumbnailUrl.includes('old') || hc.appThumbnailUrl === '/pwa-icon-512.png')) {
-            hc.appThumbnailUrl = '/uploads/ngo_logo.png';
+          const isThumbPermanentlyDeleted = localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
+          if (isThumbPermanentlyDeleted || (hc.appThumbnailUrl && (hc.appThumbnailUrl.includes('ngo_logo') || hc.appThumbnailUrl.includes('1791445209912') || hc.appThumbnailUrl.includes('1791445272050') || hc.appThumbnailUrl.includes('old')))) {
+            hc.appThumbnailUrl = '';
             changed = true;
           }
           if (hc.certificateSealUrl && (hc.certificateSealUrl.includes('old') || hc.certificateSealUrl.includes('76347e15') || hc.certificateSealUrl.includes('cloudinary'))) {

@@ -375,31 +375,47 @@ export const TabBannerMediaManager: React.FC = () => {
         setUploadProgressText(`फ़ाइल ${i + 1}/${filesToUpload.length} सुरक्षित हो रही है: ${file.name}`);
         updateProgress(fileBasePct, `अपलोडिंग फ़ाइल ${i + 1}/${filesToUpload.length}: ${file.name}`);
 
-        const downloadUrl = await uploadMediaFile(
-          file,
-          isVideoFile ? 'videos' : 'slider',
-          (pct, msg, detail) => {
-            const currentOverall = Math.min(85, Math.round(fileBasePct + (pct * fileChunkSpan) / 100));
-            updateProgress(currentOverall, msg || `अपलोडिंग: ${file.name} (${currentOverall}%)`, detail);
-          }
-        );
+        try {
+          const downloadUrl = await uploadMediaFile(
+            file,
+            isVideoFile ? 'videos' : 'slider',
+            (pct, msg, detail) => {
+              const currentOverall = Math.min(85, Math.round(fileBasePct + (pct * fileChunkSpan) / 100));
+              updateProgress(currentOverall, msg || `अपलोडिंग: ${file.name} (${currentOverall}%)`, detail);
+            }
+          );
 
-        const cleanName = file.name
-          .replace(/\.[^/.]+$/, '')
-          .replace(/[-_]/g, ' ')
-          .trim();
+          const cleanName = file.name
+            .replace(/\.[^/.]+$/, '')
+            .replace(/[-_]/g, ' ')
+            .trim();
 
-        // Create finalized photo object with permanent storage URL
-        permanentUploaded.push({
-          id: `photo-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
-          url: downloadUrl || instantDraftItems[i].url,
-          title: cleanName.length > 2 ? cleanName : `${label} झलक ${i + 1}`,
-          description: isVideoFile ? 'जीवन ज्योति फाउंडेशन वीडियो वृत्तचित्र' : 'जीवन ज्योति फाउंडेशन ग़ाज़ीपुर सेवा अभियान',
-          category: isVideoFile ? 'सेवा वीडियो' : activeTab === 'section_recent_events' ? 'सेवा कार्यक्रम' : 'जनसेवा अभियान',
-          location: 'ग़ाज़ीपुर, उत्तर प्रदेश',
-          date: new Date().toISOString().split('T')[0],
-          createdAt: new Date().toISOString()
-        });
+          // Create finalized photo object with permanent storage URL
+          permanentUploaded.push({
+            id: `photo-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
+            url: downloadUrl || instantDraftItems[i].url,
+            title: cleanName.length > 2 ? cleanName : `${label} झलक ${i + 1}`,
+            description: isVideoFile ? 'जीवन ज्योति फाउंडेशन वीडियो वृत्तचित्र' : 'जीवन ज्योति फाउंडेशन ग़ाज़ीपुर सेवा अभियान',
+            category: isVideoFile ? 'सेवा वीडियो' : activeTab === 'section_recent_events' ? 'सेवा कार्यक्रम' : 'जनसेवा अभियान',
+            location: 'ग़ाज़ीपुर, उत्तर प्रदेश',
+            date: new Date().toISOString().split('T')[0],
+            createdAt: new Date().toISOString()
+          });
+        } catch (singleErr) {
+          console.warn(`File upload notice for ${file.name}:`, singleErr);
+          // Fallback to offline draft object
+          const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').trim();
+          permanentUploaded.push({
+            id: `photo-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
+            url: instantDraftItems[i].url,
+            title: cleanName.length > 2 ? cleanName : `${label} झलक ${i + 1}`,
+            description: isVideoFile ? 'जीवन ज्योति फाउंडेशन वीडियो वृत्तचित्र' : 'जीवन ज्योति फाउंडेशन ग़ाज़ीपुर सेवा अभियान',
+            category: isVideoFile ? 'सेवा वीडियो' : activeTab === 'section_recent_events' ? 'सेवा कार्यक्रम' : 'जनसेवा अभियान',
+            location: 'ग़ाज़ीपुर, उत्तर प्रदेश',
+            date: new Date().toISOString().split('T')[0],
+            createdAt: new Date().toISOString()
+          });
+        }
       }
 
       // Finalize uploaded list with existing non-default items and keep top 15
@@ -413,9 +429,22 @@ export const TabBannerMediaManager: React.FC = () => {
       // Auto-save the section immediately with all other sections safely preserved
       const preserved = getPreservedSections(activeTab, finalList);
 
+      // Sanitize items for storage: avoid saving transient blob: URLs to database
+      const sanitizeSectionForSave = (list: SliderPhotoItem[]) =>
+        list.map((item) => ({
+          ...item,
+          url: (item.url && item.url.startsWith('blob:'))
+            ? (instantDraftItems.find((d) => d.id === item.id)?.url || item.url)
+            : item.url
+        }));
+
       await saveHomeContent(
         {
           ...preserved,
+          sliderPhotos: sanitizeSectionForSave(preserved.sliderPhotos),
+          campaignGalleryPhotos: sanitizeSectionForSave(preserved.campaignGalleryPhotos),
+          recentEventsPhotos: sanitizeSectionForSave(preserved.recentEventsPhotos),
+          ruralWorkPhotos: sanitizeSectionForSave(preserved.ruralWorkPhotos),
           bannerImageUrl: preserved.sliderPhotos[0]?.url || bannerImageUrl,
           bannerImages: preserved.sliderPhotos.map((p) => p.url),
           bannerVideoUrl: bannerVideoUrl,

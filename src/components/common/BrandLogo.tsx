@@ -46,7 +46,9 @@ export const OfficialVectorEmblem: React.FC<{
       style={{
         ...dimensionStyle,
         opacity,
-        ...(watermark ? { filter: 'contrast(1.05)' } : {}),
+        filter: watermark ? 'contrast(1.08)' : 'drop-shadow(0 2px 5px rgba(0,0,0,0.18))',
+        shapeRendering: 'geometricPrecision',
+        textRendering: 'geometricPrecision',
         ...style
       }}
       onClick={onClick}
@@ -54,45 +56,79 @@ export const OfficialVectorEmblem: React.FC<{
       aria-label="जीवन ज्योति फाउंडेशन आधिकारिक लोगो"
     >
       <defs>
-        <path id="jjfTextArcUpper" d="M 50,256 A 206,206 0 1,1 462,256" fill="none" />
-        <path id="jjfTextArcLower" d="M 462,256 A 206,206 0 0,1 50,256" fill="none" />
+        {/* Upper text arc adjusted for optimal optical balance and letterspacing */}
+        <path id="jjfTextArcUpper" d="M 52,256 A 204,204 0 1,1 460,256" fill="none" />
+        <path id="jjfTextArcLower" d="M 460,256 A 204,204 0 0,1 52,256" fill="none" />
         <radialGradient id="jjfSunBgGrad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#FFF176" />
-          <stop offset="70%" stopColor="#FFD54F" />
-          <stop offset="100%" stopColor="#FFC107" />
+          <stop offset="0%" stopColor="#FFF9C4" />
+          <stop offset="65%" stopColor="#FFD54F" />
+          <stop offset="100%" stopColor="#FFA000" />
+        </radialGradient>
+        {/* Crisp text shadow filter for maximum legibility */}
+        <filter id="jjfTextGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodColor="#000000" floodOpacity="0.75" />
+        </filter>
+        <radialGradient id="jjfOuterRingGrad" cx="30%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#3F126D" />
+          <stop offset="70%" stopColor="#250842" />
+          <stop offset="100%" stopColor="#18042B" />
         </radialGradient>
       </defs>
 
-      {/* 1. Outer Dark Purple Ring */}
-      <circle cx="256" cy="256" r="248" fill="#2C0C4D" stroke="#F5B800" strokeWidth="5" />
-      <circle cx="256" cy="256" r="243" fill="none" stroke="#FFA000" strokeWidth="1.5" />
+      {/* 1. Outer Dark Purple Ring with Gold Borders */}
+      <circle cx="256" cy="256" r="248" fill="url(#jjfOuterRingGrad)" stroke="#FFD700" strokeWidth="6" />
+      <circle cx="256" cy="256" r="242" fill="none" stroke="#FFA000" strokeWidth="2" />
 
-      {/* 2. Upper Curved Text: JEEVAN JYOTI FOUNDATION */}
-      <text fill="#F5B800" fontFamily="'Cinzel', 'Georgia', serif" fontWeight="900" fontSize="28" letterSpacing="4.5">
-        <textPath href="#jjfTextArcUpper" startOffset="50%" textAnchor="middle">JEEVAN JYOTI FOUNDATION</textPath>
+      {/* 2. Upper Curved Text: JEEVAN JYOTI FOUNDATION with Enhanced Legibility and Shadow */}
+      <text
+        fill="#FFE57F"
+        stroke="#1A0330"
+        strokeWidth="1.2"
+        paintOrder="stroke fill"
+        fontFamily="'Cinzel', 'Times New Roman', 'Georgia', serif"
+        fontWeight="900"
+        fontSize="28.5"
+        letterSpacing="4.5"
+        filter="url(#jjfTextGlow)"
+      >
+        <textPath href="#jjfTextArcUpper" startOffset="50%" textAnchor="middle">
+          JEEVAN JYOTI FOUNDATION
+        </textPath>
       </text>
 
-      {/* 3. Lower Curved Text: GHAZIPUR */}
-      <text fill="#F5B800" fontFamily="'Cinzel', 'Georgia', serif" fontWeight="900" fontSize="34" letterSpacing="8">
-        <textPath href="#jjfTextArcLower" startOffset="50%" textAnchor="middle">GHAZIPUR</textPath>
+      {/* 3. Lower Curved Text: GHAZIPUR (U.P.) with Maximum Clarity */}
+      <text
+        fill="#FFE57F"
+        stroke="#1A0330"
+        strokeWidth="1.2"
+        paintOrder="stroke fill"
+        fontFamily="'Cinzel', 'Times New Roman', 'Georgia', serif"
+        fontWeight="900"
+        fontSize="32"
+        letterSpacing="8"
+        filter="url(#jjfTextGlow)"
+      >
+        <textPath href="#jjfTextArcLower" startOffset="50%" textAnchor="middle">
+          GHAZIPUR (U.P.)
+        </textPath>
       </text>
 
       {/* 4. Decorative Stars on Sides */}
-      <g fill="#F5B800" stroke="#FFA000" strokeWidth="0.5">
+      <g fill="#FFD700" stroke="#E65100" strokeWidth="0.8">
         <polygon points="54,256 50,250 56,252 59,247 60,253 66,255 60,257 59,263 56,258 50,260" transform="translate(-10, 0) scale(1.2)" />
         <polygon points="458,256 454,250 460,252 463,247 464,253 470,255 464,257 463,263 460,258 454,260" transform="translate(10, 0) scale(1.2)" />
       </g>
 
       {/* 5. Inner Golden Yellow Circle Field */}
-      <circle cx="256" cy="256" r="182" fill="#F5B800" stroke="#2C0C4D" strokeWidth="3.5" />
-      <circle cx="256" cy="256" r="176" fill="none" stroke="#2C0C4D" strokeWidth="1.5" />
-      <circle cx="256" cy="256" r="172" fill="none" stroke="#9A7000" strokeWidth="1" />
+      <circle cx="256" cy="256" r="182" fill="#F9A825" stroke="#2C0C4D" strokeWidth="4" />
+      <circle cx="256" cy="256" r="176" fill="none" stroke="#FFF9C4" strokeWidth="1.8" />
+      <circle cx="256" cy="256" r="171" fill="none" stroke="#7F5500" strokeWidth="1.2" />
 
       {/* 6. Radiant Sunburst Background Circle */}
-      <circle cx="256" cy="250" r="110" fill="url(#jjfSunBgGrad)" stroke="#FFA000" strokeWidth="2" />
+      <circle cx="256" cy="250" r="110" fill="url(#jjfSunBgGrad)" stroke="#FFA000" strokeWidth="2.5" />
 
       {/* 7. Sunburst Rays */}
-      <g opacity="0.85">
+      <g opacity="0.9">
         <polygon points="256,250 252,142 260,142" fill="#E64A19" />
         <polygon points="256,250 332,174 338,180" fill="#E64A19" />
         <polygon points="256,250 364,250 364,258" fill="#E64A19" />
@@ -115,8 +151,18 @@ export const OfficialVectorEmblem: React.FC<{
         <ellipse cx="314" cy="300" rx="18" ry="8" transform="rotate(8, 314, 300)" />
       </g>
 
-      {/* 9. ESTD - 2018 Text */}
-      <text x="256" y="328" fontFamily="'Cinzel', 'Arial', sans-serif" fontWeight="900" fontSize="16" fill="#2C0C4D" textAnchor="middle" letterSpacing="2">
+      {/* 9. ESTD - 2018 Text with High Contrast */}
+      <rect x="204" y="316" width="104" height="19" rx="9.5" fill="#FFE082" stroke="#2C0C4D" strokeWidth="1.2" opacity="0.9" />
+      <text
+        x="256"
+        y="330"
+        fontFamily="'Cinzel', 'Arial', sans-serif"
+        fontWeight="900"
+        fontSize="14"
+        fill="#2C0C4D"
+        textAnchor="middle"
+        letterSpacing="2.5"
+      >
         ESTD - 2018
       </text>
     </svg>
@@ -220,7 +266,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     activeLogoUrl = '';
   }
 
-  if (activeLogoUrl && (activeLogoUrl.includes('1791445209912') || activeLogoUrl.includes('1791445272050'))) {
+  if (activeLogoUrl && (activeLogoUrl.includes('1791445209912') || activeLogoUrl.includes('1791445272050') || activeLogoUrl.includes('ngo_logo.png'))) {
     activeLogoUrl = '';
   }
 
@@ -231,8 +277,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
   const finalOpacity = watermark ? (opacity ?? 0.12) : (opacity ?? 1);
 
-  // If forceVector is requested, render the pure SVG directly
-  if (forceVector || fallbackStage >= 4) {
+  // If forceVector is requested, or if permanently deleted, or if activeLogoUrl is empty, or fallbackStage >= 3, render the pure SVG directly
+  if (forceVector || fallbackStage >= 3 || isPermanentlyDeleted || !activeLogoUrl) {
     return (
       <OfficialVectorEmblem
         id={id || 'jjf-official-brand-logo'}
@@ -249,13 +295,10 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   // Calculate current image source based on fallbackStage
   let currentSrc = '';
   if (fallbackStage === 0) {
-    const rawTarget = activeLogoUrl || '/uploads/ngo_logo.png';
-    currentSrc = getCacheBustedImageUrl(rawTarget);
+    currentSrc = getCacheBustedImageUrl(activeLogoUrl);
   } else if (fallbackStage === 1) {
-    currentSrc = '/uploads/ngo_logo.png';
-  } else if (fallbackStage === 2) {
     currentSrc = '/logo.png';
-  } else if (fallbackStage === 3) {
+  } else if (fallbackStage === 2) {
     currentSrc = '/logo.svg';
   }
 
@@ -283,8 +326,10 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       style={{
         ...dimensionStyle,
         opacity: finalOpacity,
-        imageRendering: 'auto',
-        ...(watermark ? { filter: 'contrast(1.05)' } : {}),
+        imageRendering: 'crisp-edges',
+        filter: watermark
+          ? 'contrast(1.08)'
+          : 'contrast(1.08) saturate(1.05) drop-shadow(0 2px 4px rgba(0,0,0,0.14))',
         ...style
       }}
       onError={handleImageError}

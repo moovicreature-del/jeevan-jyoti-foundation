@@ -58,9 +58,9 @@ export const PwaInstallBanner: React.FC = () => {
         }
       } catch {}
     }
-    const candidate = content?.appThumbnailUrl || content?.appLogoUrl || '/uploads/ngo_logo.png';
-    if (candidate.includes('1791445209912') || candidate.includes('1791445272050')) {
-      return '/uploads/ngo_logo.png';
+    const candidate = content?.appThumbnailUrl || content?.appLogoUrl || '/pwa-icon-512.png';
+    if (candidate.includes('1791445209912') || candidate.includes('1791445272050') || candidate.includes('ngo_logo')) {
+      return '/pwa-icon-512.png';
     }
     return candidate;
   });
@@ -70,7 +70,8 @@ export const PwaInstallBanner: React.FC = () => {
       content?.appThumbnailUrl &&
       content.appThumbnailUrl !== '/pwa-icon-512.png' &&
       !content.appThumbnailUrl.includes('1791445209912') &&
-      !content.appThumbnailUrl.includes('1791445272050')
+      !content.appThumbnailUrl.includes('1791445272050') &&
+      !content.appThumbnailUrl.includes('ngo_logo')
     ) {
       setActiveThumbnail(content.appThumbnailUrl);
       if (typeof window !== 'undefined') {
@@ -79,11 +80,11 @@ export const PwaInstallBanner: React.FC = () => {
     } else {
       const isDeleted = typeof window !== 'undefined' && localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
       if (isDeleted) {
-        setActiveThumbnail(content?.appLogoUrl || '/uploads/ngo_logo.png');
-      } else if (content?.appLogoUrl && !content.appLogoUrl.includes('1791445209912') && !content.appLogoUrl.includes('1791445272050')) {
+        setActiveThumbnail('/pwa-icon-512.png');
+      } else if (content?.appLogoUrl && !content.appLogoUrl.includes('1791445209912') && !content.appLogoUrl.includes('1791445272050') && !content.appLogoUrl.includes('ngo_logo')) {
         setActiveThumbnail(content.appLogoUrl);
       } else {
-        setActiveThumbnail('/uploads/ngo_logo.png');
+        setActiveThumbnail('/pwa-icon-512.png');
       }
     }
   }, [content?.appThumbnailUrl, content?.appLogoUrl]);
@@ -91,13 +92,13 @@ export const PwaInstallBanner: React.FC = () => {
   useEffect(() => {
     const handleThumbChange = (e: CustomEvent<string>) => {
       const newThumb = typeof e.detail === 'string' ? e.detail : '';
-      if (newThumb && newThumb !== '/pwa-icon-512.png') {
+      if (newThumb && newThumb !== '/pwa-icon-512.png' && !newThumb.includes('ngo_logo')) {
         setActiveThumbnail(newThumb);
         if (typeof window !== 'undefined') {
           localStorage.removeItem('jjf_thumb_permanently_deleted');
         }
       } else {
-        setActiveThumbnail(content?.appLogoUrl || '/uploads/ngo_logo.png');
+        setActiveThumbnail('/pwa-icon-512.png');
       }
     };
     window.addEventListener('jjf-thumbnail-changed' as any, handleThumbChange);
@@ -246,11 +247,7 @@ export const PwaInstallBanner: React.FC = () => {
                   className="w-full h-full object-cover rounded-md"
                   onError={(e) => {
                     const img = e.currentTarget as HTMLImageElement;
-                    if (!img.src.includes('ngo_logo.png')) {
-                      img.src = '/uploads/ngo_logo.png';
-                    } else {
-                      img.src = '/pwa-icon-512.png';
-                    }
+                    img.src = '/pwa-icon-512.png';
                   }}
                 />
               </div>
@@ -310,11 +307,7 @@ export const PwaInstallBanner: React.FC = () => {
                   className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shadow-md bg-white"
                   onError={(e) => {
                     const img = e.currentTarget as HTMLImageElement;
-                    if (!img.src.includes('ngo_logo.png')) {
-                      img.src = '/uploads/ngo_logo.png';
-                    } else {
-                      img.src = '/pwa-icon-512.png';
-                    }
+                    img.src = '/pwa-icon-512.png';
                   }}
                 />
                 <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-0.5 rounded-full border-2 border-white shadow-xs">

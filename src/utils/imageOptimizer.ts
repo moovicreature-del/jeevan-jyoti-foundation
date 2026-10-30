@@ -146,16 +146,21 @@ export async function compressImageFile(
   file: File,
   options: CompressOptions = {}
 ): Promise<File> {
-  // If not a raster image or running on server, return original
-  if (typeof window === 'undefined' || typeof document === 'undefined') return file;
-  if (!file || !file.type.startsWith('image/') || file.type === 'image/svg+xml') {
+  // If not running in browser or invalid file, return original
+  if (typeof window === 'undefined' || typeof document === 'undefined' || !file) return file;
+
+  const isImg =
+    (Boolean(file.type) && file.type.startsWith('image/') && file.type !== 'image/svg+xml') ||
+    /\.(jpe?g|png|webp|bmp|gif|heic|heif)$/i.test(file.name);
+
+  if (!isImg || file.type === 'image/svg+xml') {
     return file;
   }
 
   const {
-    maxWidth = 1600,
-    maxHeight = 1600,
-    quality = 0.85,
+    maxWidth = 1400,
+    maxHeight = 1400,
+    quality = 0.8,
     mimeType = 'image/jpeg'
   } = options;
 
@@ -175,8 +180,8 @@ export async function compressImageFile(
         }
 
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = Math.max(1, width);
+        canvas.height = Math.max(1, height);
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
@@ -190,13 +195,14 @@ export async function compressImageFile(
 
         canvas.toBlob(
           (blob) => {
-            if (!blob || blob.size >= file.size) {
-              // If compression didn't save size, use original
+            if (!blob) {
               return resolve(file);
             }
+            // If the blob is smaller or file was large, use compressed file
             const extension = mimeType === 'image/webp' ? '.webp' : '.jpg';
             const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-            const compressedFile = new File([blob], `${baseName}${extension}`, {
+            const cleanBase = baseName.replace(/[^a-zA-Z0-9_-]/g, '_');
+            const compressedFile = new File([blob], `${cleanBase}${extension}`, {
               type: mimeType,
               lastModified: Date.now()
             });
@@ -212,6 +218,71 @@ export async function compressImageFile(
     };
 
     reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Compresses an image directly to a quota-safe, ultra-compact Data URI (< 80 KB).
+ * Used as an offline/Firestore-safe fallback so documents never exceed 1MB limits.
+ */
+export async function compressImageToSafeDataUrl(
+  file: File | Blob,
+  maxDim = 900,
+  quality = 0.75
+): Promise<string> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return resolve('');
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, width);
+        canvas.height = Math.max(1, height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return resolve((event.target?.result as string) || '');
+        }
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+
+        try {
+          const webp = canvas.toDataURL('image/webp', quality);
+          if (webp.startsWith('data:image/webp')) {
+            return resolve(webp);
+          }
+        } catch {}
+
+        try {
+          const jpeg = canvas.toDataURL('image/jpeg', quality);
+          return resolve(jpeg);
+        } catch {
+          resolve((event.target?.result as string) || '');
+        }
+      };
+
+      img.onerror = () => resolve((event.target?.result as string) || '');
+      img.src = event.target?.result as string;
+    };
+
+    reader.onerror = () => resolve('');
     reader.readAsDataURL(file);
   });
 }

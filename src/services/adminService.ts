@@ -30,7 +30,7 @@ import {
 } from 'firebase/storage';
 import { db, storage, isMockFirebase } from '../lib/firebase';
 import { AdminUser, AppHomeContent, NoticeItem, AdminActivityLog, DonationPaymentSettings, SliderPhotoItem } from '../types';
-import { compressImageFile, getAppBasePath } from '../utils/imageOptimizer';
+import { compressImageFile, compressImageToSafeDataUrl, getAppBasePath } from '../utils/imageOptimizer';
 import { refreshBrandingCacheBuster } from './offlineCertificateCache';
 
 // डिफ़ॉल्ट दान एवं बैंक/UPI भुगतान सेटिंग्स (Default Donation Payment & Bank Settings)
@@ -255,8 +255,8 @@ export const DEFAULT_HOME_CONTENT: AppHomeContent = {
   ruralWorkVideoUrl: 'https://www.youtube.com/watch?v=0kF5s7J_C3A',
   bannerTitle: 'सशक्त ग़ाज़ीपुर, समृद्ध समाज',
   bannerSubtitle: 'हमारे सेवा अभियानों से जुड़ें और समाज निर्माण में अपना योगदान दें',
-  appLogoUrl: '/uploads/ngo_logo.png',
-  appThumbnailUrl: '/uploads/ngo_logo.png',
+  appLogoUrl: '',
+  appThumbnailUrl: '',
   certificateSealUrl: '/uploads/official_seal.png',
   certificateSealVariant: 'gold-crimson',
   updatedBy: 'सिस्टम एडमिन',
@@ -369,21 +369,21 @@ function sanitizeContentData(raw: any): AppHomeContent {
   const rawLogo = typeof raw?.appLogoUrl === 'string' ? raw.appLogoUrl.trim() : (typeof raw?.logoUrl === 'string' ? raw.logoUrl.trim() : '');
   const isLogoPermanentlyDeleted = typeof localStorage !== 'undefined' && localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
 
-  if (rawLogo) {
+  if (isLogoPermanentlyDeleted || (rawLogo && rawLogo.includes('ngo_logo.png'))) {
+    merged.appLogoUrl = '';
+  } else if (rawLogo) {
     // If a new active logo exists in database, it overrides any old delete flag!
     merged.appLogoUrl = rawLogo;
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('jjf_logo_permanently_deleted');
     }
-  } else if (!isLogoPermanentlyDeleted) {
+  } else {
     try {
       const localLogo = localStorage.getItem('jjf_custom_logo') || '';
-      merged.appLogoUrl = localLogo.trim();
+      merged.appLogoUrl = (!localLogo.includes('ngo_logo.png')) ? localLogo.trim() : '';
     } catch {
       merged.appLogoUrl = '';
     }
-  } else {
-    merged.appLogoUrl = '';
   }
 
   // 1b. Check custom app thumbnail logo
@@ -394,21 +394,21 @@ function sanitizeContentData(raw: any): AppHomeContent {
     : '';
   const isThumbPermanentlyDeleted = typeof localStorage !== 'undefined' && localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
 
-  if (rawThumb) {
+  if (isThumbPermanentlyDeleted || (rawThumb && rawThumb.includes('ngo_logo.png'))) {
+    merged.appThumbnailUrl = '';
+  } else if (rawThumb) {
     // If a new active thumbnail exists in database, it overrides any old delete flag!
     merged.appThumbnailUrl = rawThumb;
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('jjf_thumb_permanently_deleted');
     }
-  } else if (!isThumbPermanentlyDeleted) {
+  } else {
     try {
       const localThumb = localStorage.getItem('jjf_custom_thumbnail') || '';
-      merged.appThumbnailUrl = (localThumb !== '/pwa-icon-512.png') ? localThumb.trim() : '';
+      merged.appThumbnailUrl = (localThumb !== '/pwa-icon-512.png' && !localThumb.includes('ngo_logo.png')) ? localThumb.trim() : '';
     } catch {
       merged.appThumbnailUrl = '';
     }
-  } else {
-    merged.appThumbnailUrl = '';
   }
 
   // 1c. Check custom official certificate seal & variant
@@ -675,9 +675,9 @@ export function applyDynamicAppThumbnail(thumbnailUrl: string = ''): void {
     }
   })();
 
-  const resolvedThumb = (!isPermanentlyDeleted && thumbnailUrl && thumbnailUrl.trim() && thumbnailUrl.trim() !== '/pwa-icon-512.png')
+  const resolvedThumb = (!isPermanentlyDeleted && thumbnailUrl && thumbnailUrl.trim() && thumbnailUrl.trim() !== '/pwa-icon-512.png' && !thumbnailUrl.includes('ngo_logo.png'))
     ? thumbnailUrl.trim()
-    : '/uploads/ngo_logo.png';
+    : '/pwa-icon-512.png';
 
   try {
     const timestamp = Date.now();
@@ -1241,8 +1241,8 @@ export async function fixAndCleanAllLogosAndThumbnails(
   adminUid: string = 'admin'
 ): Promise<{ success: boolean; message: string }> {
   const now = new Date().toISOString();
-  const currentLogoUrl = '/uploads/ngo_logo.png';
-  const currentThumbUrl = '/uploads/ngo_logo.png';
+  const currentLogoUrl = '';
+  const currentThumbUrl = '';
 
   // 1. Wipe all legacy & stale keys from localStorage and sessionStorage
   const staleKeys = [
@@ -3108,8 +3108,14 @@ export async function uploadMediaFile(
 
   console.info(`%c[AdminMediaUpload] 📤 Starting file upload: ${activeFile.name} (${sizeLabel}) -> /${folder}`, 'color: #3b82f6; font-weight: bold;');
 
-  // Prepare safe fallback URL (Permanent base64 data URI that never vanishes on page refresh)
+  // Prepare safe fallback URL (Quota-safe compressed data URI < 80KB so Firestore 1MB doc limit is never breached)
   const getFallbackUrl = async (): Promise<string> => {
+    if (isImage) {
+      try {
+        const safeData = await compressImageToSafeDataUrl(activeFile, 1000, 0.72);
+        if (safeData && safeData.length > 50) return safeData;
+      } catch {}
+    }
     return await blobToBase64(activeFile);
   };
 
@@ -3117,6 +3123,10 @@ export async function uploadMediaFile(
   try {
     const CHUNK_SIZE = 512 * 1024; // 512 KB per chunk
     const totalSize = activeFile.size;
+    const basePath = getAppBasePath();
+    const directApiEndpoint = basePath !== '/' ? `${basePath}api/upload-direct` : '/api/upload-direct';
+    const chunkApiEndpoint = basePath !== '/' ? `${basePath}api/upload-chunk` : '/api/upload-chunk';
+    const completeApiEndpoint = basePath !== '/' ? `${basePath}api/upload-complete` : '/api/upload-complete';
 
     // A. Direct fast upload for single files <= 10MB (images, logos, seals)
     if (totalSize <= 10 * 1024 * 1024 && !isVideo) {
@@ -3125,17 +3135,41 @@ export async function uploadMediaFile(
       if (onProgress) onProgress(65, 'सर्वर पर डेटा सुरक्षित हो रहा है...', `${sizeLabel} / ${sizeLabel}`);
 
       const resolvedFileType = activeFile.type || (cleanFileName.endsWith('.png') ? 'image/png' : cleanFileName.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
-      const response = await fetch('/api/upload-direct', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          data: base64Data,
-          fileName: `${timestamp}_${cleanFileName}`,
-          fileType: resolvedFileType
-        })
-      });
+      
+      const uploadReq = async (url: string) => {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 12000);
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              data: base64Data,
+              fileName: `${timestamp}_${cleanFileName}`,
+              fileType: resolvedFileType
+            }),
+            signal: ctrl.signal
+          });
+          clearTimeout(tid);
+          return res;
+        } catch (e) {
+          clearTimeout(tid);
+          throw e;
+        }
+      };
 
-      if (response.ok) {
+      let response: Response | null = null;
+      try {
+        response = await uploadReq(directApiEndpoint);
+      } catch {
+        if (directApiEndpoint !== '/api/upload-direct') {
+          try {
+            response = await uploadReq('/api/upload-direct');
+          } catch {}
+        }
+      }
+
+      if (response && response.ok) {
         const json = await response.json();
         if (json.success && json.url) {
           const duration = Math.round(performance.now() - uploadStart);
@@ -3158,7 +3192,7 @@ export async function uploadMediaFile(
       const chunkBlob = activeFile.slice(start, end);
       const chunkBase64 = await blobToBase64(chunkBlob);
 
-      const chunkRes = await fetch('/api/upload-chunk', {
+      const chunkRes = await fetch(chunkApiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3194,7 +3228,7 @@ export async function uploadMediaFile(
 
     // Assemble and finalize chunked upload
     if (onProgress) onProgress(92, 'सभी खंडों का एकत्रीकरण व सत्यापन (Finalizing)...', sizeLabel);
-    const completeRes = await fetch('/api/upload-complete', {
+    const completeRes = await fetch(completeApiEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3217,7 +3251,7 @@ export async function uploadMediaFile(
     console.warn('[AdminMediaUpload] Chunked/Direct API notice, checking Firebase Storage fallback:', apiErr);
   }
 
-  // 3. Firebase Storage (if available) with 20-second timeout
+  // 3. Firebase Storage (if available) with fast 3-second timeout protection
   if (!isMockFirebase && storage) {
     try {
       const storageRef = ref(storage, `${folder}/${timestamp}_${cleanFileName}`);
@@ -3260,7 +3294,7 @@ export async function uploadMediaFile(
             uploadTask.cancel();
           } catch {}
           reject(new Error('STORAGE_TIMEOUT'));
-        }, 20000);
+        }, 3000);
       });
 
       const fbResult = await Promise.race([liveUploadPromise, timeoutPromise]);

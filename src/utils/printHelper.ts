@@ -4,7 +4,7 @@ import { toPng } from 'html-to-image';
 import { getActiveOfficialSealUrl, OFFICIAL_SEAL_BASE64_DATA_URL, DEFAULT_OFFICIAL_SEAL_URL } from '../data/officialSealData';
 import { getOptimizedImageUrl } from './imageOptimizer';
 
-export const PUBLIC_LOGO_URL = '/uploads/ngo_logo.png';
+export const PUBLIC_LOGO_URL = '/logo.png';
 export const FALLBACK_LOGO_URL = '/logo.png';
 
 const dataUrlCache = new Map<string, string>();

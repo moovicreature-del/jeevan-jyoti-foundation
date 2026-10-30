@@ -64,7 +64,7 @@ export const HeroSection: React.FC<Props> = ({
       ? `${FOUNDATION_INFO.nameHindi} (${FOUNDATION_INFO.nameEnglish})\n📍 ${FOUNDATION_INFO.address}\n\n🌟 हमारा मिशन: "सेवा • शिक्षा • स्वास्थ्य"\nग़ाज़ीपुर के ग्रामीण व निर्धन बच्चों को निःशुल्क गुणवत्तापूर्ण शिक्षा, अन्नपूर्णा भोजन सेवा एवं निःशुल्क चिकित्सा शिविर।\n\nहमारे मिशन से जुड़ें और सहयोग करें:`
       : `${FOUNDATION_INFO.nameEnglish}\n📍 Ghazipur, Uttar Pradesh, India\n\n🌟 Mission: Free evening schools for underprivileged children, Annapurna daily meals, healthcare camps & women empowerment.\n\nJoin and support our mission:`;
 
-    const activeThumbUrl = content.appThumbnailUrl || content.appLogoUrl || '/uploads/ngo_logo.png';
+    const activeThumbUrl = content.appThumbnailUrl || content.appLogoUrl || '/pwa-icon-512.png';
 
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
