@@ -2487,22 +2487,58 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   try {
     const basePath = getAppBasePath();
-    let res = await fetch(`${basePath}data/synced_app_data.json?t=${Date.now()}`, { cache: 'no-cache' }).catch(() => null);
-    if (!res || !res.ok) {
-      res = await fetch(`/data/synced_app_data.json?t=${Date.now()}`, { cache: 'no-cache' }).catch(() => null);
+    const candidateUrls = [
+      `${basePath}data/synced_app_data.json`,
+      './data/synced_app_data.json',
+      'data/synced_app_data.json',
+      '/data/synced_app_data.json'
+    ];
+
+    let data: any = null;
+    for (const url of candidateUrls) {
+      try {
+        const res = await fetch(`${url}?t=${Date.now()}`, { cache: 'no-cache' });
+        if (res && res.ok) {
+          data = await res.json();
+          if (data && (data.syncedAt || data.homeContent)) break;
+        }
+      } catch {}
     }
-    if (!res || !res.ok) return false;
-    const data = await res.json();
-    if (!data || !data.syncedAt) return false;
 
-    const incomingTime = new Date(data.syncedAt).getTime();
+    if (!data || (!data.syncedAt && !data.homeContent)) return false;
+
+    const incomingTime = data.syncedAt ? new Date(data.syncedAt).getTime() : 0;
     const lastHydratedTime = Number(localStorage.getItem('jjf_last_github_hydrated_time') || 0);
+    const incomingVersion = String(data.version || '');
+    const lastHydratedVersion = localStorage.getItem('jjf_last_github_version') || '';
 
-    // If incoming data is newer than what was previously hydrated, or if local caches are empty
-    if (incomingTime > lastHydratedTime || !localStorage.getItem('jjf_home_content')) {
+    // If incoming data has a new version, or newer timestamp, or local caches are empty
+    const shouldHydrate =
+      !localStorage.getItem('jjf_home_content') ||
+      (incomingVersion && incomingVersion !== lastHydratedVersion) ||
+      (incomingTime > 0 && incomingTime > lastHydratedTime);
+
+    if (shouldHydrate) {
       if (data.homeContent) {
-        localStorage.setItem('jjf_home_content', JSON.stringify(sanitizeContentData(data.homeContent)));
-        window.dispatchEvent(new CustomEvent('jjf-content-updated', { detail: data.homeContent }));
+        const sanitized = sanitizeContentData(data.homeContent);
+
+        // If incoming home content has no logo or empty logo, enforce permanent deletion of local stale logo
+        if (!data.homeContent.appLogoUrl || data.homeContent.appLogoUrl.trim() === '' || data.homeContent.appLogoUrl.includes('ngo_logo')) {
+          sanitized.appLogoUrl = '';
+          localStorage.removeItem('jjf_custom_logo');
+          localStorage.setItem('jjf_logo_permanently_deleted', 'true');
+          window.dispatchEvent(new CustomEvent('jjf-logo-changed', { detail: '' }));
+        }
+
+        if (!data.homeContent.appThumbnailUrl || data.homeContent.appThumbnailUrl.trim() === '' || data.homeContent.appThumbnailUrl.includes('ngo_logo')) {
+          sanitized.appThumbnailUrl = '';
+          localStorage.removeItem('jjf_custom_thumbnail');
+          localStorage.setItem('jjf_thumb_permanently_deleted', 'true');
+          window.dispatchEvent(new CustomEvent('jjf-thumbnail-changed', { detail: '' }));
+        }
+
+        localStorage.setItem('jjf_home_content', JSON.stringify(sanitized));
+        window.dispatchEvent(new CustomEvent('jjf-content-updated', { detail: sanitized }));
       }
       if (data.staffMembers && Array.isArray(data.staffMembers)) {
         let existingStaff: any[] = [];
@@ -2589,7 +2625,10 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
         window.dispatchEvent(new CustomEvent('jjf-certificates-updated'));
       }
 
-      localStorage.setItem('jjf_last_github_hydrated_time', String(incomingTime));
+      localStorage.setItem('jjf_last_github_hydrated_time', String(incomingTime || Date.now()));
+      if (incomingVersion) {
+        localStorage.setItem('jjf_last_github_version', incomingVersion);
+      }
       return true;
     }
   } catch (err) {

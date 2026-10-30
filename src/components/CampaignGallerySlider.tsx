@@ -190,7 +190,7 @@ export const CampaignGallerySlider: React.FC<CampaignGallerySliderProps> = ({
                         target.src = getOptimizedImageUrl('/uploads/jjf_media_1793250697644_9b7cd9be.jpg');
                       } else if (target.dataset.tried === '1') {
                         target.dataset.tried = '2';
-                        target.src = getOptimizedImageUrl('./uploads/jjf_media_1793250697644_9b7cd9be.jpg');
+                        target.src = getOptimizedImageUrl('/manager_secretary.webp');
                       }
                     }}
                   />

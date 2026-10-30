@@ -9,16 +9,22 @@ const sharp = require('sharp');
 
 async function run() {
   const rootDir = path.join(__dirname, '..');
-  const uploadsLogo = path.join(rootDir, 'public/uploads/ngo_logo.png');
-  const uploadsSeal = path.join(rootDir, 'public/uploads/official_seal.png');
+  let logoSrc = path.join(rootDir, 'public/uploads/ngo_logo.png');
+  if (!fs.existsSync(logoSrc)) {
+    logoSrc = path.join(rootDir, 'public/logo.png');
+  }
+  let sealSrc = path.join(rootDir, 'public/uploads/official_seal.png');
+  if (!fs.existsSync(sealSrc)) {
+    sealSrc = path.join(rootDir, 'public/official-seal.png');
+  }
 
-  if (!fs.existsSync(uploadsLogo) || !fs.existsSync(uploadsSeal)) {
-    console.log('Uploads not found, skipping sync.');
+  if (!fs.existsSync(logoSrc) || !fs.existsSync(sealSrc)) {
+    console.log('Logo/Seal sources not found, skipping sync.');
     return;
   }
 
-  const logo = sharp(uploadsLogo);
-  const seal = sharp(uploadsSeal);
+  const logo = sharp(logoSrc);
+  const seal = sharp(sealSrc);
 
   // Targets to sync in public/
   await logo.clone().resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(rootDir, 'public/pwa-icon-512.png'));
@@ -29,7 +35,6 @@ async function run() {
   await logo.clone().resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(rootDir, 'public/default-pwa-icon-512.png'));
   await logo.clone().resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(rootDir, 'public/default-pwa-icon-192.png'));
   await logo.clone().resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(rootDir, 'public/default-apple-touch-icon.png'));
-  await logo.clone().toFile(path.join(rootDir, 'public/logo.png'));
   await seal.clone().toFile(path.join(rootDir, 'public/official-seal.png'));
 
   // Also sync to dist if dist exists
@@ -40,7 +45,6 @@ async function run() {
     await logo.clone().resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(distDir, 'pwa-icon-maskable-512.png'));
     await logo.clone().resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(distDir, 'pwa-icon-maskable-192.png'));
     await logo.clone().resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(distDir, 'apple-touch-icon.png'));
-    await logo.clone().toFile(path.join(distDir, 'logo.png'));
     await seal.clone().toFile(path.join(distDir, 'official-seal.png'));
 
     if (fs.existsSync(path.join(rootDir, 'public/manifest.json'))) {
