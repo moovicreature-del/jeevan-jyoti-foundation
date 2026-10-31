@@ -50,7 +50,7 @@ import {
 import { AppLogoManager } from './AppLogoManager';
 import { SliderPhotoItem } from '../../types';
 import { extractYouTubeId } from '../VideoShowcase';
-import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
+import { getOptimizedImageUrl, compressImageToSafeDataUrl } from '../../utils/imageOptimizer';
 import toast from 'react-hot-toast';
 
 type ActiveSectionTab =
@@ -390,10 +390,19 @@ export const TabBannerMediaManager: React.FC = () => {
             .replace(/[-_]/g, ' ')
             .trim();
 
+          let finalUrl = downloadUrl;
+          if (!finalUrl || finalUrl.startsWith('blob:')) {
+            try {
+              finalUrl = await compressImageToSafeDataUrl(file, 1000, 0.75);
+            } catch {
+              finalUrl = '';
+            }
+          }
+
           // Create finalized photo object with permanent storage URL
           permanentUploaded.push({
             id: `photo-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
-            url: downloadUrl || instantDraftItems[i].url,
+            url: finalUrl || instantDraftItems[i]?.url || '',
             title: cleanName.length > 2 ? cleanName : `${label} झलक ${i + 1}`,
             description: isVideoFile ? 'जीवन ज्योति फाउंडेशन वीडियो वृत्तचित्र' : 'जीवन ज्योति फाउंडेशन ग़ाज़ीपुर सेवा अभियान',
             category: isVideoFile ? 'सेवा वीडियो' : activeTab === 'section_recent_events' ? 'सेवा कार्यक्रम' : 'जनसेवा अभियान',
@@ -403,11 +412,14 @@ export const TabBannerMediaManager: React.FC = () => {
           });
         } catch (singleErr) {
           console.warn(`File upload notice for ${file.name}:`, singleErr);
-          // Fallback to offline draft object
+          let safeUrl = '';
+          try {
+            safeUrl = await compressImageToSafeDataUrl(file, 1000, 0.75);
+          } catch {}
           const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ').trim();
           permanentUploaded.push({
             id: `photo-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
-            url: instantDraftItems[i].url,
+            url: safeUrl || instantDraftItems[i]?.url || '',
             title: cleanName.length > 2 ? cleanName : `${label} झलक ${i + 1}`,
             description: isVideoFile ? 'जीवन ज्योति फाउंडेशन वीडियो वृत्तचित्र' : 'जीवन ज्योति फाउंडेशन ग़ाज़ीपुर सेवा अभियान',
             category: isVideoFile ? 'सेवा वीडियो' : activeTab === 'section_recent_events' ? 'सेवा कार्यक्रम' : 'जनसेवा अभियान',
@@ -430,23 +442,37 @@ export const TabBannerMediaManager: React.FC = () => {
       const preserved = getPreservedSections(activeTab, finalList);
 
       // Sanitize items for storage: avoid saving transient blob: URLs to database
-      const sanitizeSectionForSave = (list: SliderPhotoItem[]) =>
-        list.map((item) => ({
-          ...item,
-          url: (item.url && item.url.startsWith('blob:'))
-            ? (instantDraftItems.find((d) => d.id === item.id)?.url || item.url)
-            : item.url
-        }));
+      const sanitizeSectionForSave = async (list: SliderPhotoItem[]) => {
+        const result: SliderPhotoItem[] = [];
+        for (const item of list) {
+          let u = item.url;
+          if (u && u.startsWith('blob:')) {
+            const matchIdx = instantDraftItems.findIndex((d) => d.id === item.id);
+            if (matchIdx >= 0 && filesToUpload[matchIdx]) {
+              try {
+                u = await compressImageToSafeDataUrl(filesToUpload[matchIdx], 1000, 0.75);
+              } catch {}
+            }
+          }
+          result.push({ ...item, url: u });
+        }
+        return result;
+      };
+
+      const safeSlider = await sanitizeSectionForSave(preserved.sliderPhotos);
+      const safeCampaign = await sanitizeSectionForSave(preserved.campaignGalleryPhotos);
+      const safeRecent = await sanitizeSectionForSave(preserved.recentEventsPhotos);
+      const safeRural = await sanitizeSectionForSave(preserved.ruralWorkPhotos);
 
       await saveHomeContent(
         {
           ...preserved,
-          sliderPhotos: sanitizeSectionForSave(preserved.sliderPhotos),
-          campaignGalleryPhotos: sanitizeSectionForSave(preserved.campaignGalleryPhotos),
-          recentEventsPhotos: sanitizeSectionForSave(preserved.recentEventsPhotos),
-          ruralWorkPhotos: sanitizeSectionForSave(preserved.ruralWorkPhotos),
-          bannerImageUrl: preserved.sliderPhotos[0]?.url || bannerImageUrl,
-          bannerImages: preserved.sliderPhotos.map((p) => p.url),
+          sliderPhotos: safeSlider,
+          campaignGalleryPhotos: safeCampaign,
+          recentEventsPhotos: safeRecent,
+          ruralWorkPhotos: safeRural,
+          bannerImageUrl: safeSlider[0]?.url || bannerImageUrl,
+          bannerImages: safeSlider.map((p) => p.url),
           bannerVideoUrl: bannerVideoUrl,
           ruralWorkVideoUrl: bannerVideoUrl
         },

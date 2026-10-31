@@ -340,12 +340,26 @@ app.post('/api/admin/sync-github-data', (req, res) => {
     if (!fs.existsSync(publicDataDir)) {
       fs.mkdirSync(publicDataDir, { recursive: true });
     }
+    const targetJsonPath = path.join(publicDataDir, 'synced_app_data.json');
+    let existingJson: any = {};
+    if (fs.existsSync(targetJsonPath)) {
+      try {
+        existingJson = JSON.parse(fs.readFileSync(targetJsonPath, 'utf-8'));
+      } catch {}
+    }
+    const mergedHomeContent = payload.homeContent ? {
+      ...(existingJson.homeContent || {}),
+      ...payload.homeContent
+    } : existingJson.homeContent;
+
     const syncedData = {
+      ...existingJson,
       ...payload,
+      homeContent: mergedHomeContent,
       syncedAt: new Date().toISOString(),
       version: '1.0.' + Math.floor(Date.now() / 1000)
     };
-    fs.writeFileSync(path.join(publicDataDir, 'synced_app_data.json'), JSON.stringify(syncedData, null, 2), 'utf-8');
+    fs.writeFileSync(targetJsonPath, JSON.stringify(syncedData, null, 2), 'utf-8');
 
     // Also write to dist/data if dist exists
     const distDataDir = path.join(__dirname, 'dist/data');

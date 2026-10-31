@@ -369,18 +369,21 @@ function sanitizeContentData(raw: any): AppHomeContent {
   const rawLogo = typeof raw?.appLogoUrl === 'string' ? raw.appLogoUrl.trim() : (typeof raw?.logoUrl === 'string' ? raw.logoUrl.trim() : '');
   const isLogoPermanentlyDeleted = typeof localStorage !== 'undefined' && localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
 
-  if (isLogoPermanentlyDeleted || (rawLogo && rawLogo.includes('ngo_logo.png'))) {
-    merged.appLogoUrl = '';
-  } else if (rawLogo) {
-    // If a new active logo exists in database, it overrides any old delete flag!
+  if (rawLogo && !rawLogo.includes('ngo_logo.png') && !rawLogo.includes('1791445209912') && !rawLogo.includes('1791445272050')) {
+    // If a new active logo exists in database or payload, it overrides any old delete flag!
     merged.appLogoUrl = rawLogo;
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('jjf_logo_permanently_deleted');
+      try {
+        localStorage.setItem('jjf_custom_logo', rawLogo);
+      } catch {}
     }
+  } else if (isLogoPermanentlyDeleted || (rawLogo && rawLogo.includes('ngo_logo.png'))) {
+    merged.appLogoUrl = '';
   } else {
     try {
       const localLogo = localStorage.getItem('jjf_custom_logo') || '';
-      merged.appLogoUrl = (!localLogo.includes('ngo_logo.png')) ? localLogo.trim() : '';
+      merged.appLogoUrl = (!localLogo.includes('ngo_logo.png') && !localLogo.includes('1791445209912') && !localLogo.includes('1791445272050')) ? localLogo.trim() : '';
     } catch {
       merged.appLogoUrl = '';
     }
@@ -394,18 +397,21 @@ function sanitizeContentData(raw: any): AppHomeContent {
     : '';
   const isThumbPermanentlyDeleted = typeof localStorage !== 'undefined' && localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
 
-  if (isThumbPermanentlyDeleted || (rawThumb && rawThumb.includes('ngo_logo.png'))) {
-    merged.appThumbnailUrl = '';
-  } else if (rawThumb) {
-    // If a new active thumbnail exists in database, it overrides any old delete flag!
+  if (rawThumb && !rawThumb.includes('ngo_logo.png') && !rawThumb.includes('1791445209912') && !rawThumb.includes('1791445272050')) {
+    // If a new active thumbnail exists in database or payload, it overrides any old delete flag!
     merged.appThumbnailUrl = rawThumb;
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem('jjf_thumb_permanently_deleted');
+      try {
+        localStorage.setItem('jjf_custom_thumbnail', rawThumb);
+      } catch {}
     }
+  } else if (isThumbPermanentlyDeleted || (rawThumb && rawThumb.includes('ngo_logo.png'))) {
+    merged.appThumbnailUrl = '';
   } else {
     try {
       const localThumb = localStorage.getItem('jjf_custom_thumbnail') || '';
-      merged.appThumbnailUrl = (localThumb !== '/pwa-icon-512.png' && !localThumb.includes('ngo_logo.png')) ? localThumb.trim() : '';
+      merged.appThumbnailUrl = (localThumb !== '/pwa-icon-512.png' && !localThumb.includes('ngo_logo.png') && !localThumb.includes('1791445209912') && !localThumb.includes('1791445272050')) ? localThumb.trim() : '';
     } catch {
       merged.appThumbnailUrl = '';
     }
@@ -480,10 +486,66 @@ function sanitizeContentData(raw: any): AppHomeContent {
     return valid.length > 0 ? valid : defaultList;
   };
 
-  merged.sliderPhotos = sanitizePhotoList(raw?.sliderPhotos, DEFAULT_SLIDER_PHOTOS);
-  merged.campaignGalleryPhotos = sanitizePhotoList(raw?.campaignGalleryPhotos, DEFAULT_CAMPAIGN_GALLERY_PHOTOS);
-  merged.recentEventsPhotos = sanitizePhotoList(raw?.recentEventsPhotos, DEFAULT_RECENT_EVENTS_PHOTOS);
-  merged.ruralWorkPhotos = sanitizePhotoList(raw?.ruralWorkPhotos, DEFAULT_RURAL_WORK_PHOTOS);
+  const isCustomPhotoItem = (item: any): boolean =>
+    Boolean(
+      item &&
+      typeof item.url === 'string' &&
+      item.url.trim().length > 0 &&
+      !item.url.includes('images.unsplash.com') &&
+      (
+        item.id?.startsWith('photo-') ||
+        item.id?.startsWith('url-photo-') ||
+        item.url.startsWith('data:') ||
+        (item.url.startsWith('/uploads/') &&
+         !item.id?.startsWith('hero-slide-') &&
+         !item.id?.startsWith('camp-slide-') &&
+         !item.id?.startsWith('event-slide-') &&
+         !item.id?.startsWith('rural-slide-'))
+      )
+    );
+
+  const resolveSectionPhotos = (
+    rawList: any,
+    storageKey: string,
+    defaultList: SliderPhotoItem[]
+  ): SliderPhotoItem[] => {
+    // 1. If raw list contains user uploaded photos, sanitize, persist and return
+    if (Array.isArray(rawList) && rawList.length > 0) {
+      const sanitized = sanitizePhotoList(rawList, defaultList);
+      if (sanitized.some(isCustomPhotoItem)) {
+        try {
+          if (typeof localStorage !== 'undefined') {
+            safeSetLocalStorage(storageKey, JSON.stringify(sanitized));
+          }
+        } catch {}
+        return sanitized;
+      }
+    }
+
+    // 2. Check dedicated storage key for previously uploaded user photos
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const sanitizedStored = sanitizePhotoList(parsed, defaultList);
+            if (sanitizedStored.some(isCustomPhotoItem)) {
+              return sanitizedStored;
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // 3. Fallback to raw list or defaultList
+    return sanitizePhotoList(rawList, defaultList);
+  };
+
+  merged.sliderPhotos = resolveSectionPhotos(raw?.sliderPhotos, 'jjf_custom_slider_photos', DEFAULT_SLIDER_PHOTOS);
+  merged.campaignGalleryPhotos = resolveSectionPhotos(raw?.campaignGalleryPhotos, 'jjf_custom_campaign_photos', DEFAULT_CAMPAIGN_GALLERY_PHOTOS);
+  merged.recentEventsPhotos = resolveSectionPhotos(raw?.recentEventsPhotos, 'jjf_custom_recent_photos', DEFAULT_RECENT_EVENTS_PHOTOS);
+  merged.ruralWorkPhotos = resolveSectionPhotos(raw?.ruralWorkPhotos, 'jjf_custom_rural_photos', DEFAULT_RURAL_WORK_PHOTOS);
 
   merged.bannerImages = merged.sliderPhotos.map((p) => p.url);
   if (merged.sliderPhotos.length > 0) {
@@ -576,6 +638,9 @@ export async function updateAppLogo(
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('jjf-logo-changed', { detail: logoUrl }));
   }
+
+  // 3b. Auto-sync to GitHub data file (synced_app_data.json) so pushes and deployments carry the new logo
+  syncCurrentAdminDataToGitHub(false).catch(() => {});
 
   // 4. Firestore update with fast 2-second timeout (never blocks UI or stalls at 85%)
   if (!isMockFirebase && db) {
@@ -2440,6 +2505,12 @@ export async function syncCurrentAdminDataToGitHub(triggerDownloadIfOffline: boo
       });
       if (res.ok) {
         const json = await res.json();
+        if (json.version) {
+          localStorage.setItem('jjf_last_github_version', String(json.version));
+        }
+        if (json.syncedAt) {
+          localStorage.setItem('jjf_last_github_hydrated_time', String(new Date(json.syncedAt).getTime()));
+        }
         return {
           success: true,
           message: json.message || 'डेटा सफलतापूर्वक फाइलों में सिंक हो गया है!'
@@ -2512,32 +2583,101 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
     const incomingVersion = String(data.version || '');
     const lastHydratedVersion = localStorage.getItem('jjf_last_github_version') || '';
 
-    // If incoming data has a new version, or newer timestamp, or local caches are empty
+    let existingLocal: AppHomeContent | null = null;
+    try {
+      const rawLocal = localStorage.getItem('jjf_home_content');
+      if (rawLocal) existingLocal = JSON.parse(rawLocal);
+    } catch {}
+
+    const localTime = existingLocal?.updatedAt ? new Date(existingLocal.updatedAt).getTime() : 0;
+    const isLocalNewer = localTime > 0 && incomingTime > 0 && localTime > incomingTime;
+
+    // If incoming data has a new version, or newer timestamp, or local caches are empty (and local is not newer)
     const shouldHydrate =
-      !localStorage.getItem('jjf_home_content') ||
-      (incomingVersion && incomingVersion !== lastHydratedVersion) ||
-      (incomingTime > 0 && incomingTime > lastHydratedTime);
+      !existingLocal ||
+      (!isLocalNewer && (
+        (incomingVersion && incomingVersion !== lastHydratedVersion) ||
+        (incomingTime > 0 && incomingTime > lastHydratedTime)
+      ));
 
     if (shouldHydrate) {
       if (data.homeContent) {
         const sanitized = sanitizeContentData(data.homeContent);
 
-        // If incoming home content has no logo or empty logo, enforce permanent deletion of local stale logo
-        if (!data.homeContent.appLogoUrl || data.homeContent.appLogoUrl.trim() === '' || data.homeContent.appLogoUrl.includes('ngo_logo')) {
-          sanitized.appLogoUrl = '';
-          localStorage.removeItem('jjf_custom_logo');
-          localStorage.setItem('jjf_logo_permanently_deleted', 'true');
-          window.dispatchEvent(new CustomEvent('jjf-logo-changed', { detail: '' }));
+        // If incoming home content has a valid custom logo, activate it and remove any permanent delete flag
+        if (data.homeContent.appLogoUrl && data.homeContent.appLogoUrl.trim() !== '' && !data.homeContent.appLogoUrl.includes('ngo_logo')) {
+          sanitized.appLogoUrl = data.homeContent.appLogoUrl.trim();
+          localStorage.removeItem('jjf_logo_permanently_deleted');
+          localStorage.setItem('jjf_custom_logo', sanitized.appLogoUrl || '');
+          window.dispatchEvent(new CustomEvent('jjf-logo-changed', { detail: sanitized.appLogoUrl }));
+        } else {
+          // If GitHub file has no custom logo, preserve existing client custom logo if configured
+          const localLogo = localStorage.getItem('jjf_custom_logo');
+          if (localLogo && !localLogo.includes('ngo_logo') && !localLogo.includes('1791445209912') && !localLogo.includes('1791445272050')) {
+            sanitized.appLogoUrl = localLogo.trim();
+            localStorage.removeItem('jjf_logo_permanently_deleted');
+          } else {
+            sanitized.appLogoUrl = '';
+          }
         }
 
-        if (!data.homeContent.appThumbnailUrl || data.homeContent.appThumbnailUrl.trim() === '' || data.homeContent.appThumbnailUrl.includes('ngo_logo')) {
-          sanitized.appThumbnailUrl = '';
-          localStorage.removeItem('jjf_custom_thumbnail');
-          localStorage.setItem('jjf_thumb_permanently_deleted', 'true');
-          window.dispatchEvent(new CustomEvent('jjf-thumbnail-changed', { detail: '' }));
+        if (data.homeContent.appThumbnailUrl && data.homeContent.appThumbnailUrl.trim() !== '' && !data.homeContent.appThumbnailUrl.includes('ngo_logo')) {
+          sanitized.appThumbnailUrl = data.homeContent.appThumbnailUrl.trim();
+          localStorage.removeItem('jjf_thumb_permanently_deleted');
+          localStorage.setItem('jjf_custom_thumbnail', sanitized.appThumbnailUrl || '');
+          window.dispatchEvent(new CustomEvent('jjf-thumbnail-changed', { detail: sanitized.appThumbnailUrl }));
+        } else {
+          const localThumb = localStorage.getItem('jjf_custom_thumbnail');
+          if (localThumb && !localThumb.includes('ngo_logo') && !localThumb.includes('1791445209912') && !localThumb.includes('1791445272050')) {
+            sanitized.appThumbnailUrl = localThumb.trim();
+            localStorage.removeItem('jjf_thumb_permanently_deleted');
+          } else {
+            sanitized.appThumbnailUrl = '';
+          }
         }
 
-        localStorage.setItem('jjf_home_content', JSON.stringify(sanitized));
+        const isUserUploadedPhoto = (item: any) =>
+          Boolean(
+            item &&
+            typeof item.url === 'string' &&
+            item.url.trim().length > 0 &&
+            !item.url.includes('images.unsplash.com') &&
+            (
+              item.id?.startsWith('photo-') ||
+              item.id?.startsWith('url-photo-') ||
+              item.url.startsWith('data:') ||
+              (item.url.startsWith('/uploads/') &&
+               !item.id?.startsWith('hero-slide-') &&
+               !item.id?.startsWith('camp-slide-') &&
+               !item.id?.startsWith('event-slide-') &&
+               !item.id?.startsWith('rural-slide-'))
+            )
+          );
+
+        const hasUserPhotos = (list?: SliderPhotoItem[]) =>
+          Array.isArray(list) && list.some(isUserUploadedPhoto);
+
+        // Preserve genuine user uploaded photos in all 4 sections if incoming GitHub data only has default samples
+        if (existingLocal?.sliderPhotos && hasUserPhotos(existingLocal.sliderPhotos) && !hasUserPhotos(data.homeContent.sliderPhotos)) {
+          sanitized.sliderPhotos = existingLocal.sliderPhotos;
+          sanitized.bannerImages = existingLocal.sliderPhotos.map((p) => p.url);
+          sanitized.bannerImageUrl = existingLocal.sliderPhotos[0]?.url || sanitized.bannerImageUrl;
+        }
+        if (existingLocal?.campaignGalleryPhotos && hasUserPhotos(existingLocal.campaignGalleryPhotos) && !hasUserPhotos(data.homeContent.campaignGalleryPhotos)) {
+          sanitized.campaignGalleryPhotos = existingLocal.campaignGalleryPhotos;
+        }
+        if (existingLocal?.recentEventsPhotos && hasUserPhotos(existingLocal.recentEventsPhotos) && !hasUserPhotos(data.homeContent.recentEventsPhotos)) {
+          sanitized.recentEventsPhotos = existingLocal.recentEventsPhotos;
+        }
+        if (existingLocal?.ruralWorkPhotos && hasUserPhotos(existingLocal.ruralWorkPhotos) && !hasUserPhotos(data.homeContent.ruralWorkPhotos)) {
+          sanitized.ruralWorkPhotos = existingLocal.ruralWorkPhotos;
+        }
+
+        safeSetLocalStorage('jjf_home_content', JSON.stringify(sanitized));
+        safeSetLocalStorage('jjf_custom_slider_photos', JSON.stringify(sanitized.sliderPhotos));
+        safeSetLocalStorage('jjf_custom_campaign_photos', JSON.stringify(sanitized.campaignGalleryPhotos));
+        safeSetLocalStorage('jjf_custom_recent_photos', JSON.stringify(sanitized.recentEventsPhotos));
+        safeSetLocalStorage('jjf_custom_rural_photos', JSON.stringify(sanitized.ruralWorkPhotos));
         window.dispatchEvent(new CustomEvent('jjf-content-updated', { detail: sanitized }));
       }
       if (data.staffMembers && Array.isArray(data.staffMembers)) {
@@ -2830,6 +2970,11 @@ export async function saveHomeContent(
   // Local storage save with quota protection
   try {
     safeSetLocalStorage('jjf_home_content', JSON.stringify(payload));
+    safeSetLocalStorage('jjf_custom_slider_photos', JSON.stringify(payload.sliderPhotos));
+    safeSetLocalStorage('jjf_custom_campaign_photos', JSON.stringify(payload.campaignGalleryPhotos));
+    safeSetLocalStorage('jjf_custom_recent_photos', JSON.stringify(payload.recentEventsPhotos));
+    safeSetLocalStorage('jjf_custom_rural_photos', JSON.stringify(payload.ruralWorkPhotos));
+    localStorage.setItem('jjf_last_github_hydrated_time', String(Date.now()));
   } catch {
     // Ignore
   }

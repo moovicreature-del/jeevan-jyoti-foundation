@@ -256,29 +256,38 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     activeLogoUrl = contextLogo.trim();
   } else if (localCustomLogo && localCustomLogo.trim()) {
     activeLogoUrl = localCustomLogo.trim();
-  } else if (typeof window !== 'undefined' && !isPermanentlyDeleted) {
+  } else if (typeof window !== 'undefined') {
     try {
-      activeLogoUrl = localStorage.getItem('jjf_custom_logo') || '';
+      const stored = localStorage.getItem('jjf_custom_logo') || '';
+      if (stored && !stored.includes('ngo_logo') && !stored.includes('1791445209912') && !stored.includes('1791445272050')) {
+        activeLogoUrl = stored;
+      }
     } catch {
       activeLogoUrl = '';
     }
-  } else {
-    activeLogoUrl = '';
   }
 
   if (activeLogoUrl && (activeLogoUrl.includes('1791445209912') || activeLogoUrl.includes('1791445272050') || activeLogoUrl.includes('ngo_logo.png'))) {
     activeLogoUrl = '';
   }
 
+  // Clear delete flag whenever a valid active logo exists
+  if (activeLogoUrl && typeof window !== 'undefined' && isPermanentlyDeleted) {
+    localStorage.removeItem('jjf_logo_permanently_deleted');
+  }
+
   // Reset fallbackStage when activeLogoUrl changes
   useEffect(() => {
+    if (activeLogoUrl && typeof window !== 'undefined') {
+      localStorage.removeItem('jjf_logo_permanently_deleted');
+    }
     setFallbackStage(0);
   }, [activeLogoUrl]);
 
   const finalOpacity = watermark ? (opacity ?? 0.12) : (opacity ?? 1);
 
-  // If forceVector is requested, or if permanently deleted, or if activeLogoUrl is empty, or fallbackStage >= 3, render the pure SVG directly
-  if (forceVector || fallbackStage >= 3 || isPermanentlyDeleted || !activeLogoUrl) {
+  // If forceVector is requested, or if activeLogoUrl is empty, or fallbackStage >= 2, render the pure SVG directly
+  if (forceVector || fallbackStage >= 2 || !activeLogoUrl) {
     return (
       <OfficialVectorEmblem
         id={id || 'jjf-official-brand-logo'}
@@ -297,9 +306,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   if (fallbackStage === 0) {
     currentSrc = getCacheBustedImageUrl(activeLogoUrl);
   } else if (fallbackStage === 1) {
-    currentSrc = '/logo.png';
-  } else if (fallbackStage === 2) {
-    currentSrc = '/logo.svg';
+    currentSrc = activeLogoUrl;
   }
 
   const handleImageError = () => {

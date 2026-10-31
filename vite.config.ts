@@ -80,6 +80,38 @@ function loadDevBranding(): { appLogoUrl: string; appThumbnailUrl: string } {
   };
 }
 
+function syncBrandingToDataFiles(branding: { appLogoUrl: string; appThumbnailUrl: string; certificateSealUrl?: string }) {
+  try {
+    const paths = [
+      path.resolve(__dirname, 'public/data/synced_app_data.json'),
+      path.resolve(__dirname, 'dist/data/synced_app_data.json')
+    ];
+    for (const p of paths) {
+      if (fs.existsSync(p)) {
+        try {
+          const content = JSON.parse(fs.readFileSync(p, 'utf-8'));
+          if (content.homeContent) {
+            content.homeContent.appLogoUrl = branding.appLogoUrl;
+            content.homeContent.appThumbnailUrl = branding.appThumbnailUrl;
+            if (branding.certificateSealUrl) {
+              content.homeContent.certificateSealUrl = branding.certificateSealUrl;
+            }
+            content.syncedAt = new Date().toISOString();
+            content.version = '1.0.' + Math.floor(Date.now() / 1000);
+            fs.writeFileSync(p, JSON.stringify(content, null, 2), 'utf-8');
+          }
+        } catch {}
+      }
+    }
+    const distUploads = path.resolve(__dirname, 'dist/uploads');
+    if (fs.existsSync(distUploads)) {
+      try {
+        fs.writeFileSync(path.join(distUploads, 'app-branding.json'), JSON.stringify(branding, null, 2), 'utf-8');
+      } catch {}
+    }
+  } catch {}
+}
+
 function saveDevBranding(logoUrl?: string, thumbnailUrl?: string, sealUrl?: string) {
   try {
     const current = loadDevBranding();
@@ -93,6 +125,7 @@ function saveDevBranding(logoUrl?: string, thumbnailUrl?: string, sealUrl?: stri
       fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     }
     fs.writeFileSync(DEV_BRANDING_FILE, JSON.stringify(updated, null, 2), 'utf-8');
+    syncBrandingToDataFiles(updated);
   } catch {}
 }
 
@@ -579,9 +612,16 @@ function apiDevServerPlugin(): Plugin {
             // Keep authentic staff members
             let mergedStaff = payload.staffMembers || existingJson.staffMembers || [];
 
+            // Merge home content cleanly
+            const mergedHomeContent = payload.homeContent ? {
+              ...(existingJson.homeContent || {}),
+              ...payload.homeContent
+            } : existingJson.homeContent;
+
             const syncedData = {
               ...existingJson,
               ...payload,
+              homeContent: mergedHomeContent,
               staffMembers: mergedStaff,
               certificates: payload.certificates || existingJson.certificates,
               syncedAt: new Date().toISOString(),
@@ -1098,6 +1138,12 @@ function apiDevServerPlugin(): Plugin {
             try {
               const filePath = path.join(UPLOADS_DIR, safeDiskFileName);
               fs.writeFileSync(filePath, fileBuffer);
+              const distUploadPath = path.resolve(__dirname, 'dist/uploads', safeDiskFileName);
+              if (fs.existsSync(path.dirname(distUploadPath))) {
+                try {
+                  fs.writeFileSync(distUploadPath, fileBuffer);
+                } catch {}
+              }
             } catch (diskErr) {
               console.warn('[Vite] Could not write to public/uploads:', diskErr);
               publicUrl = `/api/media/${mediaId}`;

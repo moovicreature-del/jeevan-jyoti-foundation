@@ -45,12 +45,10 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
           }
 
           if (parsed.appLogoUrl && !parsed.appLogoUrl.includes('ngo_logo.png')) {
-            const isLogoDeleted = localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
-            if (isLogoDeleted) {
-              parsed.appLogoUrl = '';
-            } else {
-              localStorage.removeItem('jjf_logo_permanently_deleted');
-            }
+            localStorage.removeItem('jjf_logo_permanently_deleted');
+            try {
+              localStorage.setItem('jjf_custom_logo', parsed.appLogoUrl);
+            } catch {}
           } else {
             const isLogoDeleted = localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
             const customLogo = isLogoDeleted ? '' : (localStorage.getItem('jjf_custom_logo') || '');
@@ -63,12 +61,10 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
           }
 
           if (parsed.appThumbnailUrl && parsed.appThumbnailUrl !== '/pwa-icon-512.png' && !parsed.appThumbnailUrl.includes('ngo_logo.png')) {
-            const isThumbDeleted = localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
-            if (isThumbDeleted) {
-              parsed.appThumbnailUrl = '';
-            } else {
-              localStorage.removeItem('jjf_thumb_permanently_deleted');
-            }
+            localStorage.removeItem('jjf_thumb_permanently_deleted');
+            try {
+              localStorage.setItem('jjf_custom_thumbnail', parsed.appThumbnailUrl);
+            } catch {}
           } else {
             const isThumbDeleted = localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
             const customThumb = isThumbDeleted ? '' : (localStorage.getItem('jjf_custom_thumbnail') || '');
@@ -93,25 +89,83 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
           }
           const customSealVariant = localStorage.getItem('jjf_custom_certificate_seal_variant');
           if (customSealVariant) parsed.certificateSealVariant = customSealVariant as any;
+
+          // Restore photo sections from dedicated backup storage if custom photos exist
+          const restoreSectionPhotos = (currentList: any[], key: string) => {
+            try {
+              const stored = localStorage.getItem(key);
+              if (stored) {
+                const arr = JSON.parse(stored);
+                if (Array.isArray(arr) && arr.length > 0) {
+                  const hasCustom = arr.some((item) =>
+                    item &&
+                    (item.id?.startsWith('photo-') ||
+                     item.id?.startsWith('url-photo-') ||
+                     item.url?.startsWith('data:') ||
+                     (item.url?.startsWith('/uploads/') &&
+                      !item.id?.startsWith('hero-slide-') &&
+                      !item.id?.startsWith('camp-slide-') &&
+                      !item.id?.startsWith('event-slide-') &&
+                      !item.id?.startsWith('rural-slide-')))
+                  );
+                  if (hasCustom) return arr;
+                }
+              }
+            } catch {}
+            return currentList;
+          };
+
+          parsed.sliderPhotos = restoreSectionPhotos(parsed.sliderPhotos || [], 'jjf_custom_slider_photos');
+          parsed.campaignGalleryPhotos = restoreSectionPhotos(parsed.campaignGalleryPhotos || [], 'jjf_custom_campaign_photos');
+          parsed.recentEventsPhotos = restoreSectionPhotos(parsed.recentEventsPhotos || [], 'jjf_custom_recent_photos');
+          parsed.ruralWorkPhotos = restoreSectionPhotos(parsed.ruralWorkPhotos || [], 'jjf_custom_rural_photos');
+          if (parsed.sliderPhotos && parsed.sliderPhotos.length > 0) {
+            parsed.bannerImages = parsed.sliderPhotos.map((p: any) => p.url);
+            parsed.bannerImageUrl = parsed.sliderPhotos[0]?.url || parsed.bannerImageUrl;
+          }
+
           return parsed;
         }
+        const customLogo = localStorage.getItem('jjf_custom_logo') || '';
         const isLogoDeleted = localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
-        const customLogo = isLogoDeleted ? '' : (localStorage.getItem('jjf_custom_logo') || '');
         const validLogo = !isLogoDeleted && customLogo && !customLogo.includes('ngo_logo.png') && !customLogo.includes('1791445209912') && !customLogo.includes('1791445272050') ? customLogo.trim() : '';
+        const customThumb = localStorage.getItem('jjf_custom_thumbnail') || '';
         const isThumbDeleted = localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
-        const customThumb = isThumbDeleted ? '' : (localStorage.getItem('jjf_custom_thumbnail') || '');
         const validThumb = !isThumbDeleted && customThumb && customThumb !== '/pwa-icon-512.png' && !customThumb.includes('ngo_logo.png') && !customThumb.includes('1791445209912') && !customThumb.includes('1791445272050') ? customThumb.trim() : '';
         const customSealStored = localStorage.getItem('jjf_custom_certificate_seal');
         const isSealDeleted = localStorage.getItem('jjf_seal_permanently_deleted') === 'true';
         const validSeal = !isSealDeleted && customSealStored && !customSealStored.includes('old') && !customSealStored.includes('76347e15') ? customSealStored.trim() : '';
         const customSealVariant = localStorage.getItem('jjf_custom_certificate_seal_variant');
-        if (validLogo || validThumb || validSeal) {
+        
+        const restoreListFallback = (key: string, def: any[]) => {
+          try {
+            const s = localStorage.getItem(key);
+            if (s) {
+              const a = JSON.parse(s);
+              if (Array.isArray(a) && a.length > 0) return a;
+            }
+          } catch {}
+          return def;
+        };
+
+        const fallbackSlider = restoreListFallback('jjf_custom_slider_photos', DEFAULT_HOME_CONTENT.sliderPhotos || []);
+        const fallbackCampaign = restoreListFallback('jjf_custom_campaign_photos', DEFAULT_HOME_CONTENT.campaignGalleryPhotos || []);
+        const fallbackRecent = restoreListFallback('jjf_custom_recent_photos', DEFAULT_HOME_CONTENT.recentEventsPhotos || []);
+        const fallbackRural = restoreListFallback('jjf_custom_rural_photos', DEFAULT_HOME_CONTENT.ruralWorkPhotos || []);
+
+        if (validLogo || validThumb || validSeal || fallbackSlider !== DEFAULT_HOME_CONTENT.sliderPhotos) {
           return {
             ...DEFAULT_HOME_CONTENT,
             appLogoUrl: validLogo,
             appThumbnailUrl: validThumb,
             certificateSealUrl: validSeal || '/uploads/official_seal.png',
-            certificateSealVariant: (customSealVariant as any) || 'gold-crimson'
+            certificateSealVariant: (customSealVariant as any) || 'gold-crimson',
+            sliderPhotos: fallbackSlider,
+            campaignGalleryPhotos: fallbackCampaign,
+            recentEventsPhotos: fallbackRecent,
+            ruralWorkPhotos: fallbackRural,
+            bannerImages: fallbackSlider.map((p: any) => p.url),
+            bannerImageUrl: fallbackSlider[0]?.url || ''
           };
         }
       } catch {

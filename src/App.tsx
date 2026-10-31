@@ -139,15 +139,28 @@ export function App() {
         if (homeContentStr) {
           const hc = JSON.parse(homeContentStr);
           let changed = false;
-          const isLogoPermanentlyDeleted = localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
-          if (isLogoPermanentlyDeleted || (hc.appLogoUrl && (hc.appLogoUrl.includes('ngo_logo') || hc.appLogoUrl.includes('1791445209912') || hc.appLogoUrl.includes('1791445272050') || hc.appLogoUrl.includes('old')))) {
-            hc.appLogoUrl = '';
-            changed = true;
+          if (hc.appLogoUrl) {
+            if (hc.appLogoUrl.includes('ngo_logo') || hc.appLogoUrl.includes('1791445209912') || hc.appLogoUrl.includes('1791445272050') || hc.appLogoUrl.includes('old')) {
+              hc.appLogoUrl = '';
+              changed = true;
+            } else {
+              localStorage.removeItem('jjf_logo_permanently_deleted');
+            }
+          } else {
+            const custom = localStorage.getItem('jjf_custom_logo');
+            if (custom && !custom.includes('ngo_logo') && !custom.includes('1791445209912') && !custom.includes('1791445272050') && !custom.includes('old')) {
+              hc.appLogoUrl = custom;
+              localStorage.removeItem('jjf_logo_permanently_deleted');
+              changed = true;
+            }
           }
-          const isThumbPermanentlyDeleted = localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
-          if (isThumbPermanentlyDeleted || (hc.appThumbnailUrl && (hc.appThumbnailUrl.includes('ngo_logo') || hc.appThumbnailUrl.includes('1791445209912') || hc.appThumbnailUrl.includes('1791445272050') || hc.appThumbnailUrl.includes('old')))) {
-            hc.appThumbnailUrl = '';
-            changed = true;
+          if (hc.appThumbnailUrl) {
+            if (hc.appThumbnailUrl.includes('ngo_logo') || hc.appThumbnailUrl.includes('1791445209912') || hc.appThumbnailUrl.includes('1791445272050') || hc.appThumbnailUrl.includes('old')) {
+              hc.appThumbnailUrl = '';
+              changed = true;
+            } else {
+              localStorage.removeItem('jjf_thumb_permanently_deleted');
+            }
           }
           if (hc.certificateSealUrl && (hc.certificateSealUrl.includes('old') || hc.certificateSealUrl.includes('76347e15') || hc.certificateSealUrl.includes('cloudinary'))) {
             hc.certificateSealUrl = '/uploads/official_seal.png';
