@@ -255,8 +255,8 @@ export const DEFAULT_HOME_CONTENT: AppHomeContent = {
   ruralWorkVideoUrl: 'https://www.youtube.com/watch?v=0kF5s7J_C3A',
   bannerTitle: 'सशक्त ग़ाज़ीपुर, समृद्ध समाज',
   bannerSubtitle: 'हमारे सेवा अभियानों से जुड़ें और समाज निर्माण में अपना योगदान दें',
-  appLogoUrl: '',
-  appThumbnailUrl: '',
+  appLogoUrl: '/logo.png',
+  appThumbnailUrl: '/pwa-icon-512.png',
   certificateSealUrl: '/uploads/official_seal.png',
   certificateSealVariant: 'gold-crimson',
   updatedBy: 'सिस्टम एडमिन',
@@ -383,9 +383,9 @@ function sanitizeContentData(raw: any): AppHomeContent {
   } else {
     try {
       const localLogo = localStorage.getItem('jjf_custom_logo') || '';
-      merged.appLogoUrl = (!localLogo.includes('ngo_logo.png') && !localLogo.includes('1791445209912') && !localLogo.includes('1791445272050')) ? localLogo.trim() : '';
+      merged.appLogoUrl = (!localLogo.includes('ngo_logo.png') && !localLogo.includes('1791445209912') && !localLogo.includes('1791445272050') && localLogo.trim()) ? localLogo.trim() : '/logo.png';
     } catch {
-      merged.appLogoUrl = '';
+      merged.appLogoUrl = '/logo.png';
     }
   }
 
@@ -411,9 +411,9 @@ function sanitizeContentData(raw: any): AppHomeContent {
   } else {
     try {
       const localThumb = localStorage.getItem('jjf_custom_thumbnail') || '';
-      merged.appThumbnailUrl = (localThumb !== '/pwa-icon-512.png' && !localThumb.includes('ngo_logo.png') && !localThumb.includes('1791445209912') && !localThumb.includes('1791445272050')) ? localThumb.trim() : '';
+      merged.appThumbnailUrl = (!localThumb.includes('ngo_logo.png') && !localThumb.includes('1791445209912') && !localThumb.includes('1791445272050') && localThumb.trim() && localThumb !== '/pwa-icon-512.png') ? localThumb.trim() : '/pwa-icon-512.png';
     } catch {
-      merged.appThumbnailUrl = '';
+      merged.appThumbnailUrl = '/pwa-icon-512.png';
     }
   }
 
@@ -1061,6 +1061,9 @@ export async function updateAppThumbnail(
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('jjf-thumbnail-changed', { detail: thumbnailUrl }));
   }
+
+  // 4b. Auto-sync to GitHub data file (synced_app_data.json) so pushes and deployments carry the new thumbnail
+  syncCurrentAdminDataToGitHub(false).catch(() => {});
 
   // 5. Firestore update with fast 2-second timeout (never hangs at 85%)
   if (!isMockFirebase && db) {
@@ -2613,11 +2616,11 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
         } else {
           // If GitHub file has no custom logo, preserve existing client custom logo if configured
           const localLogo = localStorage.getItem('jjf_custom_logo');
-          if (localLogo && !localLogo.includes('ngo_logo') && !localLogo.includes('1791445209912') && !localLogo.includes('1791445272050')) {
+          if (localLogo && !localLogo.includes('ngo_logo') && !localLogo.includes('1791445209912') && !localLogo.includes('1791445272050') && localLogo.trim()) {
             sanitized.appLogoUrl = localLogo.trim();
             localStorage.removeItem('jjf_logo_permanently_deleted');
           } else {
-            sanitized.appLogoUrl = '';
+            sanitized.appLogoUrl = '/logo.png';
           }
         }
 
@@ -2628,11 +2631,11 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
           window.dispatchEvent(new CustomEvent('jjf-thumbnail-changed', { detail: sanitized.appThumbnailUrl }));
         } else {
           const localThumb = localStorage.getItem('jjf_custom_thumbnail');
-          if (localThumb && !localThumb.includes('ngo_logo') && !localThumb.includes('1791445209912') && !localThumb.includes('1791445272050')) {
+          if (localThumb && !localThumb.includes('ngo_logo') && !localThumb.includes('1791445209912') && !localThumb.includes('1791445272050') && localThumb.trim() && localThumb !== '/pwa-icon-512.png') {
             sanitized.appThumbnailUrl = localThumb.trim();
             localStorage.removeItem('jjf_thumb_permanently_deleted');
           } else {
-            sanitized.appThumbnailUrl = '';
+            sanitized.appThumbnailUrl = '/pwa-icon-512.png';
           }
         }
 

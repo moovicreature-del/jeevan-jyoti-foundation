@@ -209,17 +209,49 @@ function loadPersistentBranding(): { appLogoUrl: string; appThumbnailUrl: string
     if (fs.existsSync(BRANDING_FILE)) {
       const data = JSON.parse(fs.readFileSync(BRANDING_FILE, 'utf-8'));
       return {
-        appLogoUrl: typeof data.appLogoUrl === 'string' && data.appLogoUrl.trim() ? data.appLogoUrl.trim() : '/uploads/ngo_logo.png',
-        appThumbnailUrl: typeof data.appThumbnailUrl === 'string' && data.appThumbnailUrl.trim() ? data.appThumbnailUrl.trim() : '/uploads/ngo_logo.png',
+        appLogoUrl: typeof data.appLogoUrl === 'string' && data.appLogoUrl.trim() ? data.appLogoUrl.trim() : '/logo.png',
+        appThumbnailUrl: typeof data.appThumbnailUrl === 'string' && data.appThumbnailUrl.trim() ? data.appThumbnailUrl.trim() : '/pwa-icon-512.png',
         certificateSealUrl: typeof data.certificateSealUrl === 'string' && data.certificateSealUrl.trim() ? data.certificateSealUrl.trim() : '/uploads/official_seal.png'
       };
     }
   } catch {}
   return {
-    appLogoUrl: '/uploads/ngo_logo.png',
-    appThumbnailUrl: '/uploads/ngo_logo.png',
+    appLogoUrl: '/logo.png',
+    appThumbnailUrl: '/pwa-icon-512.png',
     certificateSealUrl: '/uploads/official_seal.png'
   };
+}
+
+function syncServerBrandingToDataFiles(branding: { appLogoUrl: string; appThumbnailUrl: string; certificateSealUrl?: string }) {
+  try {
+    const paths = [
+      path.resolve(__dirname, 'public/data/synced_app_data.json'),
+      path.resolve(__dirname, 'dist/data/synced_app_data.json')
+    ];
+    for (const p of paths) {
+      if (fs.existsSync(p)) {
+        try {
+          const content = JSON.parse(fs.readFileSync(p, 'utf-8'));
+          if (content.homeContent) {
+            content.homeContent.appLogoUrl = branding.appLogoUrl || '/logo.png';
+            content.homeContent.appThumbnailUrl = branding.appThumbnailUrl || '/pwa-icon-512.png';
+            if (branding.certificateSealUrl) {
+              content.homeContent.certificateSealUrl = branding.certificateSealUrl;
+            }
+            content.syncedAt = new Date().toISOString();
+            content.version = '1.0.' + Math.floor(Date.now() / 1000);
+            fs.writeFileSync(p, JSON.stringify(content, null, 2), 'utf-8');
+          }
+        } catch {}
+      }
+    }
+    const distUploads = path.resolve(__dirname, 'dist/uploads');
+    if (fs.existsSync(distUploads)) {
+      try {
+        fs.writeFileSync(path.join(distUploads, 'app-branding.json'), JSON.stringify(branding, null, 2), 'utf-8');
+      } catch {}
+    }
+  } catch {}
 }
 
 function savePersistentBranding(logoUrl?: string, thumbnailUrl?: string, sealUrl?: string) {
@@ -235,6 +267,7 @@ function savePersistentBranding(logoUrl?: string, thumbnailUrl?: string, sealUrl
       fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     }
     fs.writeFileSync(BRANDING_FILE, JSON.stringify(updated, null, 2), 'utf-8');
+    syncServerBrandingToDataFiles(updated);
   } catch {}
 }
 
@@ -244,12 +277,24 @@ let serverAppLogoUrl: string = initialBranding.appLogoUrl;
 let serverCertificateSealUrl: string = initialBranding.certificateSealUrl;
 
 app.get('/api/app-thumbnail', (_req, res) => {
-  res.json({ success: true, appThumbnailUrl: serverAppThumbnailUrl });
+  res.json({ success: true, appThumbnailUrl: serverAppThumbnailUrl || '/pwa-icon-512.png' });
 });
 
-app.post('/api/app-thumbnail', (req, res) => {
+app.post('/api/app-thumbnail', async (req, res) => {
   const { thumbnailUrl } = req.body || {};
   serverAppThumbnailUrl = typeof thumbnailUrl === 'string' ? thumbnailUrl.trim() : '';
+  if (serverAppThumbnailUrl && serverAppThumbnailUrl.startsWith('/uploads/')) {
+    const fileName = path.basename(serverAppThumbnailUrl.split('?')[0]);
+    const srcPath = path.join(UPLOADS_DIR, fileName);
+    if (fs.existsSync(srcPath)) {
+      try {
+        const { default: sharp } = await import('sharp');
+        await sharp(srcPath).resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-512.png'));
+        await sharp(srcPath).resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-192.png'));
+        await sharp(srcPath).resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/apple-touch-icon.png'));
+      } catch {}
+    }
+  }
   savePersistentBranding(undefined, serverAppThumbnailUrl);
   res.json({ success: true, appThumbnailUrl: serverAppThumbnailUrl });
 });
@@ -266,12 +311,26 @@ app.delete('/api/app-thumbnail', (req, res) => {
 
 // Dynamic App Logo Engine
 app.get('/api/app-logo', (_req, res) => {
-  res.json({ success: true, appLogoUrl: serverAppLogoUrl });
+  res.json({ success: true, appLogoUrl: serverAppLogoUrl || '/logo.png' });
 });
 
-app.post('/api/app-logo', (req, res) => {
+app.post('/api/app-logo', async (req, res) => {
   const { logoUrl } = req.body || {};
   serverAppLogoUrl = typeof logoUrl === 'string' ? logoUrl.trim() : '';
+  if (serverAppLogoUrl && serverAppLogoUrl.startsWith('/uploads/')) {
+    try {
+      const srcPath = path.join(UPLOADS_DIR, path.basename(serverAppLogoUrl.split('?')[0]));
+      if (fs.existsSync(srcPath)) {
+        fs.copyFileSync(srcPath, path.resolve(__dirname, 'public/logo.png'));
+        const { default: sharp } = await import('sharp');
+        await sharp(srcPath).resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-512.png'));
+        await sharp(srcPath).resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-192.png'));
+        await sharp(srcPath).resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/apple-touch-icon.png'));
+      }
+    } catch (e) {
+      console.warn('[ServerAppLogo] Sync error:', e);
+    }
+  }
   savePersistentBranding(serverAppLogoUrl, undefined);
   res.json({ success: true, appLogoUrl: serverAppLogoUrl });
 });

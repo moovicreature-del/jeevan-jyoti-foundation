@@ -63,20 +63,21 @@ const devOtpStore = new Map<string, { otp: string; expiresAt: number; attempts: 
 
 const DEV_BRANDING_FILE = path.join(UPLOADS_DIR, 'app-branding.json');
 
-function loadDevBranding(): { appLogoUrl: string; appThumbnailUrl: string } {
+function loadDevBranding(): { appLogoUrl: string; appThumbnailUrl: string; certificateSealUrl?: string } {
   try {
     if (fs.existsSync(DEV_BRANDING_FILE)) {
       const data = JSON.parse(fs.readFileSync(DEV_BRANDING_FILE, 'utf-8'));
       return {
-        appLogoUrl: typeof data.appLogoUrl === 'string' ? data.appLogoUrl : '',
-        appThumbnailUrl: typeof data.appThumbnailUrl === 'string' ? data.appThumbnailUrl : ''
+        appLogoUrl: (typeof data.appLogoUrl === 'string' && data.appLogoUrl.trim()) ? data.appLogoUrl.trim() : '/logo.png',
+        appThumbnailUrl: (typeof data.appThumbnailUrl === 'string' && data.appThumbnailUrl.trim()) ? data.appThumbnailUrl.trim() : '/pwa-icon-512.png',
+        certificateSealUrl: (typeof data.certificateSealUrl === 'string' && data.certificateSealUrl.trim()) ? data.certificateSealUrl.trim() : '/uploads/official_seal.png'
       };
     }
   } catch {}
   return {
-    appLogoUrl: '',
-    appThumbnailUrl: '',
-    certificateSealUrl: ''
+    appLogoUrl: '/logo.png',
+    appThumbnailUrl: '/pwa-icon-512.png',
+    certificateSealUrl: '/uploads/official_seal.png'
   };
 }
 
@@ -91,8 +92,8 @@ function syncBrandingToDataFiles(branding: { appLogoUrl: string; appThumbnailUrl
         try {
           const content = JSON.parse(fs.readFileSync(p, 'utf-8'));
           if (content.homeContent) {
-            content.homeContent.appLogoUrl = branding.appLogoUrl;
-            content.homeContent.appThumbnailUrl = branding.appThumbnailUrl;
+            content.homeContent.appLogoUrl = branding.appLogoUrl || '/logo.png';
+            content.homeContent.appThumbnailUrl = branding.appThumbnailUrl || '/pwa-icon-512.png';
             if (branding.certificateSealUrl) {
               content.homeContent.certificateSealUrl = branding.certificateSealUrl;
             }
@@ -487,15 +488,29 @@ function apiDevServerPlugin(): Plugin {
             const candidate = typeof body?.thumbnailUrl === 'string' ? body.thumbnailUrl.trim() : '';
             if (candidate && candidate.startsWith('/uploads/')) {
               const fileName = path.basename(candidate.split('?')[0]);
-              if (fs.existsSync(path.join(UPLOADS_DIR, fileName))) {
+              const srcPath = path.join(UPLOADS_DIR, fileName);
+              if (fs.existsSync(srcPath)) {
                 devAppThumbnailUrl = candidate;
+                try {
+                  import('sharp').then(({ default: sharp }) => {
+                    sharp(srcPath).resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-512.png')).catch(() => {});
+                    sharp(srcPath).resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-192.png')).catch(() => {});
+                    sharp(srcPath).resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/apple-touch-icon.png')).catch(() => {});
+                    const distDir = path.resolve(__dirname, 'dist');
+                    if (fs.existsSync(distDir)) {
+                      sharp(srcPath).resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(distDir, 'pwa-icon-512.png')).catch(() => {});
+                      sharp(srcPath).resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(distDir, 'pwa-icon-192.png')).catch(() => {});
+                      sharp(srcPath).resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.join(distDir, 'apple-touch-icon.png')).catch(() => {});
+                    }
+                  }).catch(() => {});
+                } catch {}
               } else {
-                devAppThumbnailUrl = '';
+                devAppThumbnailUrl = candidate;
               }
             } else if (candidate.startsWith('data:image/') || candidate.startsWith('http://') || candidate.startsWith('https://')) {
               devAppThumbnailUrl = candidate;
             } else {
-              devAppThumbnailUrl = '';
+              devAppThumbnailUrl = '/pwa-icon-512.png';
             }
             saveDevBranding(undefined, devAppThumbnailUrl);
             return sendJson(200, { success: true, appThumbnailUrl: devAppThumbnailUrl });
@@ -514,7 +529,7 @@ function apiDevServerPlugin(): Plugin {
             saveDevBranding(undefined, '');
             return sendJson(200, { success: true, appThumbnailUrl: '', message: 'ऐप थंबनेल सर्वर व स्टोरेज से स्थायी रूप से हटा दिया गया है।' });
           }
-          return sendJson(200, { success: true, appThumbnailUrl: devAppThumbnailUrl });
+          return sendJson(200, { success: true, appThumbnailUrl: devAppThumbnailUrl || '/pwa-icon-512.png' });
         }
 
         // Dynamic app logo sync endpoint
@@ -522,6 +537,25 @@ function apiDevServerPlugin(): Plugin {
           if (req.method === 'POST') {
             const body = await getBody();
             devAppLogoUrl = typeof body?.logoUrl === 'string' ? body.logoUrl.trim() : '';
+            if (devAppLogoUrl && devAppLogoUrl.startsWith('/uploads/')) {
+              try {
+                const srcPath = path.join(UPLOADS_DIR, path.basename(devAppLogoUrl.split('?')[0]));
+                if (fs.existsSync(srcPath)) {
+                  fs.copyFileSync(srcPath, path.resolve(__dirname, 'public/logo.png'));
+                  const distDir = path.resolve(__dirname, 'dist');
+                  if (fs.existsSync(distDir)) {
+                    fs.copyFileSync(srcPath, path.join(distDir, 'logo.png'));
+                  }
+                  import('sharp').then(({ default: sharp }) => {
+                    sharp(srcPath).resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-512.png')).catch(() => {});
+                    sharp(srcPath).resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-192.png')).catch(() => {});
+                    sharp(srcPath).resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/apple-touch-icon.png')).catch(() => {});
+                  }).catch(() => {});
+                }
+              } catch (e) {
+                console.warn('[ViteAppLogo] Sync error:', e);
+              }
+            }
             saveDevBranding(devAppLogoUrl, undefined);
             return sendJson(200, { success: true, appLogoUrl: devAppLogoUrl });
           }
@@ -539,7 +573,7 @@ function apiDevServerPlugin(): Plugin {
             saveDevBranding('', undefined);
             return sendJson(200, { success: true, appLogoUrl: '', message: 'लोगो सर्वर व स्टोरेज से स्थायी रूप से हटा दिया गया है।' });
           }
-          return sendJson(200, { success: true, appLogoUrl: devAppLogoUrl });
+          return sendJson(200, { success: true, appLogoUrl: devAppLogoUrl || '/logo.png' });
         }
 
         // Dynamic certificate seal endpoint

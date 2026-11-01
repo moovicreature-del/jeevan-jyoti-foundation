@@ -271,6 +271,11 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     activeLogoUrl = '';
   }
 
+  // Default to official authentic logo /logo.png if no custom logo is active
+  if (!activeLogoUrl && !isPermanentlyDeleted) {
+    activeLogoUrl = '/logo.png';
+  }
+
   // Clear delete flag whenever a valid active logo exists
   if (activeLogoUrl && typeof window !== 'undefined' && isPermanentlyDeleted) {
     localStorage.removeItem('jjf_logo_permanently_deleted');
@@ -286,8 +291,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
   const finalOpacity = watermark ? (opacity ?? 0.12) : (opacity ?? 1);
 
-  // If forceVector is requested, or if activeLogoUrl is empty, or fallbackStage >= 2, render the pure SVG directly
-  if (forceVector || fallbackStage >= 2 || !activeLogoUrl) {
+  // If forceVector is explicitly requested, or fallback exceeds image stages, render inline SVG emblem
+  if (forceVector || fallbackStage >= 4 || (!activeLogoUrl && isPermanentlyDeleted)) {
     return (
       <OfficialVectorEmblem
         id={id || 'jjf-official-brand-logo'}
@@ -301,12 +306,20 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     );
   }
 
-  // Calculate current image source based on fallbackStage
+  // Calculate current image source based on fallbackStage:
+  // 0: Preferred active URL (cache-busted)
+  // 1: Direct active URL without cache-busting
+  // 2: Authentic official /logo.png
+  // 3: Authentic /logo.svg
   let currentSrc = '';
   if (fallbackStage === 0) {
     currentSrc = getCacheBustedImageUrl(activeLogoUrl);
   } else if (fallbackStage === 1) {
     currentSrc = activeLogoUrl;
+  } else if (fallbackStage === 2) {
+    currentSrc = '/logo.png';
+  } else if (fallbackStage === 3) {
+    currentSrc = '/logo.svg';
   }
 
   const handleImageError = () => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, Award, ShieldCheck, Menu, X, Phone, Globe, QrCode, Lock, Smartphone, Download, HardDrive, Users, UserPlus, ChevronDown, MessageSquare, Facebook } from 'lucide-react';
+import { Heart, Award, ShieldCheck, Menu, X, Phone, Globe, QrCode, Lock, Smartphone, Download, HardDrive, Users, UserPlus, ChevronDown, MessageSquare, Facebook, Crown } from 'lucide-react';
 import { FOUNDATION_INFO } from '../data/foundationData';
 import { useLanguage } from '../context/LanguageContext';
 import { BrandLogo } from './common/BrandLogo';
@@ -11,9 +11,10 @@ interface Props {
   onOpenAdmin?: () => void;
   onOpenGoogleDrive?: () => void;
   onOpenStaff?: (tab?: 'options' | 'registration' | 'download') => void;
+  onOpenMembership?: (tab?: 'plans' | 'payment' | 'download') => void;
 }
 
-export const Navbar: React.FC<Props> = ({ onOpenDonate, onOpenReport, onOpenAdmin, onOpenGoogleDrive, onOpenStaff }) => {
+export const Navbar: React.FC<Props> = ({ onOpenDonate, onOpenReport, onOpenAdmin, onOpenGoogleDrive, onOpenStaff, onOpenMembership }) => {
   const { language, setLanguage, isHindi, t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -57,6 +58,16 @@ export const Navbar: React.FC<Props> = ({ onOpenDonate, onOpenReport, onOpenAdmi
           <a href="#pillars" className="hover:text-[#8B0000] transition-colors">
             {t('nav.pillars', 'सेवा क्षेत्र', 'Pillars')}
           </a>
+
+          <button
+            onClick={() => onOpenMembership ? onOpenMembership('plans') : window.dispatchEvent(new CustomEvent('open-membership-modal', { detail: { tab: 'plans' } }))}
+            className="hover:text-[#8B0000] transition-all flex items-center gap-1.5 text-amber-950 bg-gradient-to-r from-amber-200 via-amber-300 to-yellow-200 hover:from-amber-300 hover:to-yellow-300 px-3 py-1 rounded-xl border border-amber-400 font-black shadow-xs hover:scale-105 cursor-pointer ring-1 ring-amber-400/50"
+            title={isHindi ? "संस्था सदस्यता (आजीवन, संरक्षक, कार्यकारिणी, वार्षिक एवं युवा सदस्यता)" : "NGO Membership"}
+          >
+            <Crown className="w-4 h-4 text-amber-900 fill-amber-500" />
+            <span>{isHindi ? 'सदस्यता' : 'Membership'}</span>
+          </button>
+
           <a href="#official-forms" className="hover:text-[#8B0000] transition-colors flex items-center gap-1 text-green-900 bg-green-100/90 px-2.5 py-1 rounded-xl border border-green-300">
             <span>📝</span>
             <span>{isHindi ? '5 फॉर्म' : '5 Forms'}</span>
@@ -224,6 +235,49 @@ export const Navbar: React.FC<Props> = ({ onOpenDonate, onOpenReport, onOpenAdmi
                 <div>
                   <div className="text-xs font-black text-gray-900">2. स्टाफ आई-कार्ड डाउनलोड</div>
                   <div className="text-[11px] text-gray-500 font-medium">स्टाइलिश कार्ड खोजें व डाउनलोड करें (हिन्दी/Eng)</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Prominent Mobile Membership Section */}
+          <div className="p-3 bg-gradient-to-r from-blue-900 via-indigo-950 to-blue-950 text-white rounded-2xl border-2 border-amber-400 space-y-2 shadow-md">
+            <div className="text-xs font-black text-amber-300 uppercase tracking-wider flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Crown className="w-4 h-4 text-amber-400 fill-amber-400" />
+                <span>संस्था सदस्यता (NGO Membership)</span>
+              </span>
+              <span className="text-[10px] bg-amber-400 text-blue-950 font-black px-2 py-0.5 rounded-full font-mono">5 योजनाएं</span>
+            </div>
+            <div className="grid grid-cols-1 gap-2 pt-0.5">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenMembership ? onOpenMembership('plans') : window.dispatchEvent(new CustomEvent('open-membership-modal', { detail: { tab: 'plans' } }));
+                }}
+                className="w-full text-left p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 flex items-center gap-3 text-xs font-bold text-white cursor-pointer shadow-xs transition-transform active:scale-98"
+              >
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-300 text-blue-950 flex items-center justify-center shrink-0 shadow-xs font-black">
+                  <Crown className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-black text-amber-300">1. सदस्यता योजनाएं व आवेदन</div>
+                  <div className="text-[11px] text-blue-200 font-medium">आजीवन, संरक्षक, कार्यकारिणी, वार्षिक व युवा</div>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenMembership ? onOpenMembership('download') : window.dispatchEvent(new CustomEvent('open-membership-modal', { detail: { tab: 'download' } }));
+                }}
+                className="w-full text-left p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 flex items-center gap-3 text-xs font-bold text-white cursor-pointer shadow-xs transition-transform active:scale-98"
+              >
+                <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Award className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-black text-white">2. प्रमाण पत्र डाउनलोड करें</div>
+                  <div className="text-[11px] text-emerald-200 font-medium">मोबाइल नंबर दर्ज कर लेटरहेड प्रमाण पत्र पाएं</div>
                 </div>
               </button>
             </div>

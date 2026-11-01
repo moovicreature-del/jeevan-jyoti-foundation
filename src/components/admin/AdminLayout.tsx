@@ -34,6 +34,7 @@ import { TabCertificatePipelineDashboard } from './TabCertificatePipelineDashboa
 import { TabStaffApprovalManager } from './TabStaffApprovalManager';
 import { TabSecuritySettings } from './TabSecuritySettings';
 import { TabBotNotifications } from './TabBotNotifications';
+import { TabMembershipManager } from './TabMembershipManager';
 import { Receipt, CreditCard, Award, Database, Download, KeyRound, Bot } from 'lucide-react';
 import { AdminUploadProgressProvider } from '../../context/AdminUploadProgressContext';
 import { AdminUploadProgressBar } from './AdminUploadProgressBar';
@@ -41,8 +42,9 @@ import { BrandLogo } from '../common/BrandLogo';
 import { DataBackupModal } from './DataBackupModal';
 import { getAllStaffMembers } from '../../services/staffService';
 import { getAllVolunteers } from '../../services/volunteerService';
+import { getPendingMembershipRecords } from '../../services/membershipService';
 
-export type AdminTabType = 'dashboard' | 'certificates' | 'staff_approval' | 'donations' | 'payment' | 'media' | 'notice' | 'text' | 'users' | 'security' | 'bot_notifications';
+export type AdminTabType = 'dashboard' | 'membership' | 'certificates' | 'staff_approval' | 'donations' | 'payment' | 'media' | 'notice' | 'text' | 'users' | 'security' | 'bot_notifications';
 
 interface AdminLayoutProps {
   onBackToWebsite: () => void;
@@ -55,6 +57,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ onBackToWebsite, onOpe
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
+  const [pendingMembershipCount, setPendingMembershipCount] = useState<number>(0);
 
   useEffect(() => {
     const updatePendingCount = () => {
@@ -64,17 +67,23 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ onBackToWebsite, onOpe
         const volunteers = getAllVolunteers();
         const pendingVolunteers = volunteers.filter((v) => v.approvalStatus === 'pending').length;
         setPendingApprovalsCount(pendingStaff + pendingVolunteers);
+
+        const pendingMembers = getPendingMembershipRecords();
+        setPendingMembershipCount(pendingMembers.length);
       } catch {
         setPendingApprovalsCount(0);
+        setPendingMembershipCount(0);
       }
     };
 
     updatePendingCount();
     window.addEventListener('jjf-staff-updated', updatePendingCount);
     window.addEventListener('jjf-volunteer-updated', updatePendingCount);
+    window.addEventListener('jjf-membership-updated', updatePendingCount);
     return () => {
       window.removeEventListener('jjf-staff-updated', updatePendingCount);
       window.removeEventListener('jjf-volunteer-updated', updatePendingCount);
+      window.removeEventListener('jjf-membership-updated', updatePendingCount);
     };
   }, []);
 
@@ -86,6 +95,14 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ onBackToWebsite, onOpe
       sublabel: 'मुख्य अवलोकन',
       icon: LayoutDashboard,
       superAdminOnly: false
+    },
+    {
+      id: 'membership' as AdminTabType,
+      label: 'संस्था सदस्यता (NGO Membership)',
+      sublabel: 'आवेदन समीक्षा, UTR व लेटरहेड प्रमाण पत्र',
+      icon: Crown,
+      superAdminOnly: false,
+      badge: pendingMembershipCount > 0 ? `${pendingMembershipCount} नया` : 'Membership'
     },
     {
       id: 'staff_approval' as AdminTabType,
@@ -424,6 +441,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ onBackToWebsite, onOpe
               onOpenBackupModal={() => setIsBackupModalOpen(true)}
             />
           )}
+          {activeTab === 'membership' && <TabMembershipManager />}
           {activeTab === 'certificates' && (
             <TabCertificatePipelineDashboard
               onOpenVerificationPortal={onOpenVerificationPortal}

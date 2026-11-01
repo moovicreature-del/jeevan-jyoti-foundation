@@ -33,7 +33,8 @@ import {
   Cloud,
   Info,
   MessageSquare,
-  Lock
+  Lock,
+  Crown
 } from 'lucide-react';
 import {
   RegisteredCertificateItem,
@@ -703,6 +704,9 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
           address: staffMember?.address || item.address || 'ग्राम तुर्की, पोस्ट तुर्की, प्रखंड कुदरा, अनुमंडल मोहनिया, जिला कैमूर, बिहार - 821108'
         }
       });
+    } else if (item.type === 'membership_cert') {
+      window.dispatchEvent(new CustomEvent('open-membership-modal', { detail: { tab: 'download', phone: item.phone } }));
+      onClose();
     }
   };
 
@@ -918,11 +922,18 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
           icon: <Sparkles className="w-3.5 h-3.5" />,
           color: 'bg-orange-100 text-orange-800 border-orange-200'
         };
+      case 'membership_cert':
+        return {
+          label: 'संस्था सदस्यता प्रमाण पत्र',
+          icon: <Crown className="w-3.5 h-3.5" />,
+          color: 'bg-amber-100 text-amber-900 border-amber-300'
+        };
     }
   };
 
   const filterTabs = [
     { key: 'all', label: 'सभी दस्तावेज़ (All)', count: certificates.length },
+    { key: 'membership_cert', label: '👑 सदस्यता प्रमाण पत्र', count: certificates.filter((c) => c.type === 'membership_cert').length },
     { key: 'volunteer_cert', label: '🎖️ स्वयंसेवक प्रमाण पत्र', count: certificates.filter(isVolCertDoc).length },
     { key: 'volunteer_id', label: '🪪 स्वयंसेवक ID कार्ड', count: certificates.filter(isVolIdDoc).length },
     { key: 'staff_id', label: '👔 स्टाफ ID कार्ड', count: certificates.filter(isStaffIdDoc).length },

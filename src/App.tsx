@@ -61,10 +61,16 @@ import { DownloadCertificatesModal } from './components/DownloadCertificatesModa
 import { QuickDonateOverlay } from './components/donation/QuickDonateOverlay';
 import { GoogleDriveHubModal } from './components/drive/GoogleDriveHubModal';
 import { StaffHubModal } from './components/staff/StaffHubModal';
+import { NgoMembershipModal } from './components/membership/NgoMembershipModal';
 
 export function App() {
   const { isLoading: isFirestoreLoading } = useHomeContent();
   const [verifyRouteId, setVerifyRouteId] = useState<string | null>(null);
+
+  // NGO Membership Portal state
+  const [showMembershipModal, setShowMembershipModal] = useState<boolean>(false);
+  const [membershipModalTab, setMembershipModalTab] = useState<'plans' | 'payment' | 'download'>('plans');
+  const [membershipModalPhone, setMembershipModalPhone] = useState<string>('');
 
   // Modals state
   const [selectedVolunteer, setSelectedVolunteer] = useState<Volunteer | null>(null);
@@ -197,9 +203,22 @@ export function App() {
       setShowStaffModal(true);
     };
 
+    const handleOpenMembershipModal = (e: any) => {
+      const tab = e?.detail?.tab || 'plans';
+      const phone = e?.detail?.phone || '';
+      if (tab === 'download' || tab === 'payment') {
+        setMembershipModalTab(tab);
+      } else {
+        setMembershipModalTab('plans');
+      }
+      if (phone) setMembershipModalPhone(phone);
+      setShowMembershipModal(true);
+    };
+
     window.addEventListener('open-staff-modal', handleOpenStaffEvent);
     window.addEventListener('open-staff-registration', handleOpenStaffReg);
     window.addEventListener('open-staff-id-card', handleOpenStaffCard);
+    window.addEventListener('open-membership-modal', handleOpenMembershipModal);
 
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
@@ -211,6 +230,22 @@ export function App() {
         urlParams.get('receipt_no');
       if (verifyParam) {
         setVerifyRouteId(verifyParam);
+      }
+
+      // Check for direct membership URL
+      const membershipParam = urlParams.get('membership') || urlParams.get('member');
+      if (membershipParam || window.location.hash === '#membership') {
+        const tab = urlParams.get('membershipTab') || urlParams.get('memberTab') || urlParams.get('tab');
+        if (tab === 'download' || tab === 'payment') {
+          setMembershipModalTab(tab);
+        } else {
+          setMembershipModalTab('plans');
+        }
+        const phone = urlParams.get('phone') || urlParams.get('mobile');
+        if (phone) {
+          setMembershipModalPhone(phone);
+        }
+        setShowMembershipModal(true);
       }
 
       // Check for direct download link (e.g. from approval SMS or WhatsApp)
@@ -273,6 +308,7 @@ export function App() {
       window.removeEventListener('open-staff-modal', handleOpenStaffEvent);
       window.removeEventListener('open-staff-registration', handleOpenStaffReg);
       window.removeEventListener('open-staff-id-card', handleOpenStaffCard);
+      window.removeEventListener('open-membership-modal', handleOpenMembershipModal);
       window.removeEventListener('open-firebase-phone-auth', handleOpenFirebasePhone);
       window.removeEventListener('open-firebase-phone-modal', handleOpenFirebasePhone);
       window.removeEventListener('open-whatsapp-otp', handleOpenWhatsAppOtp);
@@ -334,6 +370,10 @@ export function App() {
           setStaffModalTab(tab || 'options');
           setShowStaffModal(true);
         }}
+        onOpenMembership={(tab) => {
+          setMembershipModalTab(tab || 'plans');
+          setShowMembershipModal(true);
+        }}
       />
 
       {/* Main Content Sections */}
@@ -370,6 +410,10 @@ export function App() {
           onOpenStaff={(tab) => {
             setStaffModalTab(tab || 'options');
             setShowStaffModal(true);
+          }}
+          onOpenMembership={(tab) => {
+            setMembershipModalTab(tab || 'plans');
+            setShowMembershipModal(true);
           }}
         />
 
@@ -717,6 +761,16 @@ export function App() {
                 setShowStaffModal(false);
                 setUrlStaffId(null);
               }}
+            />
+          )}
+
+          {/* 15. NGO Membership Portal (5 Plans, Payment Gateway, UTR Verification & Letterhead Certificate) */}
+          {showMembershipModal && (
+            <NgoMembershipModal
+              isOpen={showMembershipModal}
+              initialTab={membershipModalTab}
+              initialPhone={membershipModalPhone}
+              onClose={() => setShowMembershipModal(false)}
             />
           )}
       </ErrorBoundary>

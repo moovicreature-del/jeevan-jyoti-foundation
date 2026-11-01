@@ -1,6 +1,6 @@
 {
-  "appLogoUrl": "",
-  "appThumbnailUrl": "",
-  "certificateSealUrl": "",
-  "updatedAt": "2026-10-30T08:56:21.511Z"
+  "appLogoUrl": "/logo.png",
+  "appThumbnailUrl": "/pwa-icon-512.png",
+  "certificateSealUrl": "/uploads/official_seal.png",
+  "updatedAt": "2026-11-01T07:15:00.000Z"
 }

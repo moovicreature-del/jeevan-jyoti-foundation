@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, UserCheck, ShieldCheck, Download, Award, FileText, Sparkles, QrCode, Zap, HardDrive, Users } from 'lucide-react';
+import { Heart, UserCheck, ShieldCheck, Download, Award, FileText, Sparkles, QrCode, Zap, HardDrive, Users, Crown } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 interface ActionCenterProps {
@@ -16,6 +16,7 @@ interface ActionCenterProps {
   onOpenDownloadCertificates?: () => void;
   onOpenGoogleDrive?: () => void;
   onOpenStaff?: (tab?: 'options' | 'registration' | 'download') => void;
+  onOpenMembership?: (tab?: 'plans' | 'payment' | 'download') => void;
 }
 
 export const ActionCenter: React.FC<ActionCenterProps> = ({
@@ -29,7 +30,8 @@ export const ActionCenter: React.FC<ActionCenterProps> = ({
   onOpenFestivalPortal,
   onOpenDownloadCertificates,
   onOpenGoogleDrive,
-  onOpenStaff
+  onOpenStaff,
+  onOpenMembership
 }) => {
   const { t, isHindi } = useLanguage();
 
@@ -103,6 +105,24 @@ export const ActionCenter: React.FC<ActionCenterProps> = ({
             </span>
             <span className="text-[9px] text-yellow-300 font-extrabold mt-0.5 bg-black/40 px-1.5 py-0.5 rounded-full border border-yellow-400/40">
               {t('action.staff_sub', 'रजिस्ट्रेशन व आई-कार्ड', 'Registration & ID')}
+            </span>
+          </button>
+
+          {/* 4. NGO Membership Portal (High Prominence) */}
+          <button
+            onClick={() => onOpenMembership ? onOpenMembership('plans') : window.dispatchEvent(new CustomEvent('open-membership-modal', { detail: { tab: 'plans' } }))}
+            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-gradient-to-b from-blue-900 via-indigo-950 to-slate-950 text-amber-300 hover:brightness-110 font-bold text-xs shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-1 cursor-pointer group text-center border-2 border-amber-400 relative overflow-hidden ring-2 ring-amber-400/60"
+            title={isHindi ? "संस्था सदस्यता योजनाएं, ऑनलाइन आवेदन, भुगतान व लेटरहेड प्रमाण पत्र" : "NGO Membership Portal"}
+          >
+            <div className="absolute -top-6 -right-6 w-12 h-12 bg-amber-400/20 rounded-full blur-xs" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-300 text-blue-950 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform shadow-md font-black">
+              <Crown className="w-5 h-5 text-blue-950 fill-blue-950" />
+            </div>
+            <span className="font-black text-white text-[11px] sm:text-xs leading-tight">
+              {isHindi ? 'संस्था सदस्यता' : 'NGO Membership'}
+            </span>
+            <span className="text-[9px] text-amber-300 font-extrabold mt-0.5 bg-black/40 px-1.5 py-0.5 rounded-full border border-amber-400/40">
+              5 प्लान व प्रमाण पत्र
             </span>
           </button>
 

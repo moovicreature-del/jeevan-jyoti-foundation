@@ -56,7 +56,7 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
               parsed.appLogoUrl = customLogo;
               localStorage.removeItem('jjf_logo_permanently_deleted');
             } else {
-              parsed.appLogoUrl = '';
+              parsed.appLogoUrl = isLogoDeleted ? '' : '/logo.png';
             }
           }
 
@@ -72,7 +72,7 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
               parsed.appThumbnailUrl = customThumb;
               localStorage.removeItem('jjf_thumb_permanently_deleted');
             } else {
-              parsed.appThumbnailUrl = '';
+              parsed.appThumbnailUrl = isThumbDeleted ? '' : '/pwa-icon-512.png';
             }
           }
           if (parsed.certificateSealUrl && !parsed.certificateSealUrl.includes('old') && !parsed.certificateSealUrl.includes('76347e15')) {
@@ -128,10 +128,10 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
         }
         const customLogo = localStorage.getItem('jjf_custom_logo') || '';
         const isLogoDeleted = localStorage.getItem('jjf_logo_permanently_deleted') === 'true';
-        const validLogo = !isLogoDeleted && customLogo && !customLogo.includes('ngo_logo.png') && !customLogo.includes('1791445209912') && !customLogo.includes('1791445272050') ? customLogo.trim() : '';
+        const validLogo = !isLogoDeleted && customLogo && !customLogo.includes('ngo_logo.png') && !customLogo.includes('1791445209912') && !customLogo.includes('1791445272050') ? customLogo.trim() : (isLogoDeleted ? '' : '/logo.png');
         const customThumb = localStorage.getItem('jjf_custom_thumbnail') || '';
         const isThumbDeleted = localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
-        const validThumb = !isThumbDeleted && customThumb && customThumb !== '/pwa-icon-512.png' && !customThumb.includes('ngo_logo.png') && !customThumb.includes('1791445209912') && !customThumb.includes('1791445272050') ? customThumb.trim() : '';
+        const validThumb = !isThumbDeleted && customThumb && !customThumb.includes('ngo_logo.png') && !customThumb.includes('1791445209912') && !customThumb.includes('1791445272050') && customThumb.trim() ? customThumb.trim() : (isThumbDeleted ? '' : '/pwa-icon-512.png');
         const customSealStored = localStorage.getItem('jjf_custom_certificate_seal');
         const isSealDeleted = localStorage.getItem('jjf_seal_permanently_deleted') === 'true';
         const validSeal = !isSealDeleted && customSealStored && !customSealStored.includes('old') && !customSealStored.includes('76347e15') ? customSealStored.trim() : '';

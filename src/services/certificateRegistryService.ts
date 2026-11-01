@@ -11,7 +11,8 @@ export type CertificateCategoryType =
   | 'staff_id'
   | 'donation_80g'
   | 'task_appreciation'
-  | 'festival_greeting';
+  | 'festival_greeting'
+  | 'membership_cert';
 
 export type CertificateApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
@@ -1073,6 +1074,7 @@ export interface MonthlyIssuanceData {
   donation_80g: number;
   task_appreciation: number;
   festival_greeting: number;
+  membership_cert?: number;
   amount80G: number;
 }
 
@@ -1086,6 +1088,7 @@ export interface YearlyIssuanceData {
   donation_80g: number;
   task_appreciation: number;
   festival_greeting: number;
+  membership_cert?: number;
 }
 
 export interface PipelineStageBreakdown {
@@ -1216,6 +1219,7 @@ export function computeCertificatePipelineStats(
       donation_80g: 0,
       task_appreciation: 0,
       festival_greeting: 0,
+      membership_cert: 0,
       amount80G: 0
     };
   });
@@ -1232,7 +1236,8 @@ export function computeCertificatePipelineStats(
       staff_id: 0,
       donation_80g: 0,
       task_appreciation: 0,
-      festival_greeting: 0
+      festival_greeting: 0,
+      membership_cert: 0
     };
   });
 
@@ -1240,13 +1245,14 @@ export function computeCertificatePipelineStats(
   let totalSelectedYear = 0;
   let totalSelectedMonth = 0;
 
-  const categoryCounts = {
+  const categoryCounts: Record<CertificateCategoryType, number> = {
     volunteer_cert: 0,
     volunteer_id: 0,
     staff_id: 0,
     donation_80g: 0,
     task_appreciation: 0,
-    festival_greeting: 0
+    festival_greeting: 0,
+    membership_cert: 0
   };
 
   const statusCounts: Record<string, number> = {
@@ -1272,20 +1278,23 @@ export function computeCertificatePipelineStats(
         staff_id: 0,
         donation_80g: 0,
         task_appreciation: 0,
-        festival_greeting: 0
+        festival_greeting: 0,
+        membership_cert: 0
       };
     }
     yearlyBuckets[year].total += 1;
-    if (yearlyBuckets[year][itemType] !== undefined) {
-      yearlyBuckets[year][itemType] += 1;
+    const yBucket = yearlyBuckets[year] as any;
+    if (yBucket[itemType] !== undefined) {
+      yBucket[itemType] += 1;
     }
 
     // Monthly tracking (if matches selected year or if all years)
     if (year === yearNum || selectedYear === 'all') {
       if (monthlyBuckets[month]) {
         monthlyBuckets[month].total += 1;
-        if (monthlyBuckets[month][itemType] !== undefined) {
-          monthlyBuckets[month][itemType] += 1;
+        const mBucket = monthlyBuckets[month] as any;
+        if (mBucket[itemType] !== undefined) {
+          mBucket[itemType] += 1;
         }
         if (item.amount) {
           monthlyBuckets[month].amount80G += item.amount;
