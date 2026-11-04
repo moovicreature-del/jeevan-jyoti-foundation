@@ -31,6 +31,7 @@ import { exportElementAsPdf, exportElementAsJpg, directPrintElement } from '../.
 import { BrandLogo } from '../common/BrandLogo';
 import { RoyalCertificateSeal } from '../common/RoyalCertificateSeal';
 import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
+import { OFFICIAL_PHOTO_CROSS_STAMP_BASE64 } from '../../data/officialPhotoStampData';
 import toast from 'react-hot-toast';
 
 export interface MembershipLetterheadCertificateProps {
@@ -49,7 +50,10 @@ export const MembershipLetterheadCertificate: React.FC<MembershipLetterheadCerti
   onClose
 }) => {
   const certificateRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [isExporting, setIsExporting] = useState<string | null>(null);
+  const [letterheadMode, setLetterheadMode] = useState<'full' | 'stationery'>(
+    hideLetterheadBackground ? 'stationery' : 'full'
+  );
 
   const certNumber =
     member.certificateNumber ||
@@ -84,16 +88,30 @@ export const MembershipLetterheadCertificate: React.FC<MembershipLetterheadCerti
       toast.error('प्रमाण पत्र एलिमेंट नहीं मिला।');
       return;
     }
-    setIsExporting(true);
+    setIsExporting('pdf');
     const toastId = toast.loading('उच्च-गुणवत्ता A4 लेटरहेड प्रमाण पत्र PDF तैयार हो रहा है...');
     try {
-      await exportElementAsPdf(elem, `JJF_Membership_Certificate_${member.id.replace(/[^a-zA-Z0-9]/g, '_')}`);
-      toast.success('प्रमाण पत्र PDF सफलतापूर्वक डाउनलोड हो गया!', { id: toastId });
+      const highResScale = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5;
+      const success = await exportElementAsPdf(
+        elem,
+        `JJF_Membership_Certificate_${member.id.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        {
+          orientation: 'portrait',
+          pixelRatio: highResScale,
+          backgroundColor: '#FFFFFF',
+          isFullBleedA4: true
+        }
+      );
+      if (success) {
+        toast.success('आधिकारिक A4 प्रमाण पत्र PDF सफलतापूर्वक डाउनलोड हो गया!', { id: toastId });
+      } else {
+        throw new Error('PDF Export returned false');
+      }
     } catch (err) {
       console.error(err);
       toast.error('PDF डाउनलोड में त्रुटि आई। कृपया प्रिंट विकल्प का प्रयोग करें।', { id: toastId });
     } finally {
-      setIsExporting(false);
+      setIsExporting(null);
     }
   };
 
@@ -104,16 +122,31 @@ export const MembershipLetterheadCertificate: React.FC<MembershipLetterheadCerti
       toast.error('प्रमाण पत्र एलिमेंट नहीं मिला।');
       return;
     }
-    setIsExporting(true);
-    const toastId = toast.loading('प्रमाण पत्र इमेज तैयार हो रही है...');
+    setIsExporting('jpg');
+    const toastId = toast.loading('प्रमाण पत्र A4 छवि तैयार हो रही है...');
     try {
-      await exportElementAsJpg(elem, `JJF_Membership_Certificate_${member.id.replace(/[^a-zA-Z0-9]/g, '_')}`);
-      toast.success('प्रमाण पत्र इमेज सफलतापूर्वक डाउनलोड हो गई!', { id: toastId });
+      const highResScale = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5;
+      const success = await exportElementAsJpg(
+        elem,
+        `JJF_Membership_Certificate_${member.id.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        {
+          orientation: 'portrait',
+          pixelRatio: highResScale,
+          quality: 0.98,
+          backgroundColor: '#FFFFFF',
+          isFullBleedA4: true
+        }
+      );
+      if (success) {
+        toast.success('प्रमाण पत्र छवि (A4 Portrait) सफलतापूर्वक डाउनलोड हो गई!', { id: toastId });
+      } else {
+        throw new Error('JPG Export returned false');
+      }
     } catch (err) {
       console.error(err);
       toast.error('इमेज डाउनलोड में त्रुटि आई।', { id: toastId });
     } finally {
-      setIsExporting(false);
+      setIsExporting(null);
     }
   };
 
@@ -124,7 +157,8 @@ export const MembershipLetterheadCertificate: React.FC<MembershipLetterheadCerti
 
   // Handle WhatsApp Share
   const handleShareWhatsApp = () => {
-    const text = `🎗️ *जीवन ज्योति फाउंडेशन ग़ाज़ीपुर - आधिकारिक सदस्यता प्रमाण पत्र*\n\n` +
+    const text =
+      `🎗️ *जीवन ज्योति फाउंडेशन ग़ाज़ीपुर - आधिकारिक सदस्यता प्रमाण पत्र*\n\n` +
       `👤 *सदस्य का नाम:* ${member.fullName}\n` +
       `🆔 *सदस्यता क्रमांक:* ${member.id}\n` +
       `🎖️ *सदस्यता श्रेणी:* ${member.planNameHindi}\n` +
@@ -139,7 +173,7 @@ export const MembershipLetterheadCertificate: React.FC<MembershipLetterheadCerti
       {/* Action Toolbar for downloading, printing & sharing */}
       <div className="w-full max-w-[794px] flex items-center justify-between gap-2 p-3 bg-gradient-to-r from-amber-100 via-orange-50 to-amber-100 rounded-2xl border-2 border-amber-300 shadow-md mb-4 flex-wrap print:hidden">
         <div className="flex items-center gap-2">
-          <span className="w-8 h-8 rounded-xl bg-[#8B0000] text-white flex items-center justify-center font-bold">
+          <span className="w-8 h-8 rounded-xl bg-[#8B0000] text-white flex items-center justify-center font-bold shadow-xs">
             <Award className="w-4 h-4" />
           </span>
           <div>
@@ -148,37 +182,65 @@ export const MembershipLetterheadCertificate: React.FC<MembershipLetterheadCerti
           </div>
         </div>
 
+        {/* Middle: Letterhead Print Mode Toggle */}
+        <div className="flex items-center bg-white/80 p-0.5 rounded-xl border border-amber-300 text-xs shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setLetterheadMode('full')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+              letterheadMode === 'full'
+                ? 'bg-amber-500 text-slate-950 shadow-xs'
+                : 'text-amber-900 hover:text-slate-950'
+            }`}
+            title="पूरा आधिकारिक लेटरहेड (डिजिटल A4 व सामान्य प्रिंट हेतु)"
+          >
+            🎨 पूरा लेटरहेड
+          </button>
+          <button
+            type="button"
+            onClick={() => setLetterheadMode('stationery')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+              letterheadMode === 'stationery'
+                ? 'bg-amber-500 text-slate-950 shadow-xs'
+                : 'text-amber-900 hover:text-slate-950'
+            }`}
+            title="केवल मैटर प्रिंट करें (संस्था के छपे हुए लेटरहेड पेपर हेतु)"
+          >
+            📄 केवल मैटर
+          </button>
+        </div>
+
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={handleDownloadPdf}
-            disabled={isExporting}
+            disabled={isExporting !== null}
             className="px-3 py-1.5 bg-[#8B0000] hover:bg-[#6b0000] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            title="A4 PDF डाउनलोड करें"
+            title="A4 300 DPI PDF डाउनलोड करें"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>PDF डाउनलोड</span>
+            <span>{isExporting === 'pdf' ? 'PDF बन रहा...' : 'A4 PDF डाउनलोड'}</span>
           </button>
 
           <button
             type="button"
             onClick={handleDownloadJpg}
-            disabled={isExporting}
+            disabled={isExporting !== null}
             className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            title="PNG/JPG इमेज डाउनलोड करें"
+            title="A4 JPG इमेज डाउनलोड करें"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>इमेज सेव</span>
+            <span>{isExporting === 'jpg' ? 'इमेज बन रही...' : 'A4 JPG'}</span>
           </button>
 
           <button
             type="button"
             onClick={handlePrint}
             className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-            title="प्रिंट करें"
+            title="सीधा A4 प्रिंट निकालें"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>प्रिंट</span>
+            <span>प्रिंट (Print)</span>
           </button>
 
           <button
@@ -204,15 +266,20 @@ export const MembershipLetterheadCertificate: React.FC<MembershipLetterheadCerti
       </div>
 
       {/* The Printable A4 300 DPI Document */}
-      <div className="overflow-x-auto w-full flex justify-center py-2 bg-slate-100 rounded-2xl shadow-inner border border-slate-300">
-        <OfficialLetterheadA4
-          id={id}
-          refNo={refNo}
-          dateStr={issueDateFormatted}
-          subject={subject}
-          hideLetterheadBackground={hideLetterheadBackground}
-          className={`membership-certificate-document shadow-2xl ${className}`}
+      <div className="w-full overflow-x-auto py-2 flex justify-center bg-slate-200/90 rounded-2xl p-2 sm:p-4 border border-slate-300">
+        <div
+          ref={certificateRef}
+          className="w-[794px] min-w-[794px] max-w-[794px] mx-auto bg-white shadow-2xl shrink-0"
+          style={{ width: '794px', minWidth: '794px', maxWidth: '794px' }}
         >
+          <OfficialLetterheadA4
+            id={id}
+            refNo={refNo}
+            dateStr={issueDateFormatted}
+            subject={subject}
+            hideLetterheadBackground={letterheadMode === 'stationery'}
+            className={`membership-certificate-document shadow-none ${className}`}
+          >
           {/* Certificate Inner Content Canvas */}
           <div className="relative w-full h-full pt-1 pb-2 flex flex-col justify-between text-slate-900 font-sans leading-relaxed">
             
@@ -232,18 +299,61 @@ export const MembershipLetterheadCertificate: React.FC<MembershipLetterheadCerti
 
             {/* 2. MEMBER PROFILE CARD WITH PHOTO & QR CODE */}
             <div className="p-3 bg-gradient-to-r from-amber-50/90 via-orange-50/70 to-amber-50/90 rounded-2xl border-2 border-amber-300 shadow-sm flex items-center justify-between gap-4">
-              {/* Member Photo in Royal Gold Frame */}
+              {/* Member Photo in Royal Gold Frame with Official NGO Attestation Stamp Overlay */}
               <div className="relative shrink-0 flex flex-col items-center">
-                <div className="w-[88px] h-[104px] rounded-xl overflow-hidden p-1 bg-gradient-to-br from-amber-300 via-yellow-100 to-amber-500 border-2 border-amber-600 shadow-md">
-                  <img
-                    src={getOptimizedImageUrl(photoSrc)}
-                    alt={member.fullName}
-                    className="w-full h-full object-cover object-top rounded-lg"
-                    crossOrigin="anonymous"
-                  />
+                <div className="relative w-[88px] h-[104px] overflow-visible">
+                  {/* Photo Gold Frame */}
+                  <div className="w-full h-full rounded-xl overflow-hidden p-1 bg-gradient-to-br from-amber-300 via-yellow-100 to-amber-500 border-2 border-amber-600 shadow-md">
+                    <img
+                      src={getOptimizedImageUrl(photoSrc)}
+                      alt={member.fullName}
+                      className="w-full h-full object-cover object-top rounded-lg bg-gray-100"
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        const fallback = '/manager_secretary.webp';
+                        if (e.currentTarget.src !== fallback) {
+                          e.currentTarget.src = fallback;
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* Verified Check Badge on top-right */}
+                  <div
+                    className="absolute top-1 right-1 bg-emerald-600 text-white rounded-full p-0.5 shadow-md border border-white z-10"
+                    title="सत्यापित फोटो"
+                  >
+                    <Check className="w-2.5 h-2.5 stroke-[3]" />
+                  </div>
+
+                  {/* Digitally Attested Official NGO Cross Stamp Overlay across Photo */}
+                  <div
+                    className="absolute -bottom-3 -left-3.5 -right-3.5 pointer-events-none select-none z-20 flex items-center justify-center"
+                    style={{
+                      transform: 'rotate(-10deg)',
+                      transformOrigin: 'center center'
+                    }}
+                    title="संस्था की आधिकारिक मुहर (Official NGO Attestation Stamp)"
+                  >
+                    <img
+                      src={OFFICIAL_PHOTO_CROSS_STAMP_BASE64 || getOptimizedImageUrl('/assets/official-photo-cross-stamp.png')}
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        const fallback = getOptimizedImageUrl('/uploads/official_stamp.png');
+                        if (target.src !== fallback) {
+                          target.src = fallback;
+                        }
+                      }}
+                      alt="Official NGO Attestation Stamp"
+                      className="w-[108px] max-w-none h-auto max-h-12 object-contain filter contrast-160 brightness-95 mix-blend-multiply drop-shadow-[0_1px_2px_rgba(20,40,100,0.35)]"
+                      crossOrigin="anonymous"
+                    />
+                  </div>
                 </div>
-                <span className="text-[8px] font-black text-amber-900 bg-amber-200 border border-amber-400 px-1.5 py-0.5 rounded-full mt-1 shadow-2xs">
-                  सत्यापित सदस्य
+
+                <span className="text-[8px] font-black text-amber-900 bg-amber-200 border border-amber-400 px-2 py-0.5 rounded-full mt-2 shadow-2xs flex items-center gap-1">
+                  <ShieldCheck className="w-2.5 h-2.5 text-emerald-800" />
+                  <span>सत्यापित सदस्य</span>
                 </span>
               </div>
 
@@ -413,5 +523,6 @@ export const MembershipLetterheadCertificate: React.FC<MembershipLetterheadCerti
         </OfficialLetterheadA4>
       </div>
     </div>
+  </div>
   );
 };

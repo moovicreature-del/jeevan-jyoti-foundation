@@ -317,15 +317,31 @@ app.get('/api/app-logo', (_req, res) => {
 app.post('/api/app-logo', async (req, res) => {
   const { logoUrl } = req.body || {};
   serverAppLogoUrl = typeof logoUrl === 'string' ? logoUrl.trim() : '';
-  if (serverAppLogoUrl && serverAppLogoUrl.startsWith('/uploads/')) {
+  if (serverAppLogoUrl) {
     try {
-      const srcPath = path.join(UPLOADS_DIR, path.basename(serverAppLogoUrl.split('?')[0]));
-      if (fs.existsSync(srcPath)) {
-        fs.copyFileSync(srcPath, path.resolve(__dirname, 'public/logo.png'));
-        const { default: sharp } = await import('sharp');
-        await sharp(srcPath).resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-512.png'));
-        await sharp(srcPath).resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-192.png'));
-        await sharp(srcPath).resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/apple-touch-icon.png'));
+      if (serverAppLogoUrl.startsWith('/uploads/')) {
+        const srcPath = path.join(UPLOADS_DIR, path.basename(serverAppLogoUrl.split('?')[0]));
+        if (fs.existsSync(srcPath)) {
+          fs.copyFileSync(srcPath, path.resolve(__dirname, 'public/logo.png'));
+          const distLogo = path.resolve(__dirname, 'dist/logo.png');
+          if (fs.existsSync(path.dirname(distLogo))) fs.copyFileSync(srcPath, distLogo);
+          const { default: sharp } = await import('sharp');
+          await sharp(srcPath).resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-512.png')).catch(() => {});
+          await sharp(srcPath).resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-192.png')).catch(() => {});
+          await sharp(srcPath).resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/apple-touch-icon.png')).catch(() => {});
+        }
+      } else if (serverAppLogoUrl.startsWith('data:image/')) {
+        const base64Data = serverAppLogoUrl.split(';base64,').pop();
+        if (base64Data) {
+          const buf = Buffer.from(base64Data, 'base64');
+          fs.writeFileSync(path.resolve(__dirname, 'public/logo.png'), buf);
+          const distLogo = path.resolve(__dirname, 'dist/logo.png');
+          if (fs.existsSync(path.dirname(distLogo))) fs.writeFileSync(distLogo, buf);
+          const { default: sharp } = await import('sharp');
+          await sharp(buf).resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-512.png')).catch(() => {});
+          await sharp(buf).resize(192, 192, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/pwa-icon-192.png')).catch(() => {});
+          await sharp(buf).resize(180, 180, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toFile(path.resolve(__dirname, 'public/apple-touch-icon.png')).catch(() => {});
+        }
       }
     } catch (e) {
       console.warn('[ServerAppLogo] Sync error:', e);
@@ -415,6 +431,10 @@ app.post('/api/admin/sync-github-data', (req, res) => {
       ...existingJson,
       ...payload,
       homeContent: mergedHomeContent,
+      staffMembers: payload.staffMembers !== undefined ? payload.staffMembers : (existingJson.staffMembers || []),
+      volunteers: payload.volunteers !== undefined ? payload.volunteers : (existingJson.volunteers || []),
+      ngoMembers: payload.ngoMembers !== undefined ? payload.ngoMembers : (existingJson.ngoMembers || []),
+      certificates: payload.certificates !== undefined ? payload.certificates : (existingJson.certificates || []),
       syncedAt: new Date().toISOString(),
       version: '1.0.' + Math.floor(Date.now() / 1000)
     };
@@ -424,6 +444,54 @@ app.post('/api/admin/sync-github-data', (req, res) => {
     const distDataDir = path.join(__dirname, 'dist/data');
     if (fs.existsSync(distDataDir)) {
       fs.writeFileSync(path.join(distDataDir, 'synced_app_data.json'), JSON.stringify(syncedData, null, 2), 'utf-8');
+    }
+
+    // Physical logo synchronization to disk: replaces public/logo.png directly
+    const logoToSync = payload.customLogo || payload.homeContent?.appLogoUrl;
+    if (logoToSync && typeof logoToSync === 'string' && logoToSync.trim() && logoToSync !== '/logo.png' && !logoToSync.includes('ngo_logo')) {
+      try {
+        if (logoToSync.startsWith('data:image/')) {
+          const base64Data = logoToSync.split(';base64,').pop();
+          if (base64Data) {
+            const buf = Buffer.from(base64Data, 'base64');
+            fs.writeFileSync(path.resolve(__dirname, 'public/logo.png'), buf);
+            const distLogo = path.resolve(__dirname, 'dist/logo.png');
+            if (fs.existsSync(path.dirname(distLogo))) fs.writeFileSync(distLogo, buf);
+          }
+        } else if (logoToSync.startsWith('/uploads/')) {
+          const srcPath = path.join(UPLOADS_DIR, path.basename(logoToSync.split('?')[0]));
+          if (fs.existsSync(srcPath)) {
+            fs.copyFileSync(srcPath, path.resolve(__dirname, 'public/logo.png'));
+            const distLogo = path.resolve(__dirname, 'dist/logo.png');
+            if (fs.existsSync(path.dirname(distLogo))) fs.copyFileSync(srcPath, distLogo);
+          }
+        }
+      } catch (logoErr) {
+        console.warn('[ServerSyncGitHubLogo] Warning:', logoErr);
+      }
+    }
+
+    // Physical thumbnail synchronization to disk: writes to public/pwa-icon-512.png
+    const thumbToSync = payload.customThumbnail || payload.homeContent?.appThumbnailUrl;
+    if (thumbToSync && typeof thumbToSync === 'string' && thumbToSync.trim() && thumbToSync !== '/pwa-icon-512.png' && !thumbToSync.includes('ngo_logo')) {
+      try {
+        if (thumbToSync.startsWith('data:image/')) {
+          const base64Data = thumbToSync.split(';base64,').pop();
+          if (base64Data) {
+            const buf = Buffer.from(base64Data, 'base64');
+            fs.writeFileSync(path.resolve(__dirname, 'public/pwa-icon-512.png'), buf);
+            fs.writeFileSync(path.resolve(__dirname, 'public/pwa-icon-192.png'), buf);
+          }
+        } else if (thumbToSync.startsWith('/uploads/')) {
+          const srcPath = path.join(UPLOADS_DIR, path.basename(thumbToSync.split('?')[0]));
+          if (fs.existsSync(srcPath)) {
+            fs.copyFileSync(srcPath, path.resolve(__dirname, 'public/pwa-icon-512.png'));
+            fs.copyFileSync(srcPath, path.resolve(__dirname, 'public/pwa-icon-192.png'));
+          }
+        }
+      } catch (thumbErr) {
+        console.warn('[ServerSyncGitHubThumb] Warning:', thumbErr);
+      }
     }
 
     return res.json({

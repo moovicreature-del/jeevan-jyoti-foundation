@@ -133,6 +133,34 @@ export const TabMembershipManager: React.FC = () => {
     }
   };
 
+  // Handle Bulk Approve
+  const handleBulkApprovePending = async () => {
+    const pendingList = members.filter((m) => m.status === 'pending');
+    if (pendingList.length === 0) {
+      alert('कोई पेंडिंग आवेदन नहीं है।');
+      return;
+    }
+    if (!window.confirm(`क्या आप सभी ${pendingList.length} पेंडिंग सदस्यता आवेदनों को एक साथ स्वीकृत करना चाहते हैं?`)) {
+      return;
+    }
+    setIsProcessing(true);
+    let successCount = 0;
+    try {
+      for (const m of pendingList) {
+        try {
+          await approveMembership(m.id || m.applicationNo, 'Super Admin', 'admin_master');
+          successCount++;
+        } catch (e) {
+          console.warn('Bulk approve item error:', e);
+        }
+      }
+      loadRecords();
+      alert(`✅ ${successCount} सदस्यता आवेदन सफलतापूर्वक स्वीकृत किए गए और आधिकारिक लेटरहेड प्रमाण पत्र जारी कर दिए गए हैं।`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Handle Reject
   const handleReject = async (member: NgoMemberRecord) => {
     const reason = prompt('अस्वीकृति का कारण दर्ज करें (जैसे: अमान्य UTR / भुगतान प्राप्त नहीं हुआ):', 'अमान्य UTR या अधूरा भुगतान विवरण');
@@ -213,6 +241,17 @@ export const TabMembershipManager: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {stats.pending > 0 && (
+            <button
+              onClick={handleBulkApprovePending}
+              disabled={isProcessing}
+              className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-2 transition-all hover:scale-105 cursor-pointer disabled:opacity-50"
+              title="सभी पेंडिंग सदस्यता आवेदनों को एक साथ स्वीकृत करें"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-950" />
+              <span>✓ सभी पेंडिंग स्वीकृत करें ({stats.pending})</span>
+            </button>
+          )}
           <button
             onClick={handleExportCsv}
             className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-xl border border-white/20 flex items-center gap-2 transition-all cursor-pointer shadow-sm"
@@ -468,37 +507,76 @@ export const TabMembershipManager: React.FC = () => {
 
                     {/* Actions */}
                     <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {/* Review / Details Modal */}
-                        <button
-                          onClick={() => {
-                            setSelectedMember(m);
-                            setCustomMembershipId(m.id?.startsWith('JJF-MEM-20') && !m.id.includes('APP') ? m.id : generateMembershipId());
-                          }}
-                          className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold rounded-lg text-xs border border-blue-200 flex items-center gap-1 cursor-pointer"
-                          title="समीक्षा व विवरण देखें"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>समीक्षा</span>
-                        </button>
+                      <div className="flex items-center justify-end flex-wrap gap-1.5">
+                        {/* Direct Approve Button (Prominently visible when pending) */}
+                        {m.status === 'pending' && (
+                          <button
+                            onClick={() => handleApprove(m)}
+                            disabled={isProcessing}
+                            className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg text-xs shadow-xs flex items-center gap-1 cursor-pointer transition-all hover:scale-105 disabled:opacity-50"
+                            title="सदस्यता तुरंत स्वीकार करें और आधिकारिक लेटरहेड प्रमाण पत्र जारी करें"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>स्वीकार करें</span>
+                          </button>
+                        )}
+
+                        {/* Direct Reject Button (Prominently visible when pending) */}
+                        {m.status === 'pending' && (
+                          <button
+                            onClick={() => handleReject(m)}
+                            disabled={isProcessing}
+                            className="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded-lg text-xs border border-red-300 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50"
+                            title="सदस्यता आवेदन अस्वीकृत करें"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>अस्वीकृत</span>
+                          </button>
+                        )}
 
                         {/* View Certificate (if approved) */}
                         {m.status === 'approved' && (
                           <button
                             onClick={() => setCertificateMember(m)}
-                            className="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black rounded-lg text-xs shadow-xs flex items-center gap-1 cursor-pointer"
-                            title="लेटरहेड प्रमाण पत्र देखें व प्रिंट करें"
+                            className="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black rounded-lg text-xs shadow-xs flex items-center gap-1 cursor-pointer transition-transform hover:scale-105"
+                            title="आधिकारिक A4 लेटरहेड प्रमाण पत्र देखें व प्रिंट करें"
                           >
                             <Award className="w-3.5 h-3.5" />
                             <span>प्रमाण पत्र</span>
                           </button>
                         )}
 
+                        {/* Re-approve Button (if rejected) */}
+                        {m.status === 'rejected' && (
+                          <button
+                            onClick={() => handleApprove(m)}
+                            disabled={isProcessing}
+                            className="px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold rounded-lg text-xs border border-emerald-300 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50"
+                            title="पुनः समीक्षा कर स्वीकृत करें"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>पुनः स्वीकृत</span>
+                          </button>
+                        )}
+
+                        {/* Review / Details Modal */}
+                        <button
+                          onClick={() => {
+                            setSelectedMember(m);
+                            setCustomMembershipId(m.id?.startsWith('JJF-MEM-20') && !m.id.includes('APP') ? m.id : generateMembershipId());
+                          }}
+                          className="px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold rounded-lg text-xs border border-blue-200 flex items-center gap-1 cursor-pointer"
+                          title="पूर्ण आवेदन विवरण व UTR सत्यापन"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>समीक्षा</span>
+                        </button>
+
                         {/* Direct Delete */}
                         <button
                           onClick={() => handleDelete(m)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                          title="रिकॉर्ड हटाएं"
+                          className="p-1.5 text-red-600 hover:text-white hover:bg-red-600 bg-red-50 border border-red-200 rounded-lg transition-colors cursor-pointer"
+                          title="यह सदस्यता रिकॉर्ड हमेशा के लिए हटाएं"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -508,6 +586,123 @@ export const TabMembershipManager: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* MOBILE CARD VIEW (for smartphones / narrow screens) */}
+        {filteredMembers.length > 0 && (
+          <div className="block md:hidden divide-y divide-slate-100 p-3 space-y-3">
+            {filteredMembers.map((m) => (
+              <div key={`m-card-${m.id || m.applicationNo}`} className="p-4 bg-slate-50/80 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300">
+                      {m.photoUrl ? (
+                        <img src={m.photoUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-blue-900 text-amber-300 font-black text-sm">
+                          {(m.fullName || 'M').charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-black text-slate-900 text-sm">{m.fullName}</div>
+                      <div className="text-xs text-blue-900 font-bold">{m.planNameHindi} (₹{m.paymentAmount})</div>
+                      <div className="text-[11px] text-slate-500">📞 {m.phone} {m.district ? `• ${m.district}` : ''}</div>
+                    </div>
+                  </div>
+
+                  {m.status === 'approved' && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+                      स्वीकृत
+                    </span>
+                  )}
+                  {m.status === 'pending' && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 animate-pulse shrink-0">
+                      पेंडिंग
+                    </span>
+                  )}
+                  {m.status === 'rejected' && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-800 border border-red-300 shrink-0">
+                      अस्वीकृत
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-2.5 bg-white rounded-xl border border-slate-200 text-[11px] space-y-1">
+                  <div className="flex justify-between font-mono">
+                    <span className="text-slate-500">सदस्यता ID / आवेदन:</span>
+                    <span className="font-bold text-blue-900">{m.id || m.applicationNo}</span>
+                  </div>
+                  {m.transactionRef && (
+                    <div className="flex justify-between font-mono">
+                      <span className="text-slate-500">UTR / लेन-देन:</span>
+                      <span className="font-bold text-emerald-800">{m.transactionRef}</span>
+                    </div>
+                  )}
+                  {m.appliedAt && (
+                    <div className="flex justify-between text-slate-400 text-[10px]">
+                      <span>आवेदन तिथि:</span>
+                      <span>{new Date(m.appliedAt).toLocaleDateString('hi-IN')}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mobile Direct Action Buttons */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  {m.status === 'pending' && (
+                    <button
+                      onClick={() => handleApprove(m)}
+                      disabled={isProcessing}
+                      className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-xs flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>स्वीकार करें</span>
+                    </button>
+                  )}
+
+                  {m.status === 'pending' && (
+                    <button
+                      onClick={() => handleReject(m)}
+                      disabled={isProcessing}
+                      className="py-2 px-3 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded-xl text-xs border border-red-300 flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>अस्वीकृत</span>
+                    </button>
+                  )}
+
+                  {m.status === 'approved' && (
+                    <button
+                      onClick={() => setCertificateMember(m)}
+                      className="flex-1 py-2 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black rounded-xl text-xs shadow-xs flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Award className="w-3.5 h-3.5" />
+                      <span>प्रमाण पत्र</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setSelectedMember(m);
+                      setCustomMembershipId(m.id?.startsWith('JJF-MEM-20') && !m.id.includes('APP') ? m.id : generateMembershipId());
+                    }}
+                    className="py-2 px-3 bg-blue-50 text-blue-900 font-bold rounded-xl text-xs border border-blue-200 flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>समीक्षा</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(m)}
+                    className="p-2 text-red-600 bg-red-50 border border-red-200 rounded-xl cursor-pointer"
+                    title="हटाएं"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

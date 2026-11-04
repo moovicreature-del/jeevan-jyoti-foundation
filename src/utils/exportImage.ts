@@ -111,6 +111,21 @@ export function directPrintElement(elementIdOrRef?: HTMLElement | string | null)
         padding: ${isIdCard ? '12px' : '0'} !important;
         background: #ffffff !important;
       }
+      .official-letterhead-a4,
+      .membership-certificate-document,
+      .printable-appointment-letter,
+      [id*="letterhead"],
+      [id*="certificate"],
+      [id*="appointment"] {
+        width: 210mm !important;
+        height: 297mm !important;
+        min-height: 297mm !important;
+        max-height: 297mm !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        page-break-inside: avoid !important;
+        page-break-after: avoid !important;
+      }
     `;
 
     // Clone node and clean up preview styling
@@ -255,8 +270,12 @@ export async function captureElementToImageData(
   const isA4Doc = 
     element.classList.contains('official-letterhead-a4') ||
     Boolean(element.querySelector('.official-letterhead-a4')) ||
+    element.classList.contains('membership-certificate-document') ||
+    Boolean(element.querySelector('.membership-certificate-document')) ||
     element.id.toLowerCase().includes('letterhead') ||
-    element.id.toLowerCase().includes('appointment');
+    element.id.toLowerCase().includes('certificate') ||
+    element.id.toLowerCase().includes('appointment') ||
+    element.id.toLowerCase().includes('membership');
 
   let targetWidth = 0;
   let targetHeight = 0;
@@ -495,37 +514,61 @@ export async function exportElementAsPdf(
     // Preserve exact aspect ratio with crisp margins
     const elemAspect = elemWidth / elemHeight;
 
-    // Detect if this is an A4 portrait document (aspect ~ 210/297 = 0.707)
-    const isA4PortraitDoc = options?.isFullBleedA4 || (orientation === 'portrait' && Math.abs(elemAspect - (210 / 297)) < 0.05);
+    // Detect if this element represents an A4 letterhead or official certificate document
+    const isA4Doc =
+      options?.isFullBleedA4 === true ||
+      element.classList.contains('official-letterhead-a4') ||
+      Boolean(element.querySelector('.official-letterhead-a4')) ||
+      element.classList.contains('membership-certificate-document') ||
+      Boolean(element.querySelector('.membership-certificate-document')) ||
+      element.classList.contains('printable-appointment-letter') ||
+      Boolean(element.querySelector('.printable-appointment-letter')) ||
+      element.id.toLowerCase().includes('letterhead') ||
+      element.id.toLowerCase().includes('certificate') ||
+      element.id.toLowerCase().includes('appointment') ||
+      element.id.toLowerCase().includes('membership');
 
-    // Margin for clean printing (0mm for full bleed A4 letterhead, 4mm for other standard cards)
-    const margin = isA4PortraitDoc ? 0 : 4;
-    const usableWidth = pageWidth - (margin * 2);
-    const usableHeight = pageHeight - (margin * 2);
+    // True A4 Portrait Document Check: A4 doc or portrait aspect ratio (~210/297 = 0.707)
+    const isA4PortraitDoc = isA4Doc || (orientation === 'portrait' && Math.abs(elemAspect - (210 / 297)) < 0.15);
 
-    let renderWidth = usableWidth;
-    let renderHeight = usableWidth / elemAspect;
-    let offsetX = margin;
-    let offsetY = margin + ((usableHeight - renderHeight) / 2);
+    // True ID Card Document Check - ONLY if explicitly flagged or genuine small pocket badge
+    const isIdCardDoc = !isA4PortraitDoc && (
+      options?.isIdCard === true ||
+      element.classList.contains('printable-id-card') ||
+      (element.id.toLowerCase().includes('id-card') && element.offsetWidth < 520) ||
+      (element.offsetWidth > 0 && element.offsetWidth < 480 && element.offsetHeight < 720)
+    );
 
-    // Smart Badge Sizing: If it's an ID Card (narrow portrait aspect ratio), render at standard pocket badge width (~92mm) centered on A4
-    const isIdCardDoc = options?.isIdCard || (orientation === 'portrait' && elemAspect < 0.72 && !isA4PortraitDoc);
+    let renderWidth = pageWidth;
+    let renderHeight = pageHeight;
+    let offsetX = 0;
+    let offsetY = 0;
 
-    if (isIdCardDoc) {
-      renderWidth = Math.min(usableWidth, 92);
-      renderHeight = renderWidth / elemAspect;
-      offsetX = margin + ((usableWidth - renderWidth) / 2);
-      offsetY = margin + ((usableHeight - renderHeight) / 2);
-    } else if (isA4PortraitDoc) {
+    if (isA4PortraitDoc) {
+      // 100% Full-bleed A4 (210mm x 297mm) - Exact match for official foundation letterhead certificate
       renderWidth = pageWidth;
       renderHeight = pageHeight;
       offsetX = 0;
       offsetY = 0;
-    } else if (renderHeight > usableHeight) {
-      renderHeight = usableHeight;
-      renderWidth = usableHeight * elemAspect;
-      offsetX = margin + ((usableWidth - renderWidth) / 2);
-      offsetY = margin;
+    } else if (isIdCardDoc) {
+      // ID Card pocket badge centered on A4 sheet
+      renderWidth = Math.min(pageWidth - 12, 92);
+      renderHeight = renderWidth / elemAspect;
+      offsetX = (pageWidth - renderWidth) / 2;
+      offsetY = (pageHeight - renderHeight) / 2;
+    } else {
+      // General proportional document
+      const margin = 6;
+      const usableWidth = pageWidth - (margin * 2);
+      const usableHeight = pageHeight - (margin * 2);
+      renderWidth = usableWidth;
+      renderHeight = usableWidth / elemAspect;
+      if (renderHeight > usableHeight) {
+        renderHeight = usableHeight;
+        renderWidth = usableHeight * elemAspect;
+      }
+      offsetX = (pageWidth - renderWidth) / 2;
+      offsetY = (pageHeight - renderHeight) / 2;
     }
 
     pdf.addImage(result.dataUrl, 'JPEG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST');

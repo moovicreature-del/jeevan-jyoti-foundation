@@ -1,6 +1,6 @@
 {
-  "syncedAt": "2026-11-01T07:18:36.843Z",
-  "version": "1.0.1793517516",
+  "syncedAt": "2026-11-03T05:30:32.232Z",
+  "version": "1.0.1793683832",
   "syncedBy": "System Auto-Sync (Verified Official Master)",
   "note": "यह फ़ाइल एडमिन एवं संस्था के सभी अनुमोदित पहचान पत्र, नियुक्ति पत्र, प्रमाण पत्र, होम पेज लाइव फोटो गैलरी एवं स्टाफ डेटा को GitHub और लाइव लिंक के साथ स्थायी रूप से सुरक्षित रखती है।",
   "homeContent": {
@@ -188,7 +188,7 @@
     "bannerTitle": "सशक्त ग़ाज़ीपुर, समृद्ध समाज",
     "bannerSubtitle": "हमारे सेवा अभियानों से जुड़ें और समाज निर्माण में अपना योगदान दें",
     "appLogoUrl": "/logo.png",
-    "appThumbnailUrl": "/pwa-icon-512.png",
+    "appThumbnailUrl": "/uploads/jjf_media_1793441166525_544baf40.jpg",
     "certificateSealUrl": "/uploads/official_seal.png",
     "certificateSealVariant": "gold-crimson",
     "updatedBy": "सिस्टम एडमिन",
@@ -210,5 +210,7 @@
     "payuDonationUrl": "https://u.payu.in/fJwCvOSIlICb"
   },
   "staffMembers": [],
+  "volunteers": [],
+  "ngoMembers": [],
   "certificates": []
 }

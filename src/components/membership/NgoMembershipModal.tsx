@@ -990,12 +990,27 @@ export const NgoMembershipModal: React.FC<NgoMembershipModalProps> = ({
                               <div>
                                 <div className="flex items-start justify-between gap-2 mb-3">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-12 h-14 rounded-xl overflow-hidden p-0.5 bg-gradient-to-br from-amber-300 to-amber-600 border border-amber-500 shadow-2xs shrink-0">
-                                      <img
-                                        src={member.photoUrl || '/manager_secretary.webp'}
-                                        alt={member.fullName}
-                                        className="w-full h-full object-cover object-top rounded-lg"
-                                      />
+                                    <div className="relative w-12 h-14 shrink-0 overflow-visible">
+                                      <div className="w-full h-full rounded-xl overflow-hidden p-0.5 bg-gradient-to-br from-amber-300 to-amber-600 border border-amber-500 shadow-2xs">
+                                        <img
+                                          src={member.photoUrl || '/manager_secretary.webp'}
+                                          alt={member.fullName}
+                                          className="w-full h-full object-cover object-top rounded-lg"
+                                        />
+                                      </div>
+                                      {isApproved && (
+                                        <div
+                                          className="absolute -bottom-1 -left-2 -right-2 pointer-events-none select-none z-10 flex items-center justify-center"
+                                          style={{ transform: 'rotate(-10deg)' }}
+                                          title="संस्था की आधिकारिक मुहर"
+                                        >
+                                          <img
+                                            src="/uploads/official_stamp.png"
+                                            alt="NGO Stamp"
+                                            className="w-14 max-w-none h-auto max-h-5 object-contain filter contrast-160 mix-blend-multiply drop-shadow-2xs"
+                                          />
+                                        </div>
+                                      )}
                                     </div>
 
                                     <div>

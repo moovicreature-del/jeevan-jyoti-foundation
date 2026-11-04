@@ -38,7 +38,8 @@ import {
   History,
   Activity,
   Ban,
-  RotateCcw
+  RotateCcw,
+  Crown
 } from 'lucide-react';
 import { StaffMember, StaffStatus, StaffCardTheme, StaffCardLanguage, formatRelationLabel } from '../../types/staff';
 import {
@@ -67,6 +68,8 @@ import {
 import { SwayamSewakCardModal } from '../SwayamSewakCardModal';
 import { VolunteerCertificateModal } from '../VolunteerCertificateModal';
 import { StampedCandidatePhoto } from '../common/StampedCandidatePhoto';
+import { TabMembershipManager } from './TabMembershipManager';
+import { getAllMembers } from '../../services/membershipService';
 
 export const TabStaffApprovalManager: React.FC = () => {
   const { adminProfile } = useAdminAuth();
@@ -101,8 +104,9 @@ export const TabStaffApprovalManager: React.FC = () => {
   // Delete Confirmation Dialog Modal
   const [deleteModalStaff, setDeleteModalStaff] = useState<StaffMember | null>(null);
 
-  // Active Sub-Tab: 'staff' vs 'volunteer'
-  const [activeRoleTab, setActiveRoleTab] = useState<'staff' | 'volunteer'>('staff');
+  // Active Sub-Tab: 'staff' vs 'volunteer' vs 'membership'
+  const [activeRoleTab, setActiveRoleTab] = useState<'staff' | 'volunteer' | 'membership'>('staff');
+  const [pendingMemberCount, setPendingMemberCount] = useState<number>(0);
 
   // Volunteer State & Filters
   const [volunteerList, setVolunteerList] = useState<Volunteer[]>([]);
@@ -117,6 +121,12 @@ export const TabStaffApprovalManager: React.FC = () => {
   const refreshList = () => {
     setStaffList(getAllStaffMembers());
     setVolunteerList(getAllVolunteers());
+    try {
+      const allMem = getAllMembers();
+      setPendingMemberCount(allMem.filter((m) => m.status === 'pending').length);
+    } catch {
+      setPendingMemberCount(0);
+    }
   };
 
   useEffect(() => {
@@ -124,11 +134,14 @@ export const TabStaffApprovalManager: React.FC = () => {
 
     const handleStaffUpdate = () => refreshList();
     const handleVolUpdate = () => refreshList();
+    const handleMemUpdate = () => refreshList();
     window.addEventListener('jjf-staff-updated', handleStaffUpdate);
     window.addEventListener('jjf-volunteer-updated', handleVolUpdate);
+    window.addEventListener('jjf-membership-updated', handleMemUpdate);
     return () => {
       window.removeEventListener('jjf-staff-updated', handleStaffUpdate);
       window.removeEventListener('jjf-volunteer-updated', handleVolUpdate);
+      window.removeEventListener('jjf-membership-updated', handleMemUpdate);
     };
   }, []);
 
@@ -494,11 +507,29 @@ export const TabStaffApprovalManager: React.FC = () => {
               </span>
             )}
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveRoleTab('membership')}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+              activeRoleTab === 'membership'
+                ? 'bg-blue-900 text-white shadow-md shadow-blue-900/20'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <Crown className={`w-4 h-4 ${activeRoleTab === 'membership' ? 'text-amber-300' : 'text-slate-500'}`} />
+            <span>3. संस्था सदस्यता अप्रूवल (Membership)</span>
+            {pendingMemberCount > 0 && (
+              <span className="bg-amber-400 text-blue-950 font-black text-[10px] px-2 py-0.5 rounded-full animate-pulse shadow-xs">
+                {pendingMemberCount} लंबित
+              </span>
+            )}
+          </button>
         </div>
 
         <div className="text-[11px] text-slate-500 font-bold flex items-center gap-2">
           <span>
-            कुल लंबित अनुमोदन: <strong className="text-amber-700 font-mono font-black">{counts.pending + volunteerCounts.pending}</strong>
+            कुल लंबित अनुमोदन: <strong className="text-amber-700 font-mono font-black">{counts.pending + volunteerCounts.pending + pendingMemberCount}</strong>
           </span>
           <span>•</span>
           <button
@@ -2025,6 +2056,15 @@ export const TabStaffApprovalManager: React.FC = () => {
         </div>
       )}
     </>
+  )}
+
+  {/* ========================================================================= */}
+  {/* 👑 NGO MEMBERSHIP APPROVAL VIEW                                            */}
+  {/* ========================================================================= */}
+  {activeRoleTab === 'membership' && (
+    <div className="pt-1">
+      <TabMembershipManager />
+    </div>
   )}
 
       {/* WHATSAPP SENDING DIALOG MODAL */}

@@ -50,6 +50,7 @@ interface TabDashboardOverviewProps {
 }
 
 import { getAllVolunteers } from '../../services/volunteerService';
+import { getAllMembers } from '../../services/membershipService';
 
 export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
   onSelectTab,
@@ -63,6 +64,7 @@ export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
   const [yearCount, setYearCount] = useState<number>(0);
   const [pendingStaffCount, setPendingStaffCount] = useState<number>(0);
   const [pendingVolCount, setPendingVolCount] = useState<number>(0);
+  const [pendingMembershipCount, setPendingMembershipCount] = useState<number>(0);
   const [isSyncingData, setIsSyncingData] = useState<boolean>(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
 
@@ -93,6 +95,10 @@ export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
       const volunteers = getAllVolunteers();
       const pendingVol = volunteers.filter((v) => v.approvalStatus === 'pending').length;
       setPendingVolCount(pendingVol);
+
+      const members = getAllMembers();
+      const pendingMembers = members.filter((m) => m.status === 'pending').length;
+      setPendingMembershipCount(pendingMembers);
     } catch (e) {
       console.warn('Error loading overview stats:', e);
     }
@@ -102,9 +108,11 @@ export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
     loadStats();
     window.addEventListener('jjf-staff-updated', loadStats);
     window.addEventListener('jjf-volunteer-updated', loadStats);
+    window.addEventListener('jjf-membership-updated', loadStats);
     return () => {
       window.removeEventListener('jjf-staff-updated', loadStats);
       window.removeEventListener('jjf-volunteer-updated', loadStats);
+      window.removeEventListener('jjf-membership-updated', loadStats);
     };
   }, []);
 
@@ -227,6 +235,50 @@ export const TabDashboardOverview: React.FC<TabDashboardOverviewProps> = ({
           </div>
         );
       })()}
+
+      {/* Featured Banner: NGO Membership Approvals & Letterhead Certificates */}
+      <div className={`rounded-3xl p-6 shadow-md border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+        pendingMembershipCount > 0
+          ? 'bg-gradient-to-r from-blue-950 via-indigo-950 to-slate-900 border-amber-400 text-white ring-2 ring-amber-400/40'
+          : 'bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 border-slate-700 text-white'
+      }`}>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-300 text-blue-950 flex items-center justify-center font-black shrink-0 shadow-md">
+            <Crown className="w-6 h-6 fill-blue-950" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.2 rounded-full font-black uppercase tracking-wider">
+                NGO MEMBERSHIP APPROVALS
+              </span>
+              {pendingMembershipCount > 0 ? (
+                <span className="text-xs bg-amber-400 text-blue-950 px-2.5 py-0.5 rounded-full font-black animate-pulse">
+                  ⚠️ {pendingMembershipCount} नए संस्था सदस्यता आवेदन UTR सत्यापन व अनुमोदन हेतु प्रतीक्षारत
+                </span>
+              ) : (
+                <span className="text-xs text-emerald-300 font-bold">
+                  ✓ सभी सदस्यता आवेदन अनुमोदित व प्रमाण पत्र जारी
+                </span>
+              )}
+            </div>
+            <h2 className="text-base font-black text-white mt-0.5">
+              संस्था सदस्यता प्रबंधन, UTR सत्यापन, अनुमोदन एवं लेटरहेड प्रमाण पत्र
+            </h2>
+            <p className="text-xs text-slate-300">
+              5 योजनाओं में प्राप्त सदस्यता शुल्क व बैंक UTR की जांच करें, सदस्यता आईडी स्वीकृत करें अथवा अस्वीकृत/डिलीट करें। अनुमोदन के बाद सदस्य अपना आधिकारिक लेटरहेड प्रमाण पत्र तुरंत डाउनलोड कर सकेंगे।
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onSelectTab('membership')}
+          className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-blue-950 font-black text-xs rounded-xl shadow-lg transition-transform hover:scale-105 cursor-pointer shrink-0"
+        >
+          <Crown className="w-4 h-4 fill-blue-950" />
+          <span>सदस्यता अप्रूवल पोर्टल खोलें</span>
+          <ArrowUpRight className="w-4 h-4" />
+        </button>
+      </div>
 
       {/* Featured Banner: Super-Admin Certificate Issuance Pipeline */}
       <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white rounded-3xl p-6 shadow-md border border-blue-900 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
