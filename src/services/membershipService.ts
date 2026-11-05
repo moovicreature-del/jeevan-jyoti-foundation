@@ -396,6 +396,9 @@ export async function rejectMembership(
     window.dispatchEvent(new CustomEvent('jjf-membership-updated', { detail: updatedRecord }));
   }
 
+  // Background GitHub Data Sync
+  syncCurrentAdminDataToGitHub(false).catch(() => {});
+
   return updatedRecord;
 }
 
@@ -425,6 +428,9 @@ export async function deleteMember(targetIdOrAppNo: string): Promise<boolean> {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('jjf-membership-updated'));
   }
+
+  // Background GitHub Data Sync
+  syncCurrentAdminDataToGitHub(false).catch(() => {});
 
   return true;
 }

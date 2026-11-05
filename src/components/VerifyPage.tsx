@@ -22,8 +22,10 @@ import {
   FileCheck,
   BadgeCheck,
   Clock,
-  Droplet
+  Droplet,
+  Download
 } from 'lucide-react';
+import { downloadVerificationQrBadge } from '../utils/downloadVerificationQr';
 import { FOUNDATION_INFO } from '../data/foundationData';
 import { DONORS_DATA } from '../data/donorsData';
 import { INITIAL_VOLUNTEERS, INITIAL_TASKS } from '../data/taskData';
@@ -62,6 +64,7 @@ export const VerifyPage: React.FC<VerifyPageProps> = ({
   const [isVerifying, setIsVerifying] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isLiveConnected, setIsLiveConnected] = useState(true);
+  const [downloadingQr, setDownloadingQr] = useState(false);
 
   useEffect(() => {
     // Background sync from Firestore to get latest certificates
@@ -226,6 +229,22 @@ export const VerifyPage: React.FC<VerifyPageProps> = ({
     }
   };
 
+  const handleDownloadQrCode = async () => {
+    const certId = record?.certNumber || searchedId;
+    if (!certId) return;
+    setDownloadingQr(true);
+    try {
+      await downloadVerificationQrBadge({
+        certificateId: certId,
+        recipientName: record?.name,
+        categoryTitle: record?.categoryTitle,
+        issueDate: record?.issueDate
+      });
+    } finally {
+      setDownloadingQr(false);
+    }
+  };
+
   const handleShareWhatsApp = () => {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://jeevanjyotifoundation.org';
     const verifyUrl = `${origin}/?verify=${encodeURIComponent(searchedId)}`;
@@ -256,7 +275,7 @@ export const VerifyPage: React.FC<VerifyPageProps> = ({
             </a>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleCopyLink}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-xs shadow-xs cursor-pointer transition-all"
@@ -264,6 +283,16 @@ export const VerifyPage: React.FC<VerifyPageProps> = ({
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-600" />}
               <span>{copied ? 'लिंक कॉपी हो गया!' : 'सत्यापन लिंक कॉपी करें'}</span>
+            </button>
+
+            <button
+              onClick={handleDownloadQrCode}
+              disabled={downloadingQr}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs cursor-pointer transition-all disabled:opacity-50"
+              title="सत्यापन QR कोड इमेज डाउनलोड करें (Download QR Code Image for Offline Sharing)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{downloadingQr ? 'QR तैयार हो रहा...' : 'QR कोड डाउनलोड करें'}</span>
             </button>
 
             <button
@@ -701,6 +730,16 @@ export const VerifyPage: React.FC<VerifyPageProps> = ({
                   <span className="text-[7.5pt] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.2 rounded-full mt-0.5">
                     ✓ 100% SCAN VERIFIED
                   </span>
+                  <button
+                    type="button"
+                    onClick={handleDownloadQrCode}
+                    disabled={downloadingQr}
+                    className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#8B0000] hover:bg-[#6b0000] text-white rounded-xl text-[10px] sm:text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                    title="सत्यापन QR कोड इमेज डाउनलोड करें (Download QR Code Image for Offline Sharing)"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{downloadingQr ? 'डाउनलोड हो रहा...' : 'QR कोड डाउनलोड करें'}</span>
+                  </button>
                 </div>
 
                 {/* Column 2: Royal Center Seal */}

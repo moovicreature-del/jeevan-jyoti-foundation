@@ -57,6 +57,7 @@ export const TabSecuritySettings: React.FC = () => {
   const [adminPassword, setAdminPassword] = useState<string>('');
   const [adminConfirmPassword, setAdminConfirmPassword] = useState<string>('');
   const [showAdminPassword, setShowAdminPassword] = useState<boolean>(false);
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
 
   // Load fresh credentials on mount
   const loadCredentials = async () => {
@@ -158,12 +159,8 @@ export const TabSecuritySettings: React.FC = () => {
   };
 
   // Factory Reset
-  const handleResetDefaults = async () => {
-    const confirmReset = window.confirm(
-      'क्या आप वाकई दोनों क्रेडेंशियल्स को फ़ैक्टरी डिफ़ॉल्ट (superadmin / admin) पर रीसेट करना चाहते हैं?'
-    );
-    if (!confirmReset) return;
-
+  const handleConfirmResetDefaults = async () => {
+    setShowResetConfirmModal(false);
     setIsResetting(true);
     try {
       const res = await resetToDefaultCredentials(adminProfile?.name || 'Super Admin');
@@ -644,7 +641,7 @@ export const TabSecuritySettings: React.FC = () => {
 
           <button
             type="button"
-            onClick={handleResetDefaults}
+            onClick={() => setShowResetConfirmModal(true)}
             disabled={isResetting}
             className="px-4 py-2.5 bg-slate-200 hover:bg-red-100 hover:text-red-700 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer shrink-0 border border-slate-300 flex items-center gap-2"
           >
@@ -655,6 +652,39 @@ export const TabSecuritySettings: React.FC = () => {
             )}
             <span>मूल डिफ़ॉल्ट पर रीसेट करें</span>
           </button>
+        </div>
+      )}
+
+      {/* IN-APP FACTORY RESET CONFIRMATION MODAL */}
+      {showResetConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 text-center space-y-4">
+            <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border-2 border-amber-200">
+              <RefreshCw className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800">डिफ़ॉल्ट क्रेडेंशियल्स रीसेट करें?</h3>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                क्या आप वाकई दोनों क्रेडेंशियल्स को फ़ैक्टरी डिफ़ॉल्ट (superadmin / admin) पर रीसेट करना चाहते हैं?
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirmModal(false)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                रद्द करें
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmResetDefaults}
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer"
+              >
+                हाँ, रीसेट करें
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

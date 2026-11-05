@@ -22,6 +22,7 @@ import {
   Users,
   HeartHandshake
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { User } from 'firebase/auth';
 import {
   signInWithGoogleDrive,
@@ -209,7 +210,7 @@ export const GoogleDriveHubModal: React.FC<GoogleDriveHubModalProps> = ({ isOpen
       await loadFiles(activeFolder.id);
       triggerSuccessToast(isHindi ? 'फ़ोल्डर सफलतापूर्वक बनाया गया' : 'Folder created successfully');
     } catch (err: any) {
-      alert(err.message || 'Failed to create folder');
+      toast.error(err.message || 'फ़ोल्डर बनाने में त्रुटि हुई');
     } finally {
       setIsCreatingFolder(false);
     }
@@ -237,7 +238,7 @@ export const GoogleDriveHubModal: React.FC<GoogleDriveHubModalProps> = ({ isOpen
           : `File "${file.name}" uploaded to Google Drive!`
       );
     } catch (err: any) {
-      alert(err.message || 'Failed to upload file');
+      toast.error(err.message || 'फ़ाइल अपलोड करने में त्रुटि हुई');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -258,7 +259,7 @@ export const GoogleDriveHubModal: React.FC<GoogleDriveHubModalProps> = ({ isOpen
       setFileToDelete(null);
       await loadFiles(activeFolder.id);
     } catch (err: any) {
-      alert(err.message || 'Failed to delete file');
+      toast.error(err.message || 'फ़ाइल हटाने में त्रुटि हुई');
     } finally {
       setIsDeleting(false);
     }
@@ -348,7 +349,7 @@ export const GoogleDriveHubModal: React.FC<GoogleDriveHubModalProps> = ({ isOpen
           : 'Foundation record backup saved directly to Google Drive!'
       );
     } catch (err: any) {
-      alert(err.message || 'Backup export failed');
+      toast.error(err.message || 'बैकअप निर्यात विफल रहा');
     } finally {
       setIsExportingBackup(false);
     }

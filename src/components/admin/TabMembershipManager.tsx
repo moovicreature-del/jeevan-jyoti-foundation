@@ -27,8 +27,10 @@ import {
   ChevronRight,
   ShieldCheck,
   X,
-  FileSpreadsheet
+  FileSpreadsheet,
+  AlertTriangle
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import {
   NgoMemberRecord,
   MembershipType,
@@ -54,6 +56,13 @@ export const TabMembershipManager: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [customMembershipId, setCustomMembershipId] = useState('');
+
+  // In-App Action Confirmation Modals (Zero window.alert / window.confirm)
+  const [approveConfirmMember, setApproveConfirmMember] = useState<NgoMemberRecord | null>(null);
+  const [rejectDialogMember, setRejectDialogMember] = useState<NgoMemberRecord | null>(null);
+  const [rejectReasonInput, setRejectReasonInput] = useState('अमान्य UTR या अधूरा भुगतान विवरण');
+  const [deleteConfirmMember, setDeleteConfirmMember] = useState<NgoMemberRecord | null>(null);
+  const [showBulkApproveConfirm, setShowBulkApproveConfirm] = useState(false);
 
   // Load records
   const loadRecords = () => {
@@ -103,44 +112,65 @@ export const TabMembershipManager: React.FC = () => {
     });
   }, [members, statusFilter, planFilter, searchQuery]);
 
-  // Handle Approve
-  const handleApprove = async (member: NgoMemberRecord) => {
-    if (!window.confirm(`क्या आप ${member.fullName} (${member.planNameHindi}) की सदस्यता को स्वीकृत करना चाहते हैं?`)) {
-      return;
-    }
+  // Trigger In-App Approve
+  const promptApprove = (member: NgoMemberRecord) => {
+    setApproveConfirmMember(member);
+    setCustomMembershipId(
+      member.id?.startsWith('JJF-MEM-20') && !member.id.includes('APP')
+        ? member.id
+        : generateMembershipId()
+    );
+  };
+
+  // Execute Approve
+  const executeApprove = async (memberToApprove?: NgoMemberRecord) => {
+    const target = memberToApprove || approveConfirmMember;
+    if (!target) return;
     setIsProcessing(true);
     try {
       const assignedId = customMembershipId.trim() || undefined;
       const approved = await approveMembership(
-        member.id || member.applicationNo,
+        target.id || target.applicationNo,
         'Super Admin',
         'admin_master',
         {
           customMembershipId: assignedId,
-          customValidTill: member.membershipType === 'life' || member.membershipType === 'patron' ? 'आजीवन (Lifetime)' : undefined
+          customValidTill:
+            target.membershipType === 'life' || target.membershipType === 'patron'
+              ? 'आजीवन (Lifetime)'
+              : undefined
         }
       );
       if (approved) {
         setSelectedMember(null);
+        setApproveConfirmMember(null);
         setCustomMembershipId('');
         loadRecords();
-        alert(`✅ सदस्यता सफलतापूर्वक स्वीकृत की गई!\nसदस्यता आईडी: ${approved.id}\nआधिकारिक लेटरहेड प्रमाण पत्र जारी कर दिया गया है।`);
+        toast.success(`✅ ${approved.fullName} की सदस्यता स्वीकृत! प्रमाण पत्र जारी हो गया।`);
       }
     } catch (e: any) {
-      alert(`स्वीकृति में त्रुटि हुई: ${e.message || 'पुनः प्रयास करें।'}`);
+      toast.error(`स्वीकृति में त्रुटि हुई: ${e.message || 'पुनः प्रयास करें।'}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Handle Bulk Approve
-  const handleBulkApprovePending = async () => {
+  // Trigger Bulk Approve
+  const promptBulkApprovePending = () => {
     const pendingList = members.filter((m) => m.status === 'pending');
     if (pendingList.length === 0) {
-      alert('कोई पेंडिंग आवेदन नहीं है।');
+      toast.error('कोई पेंडिंग आवेदन नहीं है।');
       return;
     }
-    if (!window.confirm(`क्या आप सभी ${pendingList.length} पेंडिंग सदस्यता आवेदनों को एक साथ स्वीकृत करना चाहते हैं?`)) {
+    setShowBulkApproveConfirm(true);
+  };
+
+  // Execute Bulk Approve
+  const executeBulkApprove = async () => {
+    const pendingList = members.filter((m) => m.status === 'pending');
+    if (pendingList.length === 0) {
+      toast.error('कोई पेंडिंग आवेदन नहीं है।');
+      setShowBulkApproveConfirm(false);
       return;
     }
     setIsProcessing(true);
@@ -154,48 +184,64 @@ export const TabMembershipManager: React.FC = () => {
           console.warn('Bulk approve item error:', e);
         }
       }
+      setShowBulkApproveConfirm(false);
       loadRecords();
-      alert(`✅ ${successCount} सदस्यता आवेदन सफलतापूर्वक स्वीकृत किए गए और आधिकारिक लेटरहेड प्रमाण पत्र जारी कर दिए गए हैं।`);
+      toast.success(`✅ ${successCount} सदस्यता आवेदन स्वीकृत व प्रमाण पत्र जारी किए गए!`);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Handle Reject
-  const handleReject = async (member: NgoMemberRecord) => {
-    const reason = prompt('अस्वीकृति का कारण दर्ज करें (जैसे: अमान्य UTR / भुगतान प्राप्त नहीं हुआ):', 'अमान्य UTR या अधूरा भुगतान विवरण');
-    if (!reason) return;
+  // Trigger In-App Reject
+  const promptReject = (member: NgoMemberRecord) => {
+    setRejectDialogMember(member);
+    setRejectReasonInput('अमान्य UTR या अधूरा भुगतान विवरण');
+  };
+
+  // Execute Reject
+  const executeReject = async () => {
+    if (!rejectDialogMember) return;
     setIsProcessing(true);
     try {
-      await rejectMembership(member.id || member.applicationNo, reason, 'Super Admin');
+      await rejectMembership(
+        rejectDialogMember.id || rejectDialogMember.applicationNo,
+        rejectReasonInput.trim() || 'अमान्य UTR या अधूरा भुगतान विवरण',
+        'Super Admin'
+      );
       setSelectedMember(null);
+      setRejectDialogMember(null);
       loadRecords();
-      alert(`सदस्यता आवेदन अस्वीकृत कर दिया गया है।`);
+      toast.success(`सदस्यता आवेदन अस्वीकृत कर दिया गया।`);
     } catch {
-      alert('त्रुटि हुई।');
+      toast.error('अस्वीकृति में त्रुटि हुई।');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Handle Delete
-  const handleDelete = async (member: NgoMemberRecord) => {
-    if (!window.confirm(`चेतावनी: क्या आप ${member.fullName} का रिकॉर्ड स्थायी रूप से हटाना चाहते हैं?`)) {
-      return;
-    }
+  // Trigger In-App Delete
+  const promptDelete = (member: NgoMemberRecord) => {
+    setDeleteConfirmMember(member);
+  };
+
+  // Execute Delete
+  const executeDelete = async () => {
+    if (!deleteConfirmMember) return;
     try {
-      await deleteMember(member.id || member.applicationNo);
+      await deleteMember(deleteConfirmMember.id || deleteConfirmMember.applicationNo);
       setSelectedMember(null);
+      setDeleteConfirmMember(null);
       loadRecords();
+      toast.success(`${deleteConfirmMember.fullName} का सदस्यता रिकॉर्ड हटा दिया गया।`);
     } catch {
-      alert('हटाने में त्रुटि।');
+      toast.error('हटाने में त्रुटि आई।');
     }
   };
 
   // Export CSV
   const handleExportCsv = () => {
     if (members.length === 0) {
-      alert('एक्सपोर्ट के लिए कोई रिकॉर्ड उपलब्ध नहीं है।');
+      toast.error('एक्सपोर्ट के लिए कोई रिकॉर्ड उपलब्ध नहीं है।');
       return;
     }
     const headers = ['सदस्यता ID', 'आवेदन क्र.', 'नाम', 'पिता/पति', 'फोन', 'श्रेणी', 'शुल्क (₹)', 'UTR / लेनदेन', 'स्थिति', 'आवेदन तिथि', 'पता'];
@@ -221,6 +267,7 @@ export const TabMembershipManager: React.FC = () => {
     a.download = `JJF_NGO_MEMBERSHIP_REGISTER_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    toast.success('सदस्यता रजिस्टर CSV सफलतापूर्वक डाउनलोड हुआ!');
   };
 
   return (
@@ -243,7 +290,7 @@ export const TabMembershipManager: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2.5">
           {stats.pending > 0 && (
             <button
-              onClick={handleBulkApprovePending}
+              onClick={promptBulkApprovePending}
               disabled={isProcessing}
               className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center gap-2 transition-all hover:scale-105 cursor-pointer disabled:opacity-50"
               title="सभी पेंडिंग सदस्यता आवेदनों को एक साथ स्वीकृत करें"
@@ -511,7 +558,7 @@ export const TabMembershipManager: React.FC = () => {
                         {/* Direct Approve Button (Prominently visible when pending) */}
                         {m.status === 'pending' && (
                           <button
-                            onClick={() => handleApprove(m)}
+                            onClick={() => promptApprove(m)}
                             disabled={isProcessing}
                             className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-lg text-xs shadow-xs flex items-center gap-1 cursor-pointer transition-all hover:scale-105 disabled:opacity-50"
                             title="सदस्यता तुरंत स्वीकार करें और आधिकारिक लेटरहेड प्रमाण पत्र जारी करें"
@@ -524,7 +571,7 @@ export const TabMembershipManager: React.FC = () => {
                         {/* Direct Reject Button (Prominently visible when pending) */}
                         {m.status === 'pending' && (
                           <button
-                            onClick={() => handleReject(m)}
+                            onClick={() => promptReject(m)}
                             disabled={isProcessing}
                             className="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded-lg text-xs border border-red-300 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50"
                             title="सदस्यता आवेदन अस्वीकृत करें"
@@ -549,7 +596,7 @@ export const TabMembershipManager: React.FC = () => {
                         {/* Re-approve Button (if rejected) */}
                         {m.status === 'rejected' && (
                           <button
-                            onClick={() => handleApprove(m)}
+                            onClick={() => promptApprove(m)}
                             disabled={isProcessing}
                             className="px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold rounded-lg text-xs border border-emerald-300 flex items-center gap-1 cursor-pointer transition-colors disabled:opacity-50"
                             title="पुनः समीक्षा कर स्वीकृत करें"
@@ -574,7 +621,7 @@ export const TabMembershipManager: React.FC = () => {
 
                         {/* Direct Delete */}
                         <button
-                          onClick={() => handleDelete(m)}
+                          onClick={() => promptDelete(m)}
                           className="p-1.5 text-red-600 hover:text-white hover:bg-red-600 bg-red-50 border border-red-200 rounded-lg transition-colors cursor-pointer"
                           title="यह सदस्यता रिकॉर्ड हमेशा के लिए हटाएं"
                         >
@@ -652,7 +699,7 @@ export const TabMembershipManager: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   {m.status === 'pending' && (
                     <button
-                      onClick={() => handleApprove(m)}
+                      onClick={() => promptApprove(m)}
                       disabled={isProcessing}
                       className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-xs flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
                     >
@@ -663,7 +710,7 @@ export const TabMembershipManager: React.FC = () => {
 
                   {m.status === 'pending' && (
                     <button
-                      onClick={() => handleReject(m)}
+                      onClick={() => promptReject(m)}
                       disabled={isProcessing}
                       className="py-2 px-3 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded-xl text-xs border border-red-300 flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
                     >
@@ -682,6 +729,17 @@ export const TabMembershipManager: React.FC = () => {
                     </button>
                   )}
 
+                  {m.status === 'rejected' && (
+                    <button
+                      onClick={() => promptApprove(m)}
+                      disabled={isProcessing}
+                      className="py-2 px-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold rounded-xl text-xs border border-emerald-300 flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>पुनः स्वीकृत</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => {
                       setSelectedMember(m);
@@ -694,7 +752,7 @@ export const TabMembershipManager: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => handleDelete(m)}
+                    onClick={() => promptDelete(m)}
                     className="p-2 text-red-600 bg-red-50 border border-red-200 rounded-xl cursor-pointer"
                     title="हटाएं"
                   >
@@ -832,7 +890,7 @@ export const TabMembershipManager: React.FC = () => {
               <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => handleReject(selectedMember)}
+                  onClick={() => promptReject(selectedMember)}
                   disabled={isProcessing}
                   className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-800 font-bold rounded-xl text-xs transition-colors cursor-pointer"
                 >
@@ -855,7 +913,7 @@ export const TabMembershipManager: React.FC = () => {
                   )}
                   <button
                     type="button"
-                    onClick={() => handleApprove(selectedMember)}
+                    onClick={() => executeApprove(selectedMember)}
                     disabled={isProcessing}
                     className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs flex items-center gap-1.5 shadow-md transition-all hover:scale-105 cursor-pointer"
                   >
@@ -863,6 +921,270 @@ export const TabMembershipManager: React.FC = () => {
                     <span>{selectedMember.status === 'approved' ? 'आईडी अपडेट करें' : 'स्वीकार व अनुमोदित करें'}</span>
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 1. IN-APP APPROVE CONFIRMATION MODAL */}
+      {approveConfirmMember && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border-2 border-emerald-400 overflow-hidden my-6 animate-in fade-in zoom-in duration-200">
+            <div className="bg-gradient-to-r from-emerald-800 to-teal-800 p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+                <h3 className="font-black text-base text-white">सदस्यता आवेदन स्वीकृत करें</h3>
+              </div>
+              <button
+                onClick={() => setApproveConfirmMember(null)}
+                className="p-1.5 rounded-full hover:bg-white/20 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs text-slate-700">
+              <div className="flex items-center gap-3 p-3 bg-emerald-50/80 rounded-2xl border border-emerald-200">
+                <div className="w-12 h-14 rounded-xl overflow-hidden bg-slate-200 shrink-0 border border-emerald-400 shadow-xs">
+                  {approveConfirmMember.photoUrl ? (
+                    <img src={approveConfirmMember.photoUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-blue-900 text-amber-300 font-black text-base">
+                      {(approveConfirmMember.fullName || 'M').charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="font-black text-slate-900 text-sm">{approveConfirmMember.fullName}</div>
+                  <div className="text-emerald-900 font-bold">{approveConfirmMember.planNameHindi} (₹{approveConfirmMember.paymentAmount})</div>
+                  <div className="text-[11px] text-slate-600">📞 +91 {approveConfirmMember.phone}</div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1 font-mono text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">लेन-देन / UTR संदर्भ:</span>
+                  <span className="font-bold text-slate-900">{approveConfirmMember.transactionRef || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">वैधता अवधि:</span>
+                  <span className="font-bold text-blue-900">{approveConfirmMember.validTill || 'आजीवन (Lifetime)'}</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-slate-900">
+                  आवंटित सदस्यता संख्या (Membership ID):
+                </label>
+                <input
+                  type="text"
+                  value={customMembershipId}
+                  onChange={(e) => setCustomMembershipId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white rounded-xl border-2 border-emerald-400 font-mono font-bold text-blue-950 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  placeholder="JJF-MEM-2026-001"
+                />
+                <p className="text-[10px] text-slate-500">
+                  स्वीकृति के तुरंत बाद सदस्य के मोबाइल नंबर पर प्रमाण पत्र डाउनलोड उपलब्ध हो जाएगा।
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setApproveConfirmMember(null)}
+                  disabled={isProcessing}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeApprove()}
+                  disabled={isProcessing}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{isProcessing ? 'स्वीकृति जारी...' : 'हाँ, सदस्यता स्वीकृत करें'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. IN-APP REJECT DIALOG MODAL */}
+      {rejectDialogMember && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border-2 border-red-300 overflow-hidden my-6 animate-in fade-in zoom-in duration-200">
+            <div className="bg-gradient-to-r from-red-800 to-rose-900 p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-red-200" />
+                <h3 className="font-black text-base text-white">सदस्यता आवेदन अस्वीकृत करें</h3>
+              </div>
+              <button
+                onClick={() => setRejectDialogMember(null)}
+                className="p-1.5 rounded-full hover:bg-white/20 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs text-slate-700">
+              <div className="p-3 bg-red-50 rounded-2xl border border-red-200">
+                <div className="font-black text-slate-900 text-sm">{rejectDialogMember.fullName}</div>
+                <div className="text-red-900 font-bold">{rejectDialogMember.planNameHindi} • 📞 +91 {rejectDialogMember.phone}</div>
+                <div className="text-[11px] text-slate-600 mt-1">आवेदन क्र.: {rejectDialogMember.applicationNo || rejectDialogMember.id}</div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-black text-slate-900">
+                  अस्वीकृति का कारण (Reason for Rejection):
+                </label>
+                <div className="space-y-1.5">
+                  {[
+                    'अमान्य UTR या अधूरा भुगतान विवरण',
+                    'बैंक खाते में सदस्यता शुल्क प्राप्त नहीं हुआ',
+                    'फ़ोटो या पहचान पत्र स्पष्ट नहीं है',
+                    'नाम अथवा पता विवरण में विसंगति'
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setRejectReasonInput(preset)}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg border text-xs font-medium transition cursor-pointer ${
+                        rejectReasonInput === preset
+                          ? 'bg-red-100 border-red-400 text-red-900 font-bold'
+                          : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700'
+                      }`}
+                    >
+                      • {preset}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  rows={2}
+                  value={rejectReasonInput}
+                  onChange={(e) => setRejectReasonInput(e.target.value)}
+                  className="w-full px-3 py-2 bg-white rounded-xl border border-slate-300 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="कस्टम कारण लिखें..."
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectDialogMember(null)}
+                  disabled={isProcessing}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeReject()}
+                  disabled={isProcessing}
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <XCircle className="w-4 h-4" />
+                  <span>{isProcessing ? 'प्रक्रियाधीन...' : 'आवेदन अस्वीकृत करें'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. IN-APP DELETE CONFIRMATION MODAL */}
+      {deleteConfirmMember && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border-2 border-red-300 overflow-hidden my-6 animate-in fade-in zoom-in duration-200">
+            <div className="bg-gradient-to-r from-red-900 to-rose-950 p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-300" />
+                <h3 className="font-black text-base text-white">सदस्यता रिकॉर्ड स्थायी रूप से हटाएं?</h3>
+              </div>
+              <button
+                onClick={() => setDeleteConfirmMember(null)}
+                className="p-1.5 rounded-full hover:bg-white/20 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs text-slate-700">
+              <p className="text-slate-700 text-sm">
+                क्या आप सचमुच <strong>{deleteConfirmMember.fullName}</strong> ({deleteConfirmMember.planNameHindi}) का सदस्यता रिकॉर्ड हटाना चाहते हैं?
+              </p>
+              <div className="p-3 bg-red-50 text-red-900 rounded-xl border border-red-200 text-[11px] leading-relaxed">
+                ⚠️ <strong>चेतावनी:</strong> यह कार्रवाई स्थायी है। इससे सदस्य का आवेदन व प्रमाण पत्र रिकॉर्ड सिस्टम व डेटाबेस से हमेशा के लिए हट जाएगा।
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmMember(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeDelete()}
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>हाँ, स्थायी रूप से हटाएं</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. IN-APP BULK APPROVE CONFIRMATION MODAL */}
+      {showBulkApproveConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border-2 border-emerald-400 overflow-hidden my-6 animate-in fade-in zoom-in duration-200">
+            <div className="bg-gradient-to-r from-emerald-800 to-teal-800 p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+                <h3 className="font-black text-base text-white">सभी पेंडिंग आवेदन स्वीकृत करें</h3>
+              </div>
+              <button
+                onClick={() => setShowBulkApproveConfirm(false)}
+                className="p-1.5 rounded-full hover:bg-white/20 text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs text-slate-700">
+              <p className="text-slate-800 text-sm leading-relaxed">
+                कुल <strong>{stats.pending} पेंडिंग सदस्यता आवेदनों</strong> को एक साथ स्वीकृत कर सभी के आधिकारिक A4 लेटरहेड प्रमाण पत्र जारी किए जाएंगे।
+              </p>
+              <div className="p-3 bg-emerald-50 text-emerald-950 rounded-xl border border-emerald-200 text-[11px]">
+                ✓ सभी सदस्यों को विशिष्ट सदस्यता क्रमांक आवंटित होगा एवं ऑनलाइन सत्यापन सक्रिय हो जाएगा।
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkApproveConfirm(false)}
+                  disabled={isProcessing}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+                >
+                  रद्द करें
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeBulkApprove()}
+                  disabled={isProcessing}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl text-xs shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{isProcessing ? 'स्वीकृति जारी...' : `हाँ, सभी ${stats.pending} स्वीकृत करें`}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -947,7 +1269,7 @@ const ManualAddMemberModal: React.FC<ManualAddMemberModalProps> = ({ onClose, on
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fullName.trim() || !formData.phone.trim()) {
-      alert('कृपया नाम और मोबाइल नंबर भरें।');
+      toast.error('कृपया नाम और मोबाइल नंबर भरें।');
       return;
     }
 
@@ -967,11 +1289,11 @@ const ManualAddMemberModal: React.FC<ManualAddMemberModalProps> = ({ onClose, on
             customValidTill: formData.membershipType === 'life' || formData.membershipType === 'patron' ? 'आजीवन (Lifetime)' : undefined
           }
         );
-        alert(`✅ सदस्य ${formData.fullName} को सफलतापूर्वक जोड़ दिया गया है और प्रमाण पत्र जारी हो गया है!`);
+        toast.success(`✅ सदस्य ${formData.fullName} को सफलतापूर्वक जोड़ दिया गया है और प्रमाण पत्र जारी हो गया है!`);
         onAdded();
       }
     } catch (err: any) {
-      alert(`सदस्य जोड़ने में त्रुटि: ${err.message || 'पुनः प्रयास करें।'}`);
+      toast.error(`सदस्य जोड़ने में त्रुटि: ${err.message || 'पुनः प्रयास करें।'}`);
     }
   };
 

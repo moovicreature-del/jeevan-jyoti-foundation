@@ -461,7 +461,7 @@ export const Donation80GPortal: React.FC<Props> = ({
                 onPhotoRemove={() => setDonorPhoto('')}
                 required={true}
                 label="दानदाता का पासपोर्ट फोटो (Donor Photo - कैमरा या गैलरी)"
-                subLabel="आधिकारिक 80G रसीद व प्रशस्ति सम्मान पत्र पर डिजिटल क्रॉस स्टांप मुद्रण हेतु अनिवार्य"
+                subLabel="आधिकारिक दान रसीद व प्रशस्ति सम्मान पत्र पर डिजिटल क्रॉस स्टांप मुद्रण हेतु अनिवार्य"
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -727,7 +727,7 @@ export const Donation80GPortal: React.FC<Props> = ({
 
                   <div className="p-3 bg-white/90 rounded-xl border border-emerald-200 text-left max-w-lg mx-auto">
                     <label className="block text-xs font-bold text-gray-800 mb-1">
-                      भुगतान उपरांत UTR / लेन-देन संख्या दर्ज करें (रसीद व 80G प्रमाण पत्र हेतु):
+                      भुगतान उपरांत UTR / लेन-देन संख्या दर्ज करें (दान रसीद व प्रमाण पत्र हेतु):
                     </label>
                     <div className="flex gap-2">
                       <input

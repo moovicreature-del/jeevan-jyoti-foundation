@@ -1207,7 +1207,7 @@ export const QuickDonateOverlay: React.FC<QuickDonateOverlayProps> = ({
                           onClick={() => setShowClaimForm(true)}
                           className="text-[11px] text-emerald-800 hover:text-emerald-950 font-black underline cursor-pointer"
                         >
-                          भुगतान पूर्ण हो गया? 80G दान रसीद व प्रमाण पत्र तुरंत जनरेट करें →
+                          भुगतान पूर्ण हो गया? दान रसीद व प्रमाण पत्र तुरंत जनरेट करें →
                         </button>
                       </div>
                     </div>

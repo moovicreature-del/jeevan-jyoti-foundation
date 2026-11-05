@@ -461,7 +461,7 @@ export const MembershipLetterheadCertificate: React.FC<MembershipLetterheadCerti
                 </span>
               </div>
               <div className="text-right font-semibold text-slate-600">
-                आयकर अधिनियम 12A एवं 80G अधिकृत
+                शासन पंजीकृत सामाजिक सेवा संगठन
               </div>
             </div>
 

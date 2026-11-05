@@ -1,5 +1,5 @@
 // ============================================================================
-// JEEVAN JYOTI FOUNDATION - OFFICIAL DONATION CERTIFICATE & 80G RECEIPT
+// JEEVAN JYOTI FOUNDATION - OFFICIAL DONATION CERTIFICATE & RECEIPT
 // जीवन ज्योति फाउंडेशन - आधिकारिक दान रसीद व प्रशस्ति सम्मान पत्र (लेटरहेड प्रारूप)
 // A4 300 DPI Perfect Alignment with Donor Photo & Verification QR Code
 // ============================================================================
@@ -29,11 +29,13 @@ export const DonationLetterheadA4Document: React.FC<DonationLetterheadProps> = (
   className = '',
   hideLetterheadBackground = false
 }) => {
-  // Format Receipt Number e.g. JJF/DON-80G/2026/0001
-  const receiptNumber = donation.receiptNo || (
+  // Format Receipt Number e.g. JJF/DON/2026/0001
+  const receiptNumber = donation.receiptNo
+    ? donation.receiptNo.replace('JJF/DON-80G', 'JJF/DON')
+    : (
     donation.id.startsWith('JJF/DON')
-      ? donation.id
-      : `JJF/DON-80G/2026/${donation.id.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '0001'}`
+      ? donation.id.replace('JJF/DON-80G', 'JJF/DON')
+      : `JJF/DON/2026/${donation.id.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '0001'}`
   );
 
   // Format Date
@@ -60,8 +62,8 @@ export const DonationLetterheadA4Document: React.FC<DonationLetterheadProps> = (
   // Donor Photo Fallback (high-res authentic Indian donor portrait or foundation emblem)
   const photo = donorPhotoUrl || donation.photoUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&auto=format&fit=crop&q=80';
 
-  const refNo = `JJF/DON-80G/2026/${donation.id.replace(/[^0-9]/g, '').slice(-4).padStart(4, '0') || '0001'}`;
-  const subject = 'आयकर अधिनियम 80G एवं 12A के अंतर्गत आधिकारिक दान रसीद व प्रशस्ति सम्मान पत्र (Donation Receipt & Certificate of Honor)';
+  const refNo = receiptNumber;
+  const subject = 'संस्था नियमावली के अंतर्गत आधिकारिक दान रसीद व प्रशस्ति सम्मान पत्र (Official Donation Receipt & Certificate of Honor)';
 
   return (
     <OfficialLetterheadA4
@@ -159,7 +161,7 @@ export const DonationLetterheadA4Document: React.FC<DonationLetterheadProps> = (
               <QRCodeSVG value={verifyUrl} size={62} level="M" />
             </div>
             <span className="text-[7.5px] font-black text-emerald-800 uppercase mt-0.5 tracking-tight">
-              Scan to Verify 80G ✓
+              Scan to Verify ✓
             </span>
           </div>
         </div>
@@ -180,7 +182,7 @@ export const DonationLetterheadA4Document: React.FC<DonationLetterheadProps> = (
           <div className="bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 text-white px-3 py-1 font-bold flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Award className="w-3.5 h-3.5 text-amber-300" />
-              <span>दान एवं भुगतान विवरण (Donation & Statutory Particulars)</span>
+              <span>दान एवं भुगतान विवरण (Donation Particulars)</span>
             </div>
             <span className="text-[9.5px] text-amber-200 font-mono">
               वित्तीय वर्ष 2025-2026 / 2026-2027
@@ -215,27 +217,27 @@ export const DonationLetterheadA4Document: React.FC<DonationLetterheadProps> = (
                 </td>
               </tr>
               <tr>
-                <td className="py-1 px-2.5 font-bold text-slate-700 border-r border-amber-100">80G पंजीकरण सं.:</td>
+                <td className="py-1 px-2.5 font-bold text-slate-700 border-r border-amber-100">संस्था पंजीकरण सं.:</td>
                 <td className="py-1 px-2.5 font-mono font-bold text-slate-900 border-r border-amber-100">
-                  {FOUNDATION_INFO.urn80G || 'AAATJ5576RF20214'}
+                  {FOUNDATION_INFO.regNo}
                 </td>
-                <td className="py-1 px-2.5 font-bold text-slate-700 border-r border-amber-100">संस्था पैन / 12A URN:</td>
+                <td className="py-1 px-2.5 font-bold text-slate-700 border-r border-amber-100">नीति आयोग UID / पैन:</td>
                 <td className="py-1 px-2.5 font-mono font-bold text-slate-900">
-                  {FOUNDATION_INFO.pan} / {FOUNDATION_INFO.urn10A || 'AAEAJ3141QE20231'}
+                  {FOUNDATION_INFO.nitiAayogUid} / {FOUNDATION_INFO.pan}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* 4. STATUTORY TAX BENEFIT & CERTIFICATE CLAUSE */}
+        {/* 4. STATUTORY CERTIFICATION CLAUSE */}
         <div className="p-2 bg-amber-50/70 rounded-lg border border-amber-200 text-[10.5px] space-y-0.5">
           <div className="font-bold text-[#8B0000] flex items-center gap-1">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-            <span>आयकर छूट एवं वैधानिक प्रमाणन (Statutory 80G Tax Exemption Clause):</span>
+            <span>आधिकारिक वैधानिक एवं प्रामाणिक पावती (Official Statutory Receipt & Certification):</span>
           </div>
           <p className="text-justify text-[10px] text-slate-700 leading-snug">
-            प्रमाणित किया जाता है कि उपरोक्त दान राशि जीवन ज्योति फाउंडेशन को स्वैच्छिक रूप से समाज कल्याण हेतु प्राप्त हुई है। यह संस्था आयकर अधिनियम 1961 की धारा 80G(5)(vi) तथा 12A के अंतर्गत पंजीकृत है एवं यह दान आयकर छूट के प्रयोजनार्थ पूर्णतः मान्य है।
+            प्रमाणित किया जाता है कि उपरोक्त दान राशि जीवन ज्योति फाउंडेशन को स्वैच्छिक रूप से समाज कल्याण एवं जनहित प्रकल्पों हेतु प्राप्त हुई है। यह रसीद संस्था के आधिकारिक केंद्रीय रिकॉर्ड में विधिवत पंजीकृत एवं डिजिटल रूप से प्रमाणित है।
           </p>
         </div>
 
@@ -265,7 +267,7 @@ export const DonationLetterheadA4Document: React.FC<DonationLetterheadProps> = (
             <div className="px-3 py-1 bg-amber-50 rounded-lg border border-amber-300 shadow-2xs text-center">
               <div className="text-[8px] font-black text-emerald-900 uppercase tracking-tight flex items-center justify-center gap-1">
                 <span>✓</span>
-                <span>80G DIGITALLY VERIFIED</span>
+                <span>DIGITALLY VERIFIED RECEIPT</span>
               </div>
               <div className="text-[7px] font-mono text-slate-600 mt-0.5">
                 Receipt UID: {receiptNumber}

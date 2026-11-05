@@ -84,6 +84,8 @@ import { AppointmentLetterModal } from './common/AppointmentLetterModal';
 import { DonationLetterheadA4Document } from './common/DonationLetterheadA4Document';
 import { findStaffMember } from '../services/staffService';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { downloadVerificationQrBadge } from '../utils/downloadVerificationQr';
+import toast from 'react-hot-toast';
 
 interface DownloadCertificatesModalProps {
   isOpen: boolean;
@@ -719,7 +721,7 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
         ? `⚠️ यह प्रमाण पत्र/दान रसीद संस्था एडमिन द्वारा अस्वीकृत (Rejected) कर दी गई है। कारण: ${item.rejectionReason || 'विवरण अपूर्ण'}`
         : '⏳ यह प्रमाण पत्र/दान रसीद अभी संस्था एडमिन द्वारा अनुमोदन (Approval) के लिए प्रतीक्षारत (Pending) है। एडमिन द्वारा स्वीकृति के बाद ही इसे डाउनलोड किया जा सकता है।';
       setVerificationError(msg);
-      alert(msg);
+      toast.error(msg, { duration: 6000 });
       return;
     }
 
@@ -836,7 +838,7 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
         ? `⚠️ यह प्रमाण पत्र/दान रसीद संस्था एडमिन द्वारा अस्वीकृत है। मुद्रण की अनुमति नहीं है।`
         : '⏳ यह प्रमाण पत्र/दान रसीद अभी संस्था एडमिन द्वारा अनुमोदन (Approval) के लिए प्रतीक्षारत है। स्वीकृति के बाद ही प्रिंट करें।';
       setVerificationError(msg);
-      alert(msg);
+      toast.error(msg, { duration: 6000 });
       return;
     }
 
@@ -2072,27 +2074,66 @@ export const DownloadCertificatesModal: React.FC<DownloadCertificatesModalProps>
               </div>
 
               {/* QR Verification Link Box */}
-              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-bold text-amber-950">
-                    आधिकारिक सार्वजनिक सत्यापन यूआरएल:
-                  </p>
-                  <p className="text-[10px] font-mono text-amber-800 truncate">
-                    https://jeevanjyotifoundation.org/?verify={inspectingVerification.certificateId}
-                  </p>
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-amber-950">
+                      आधिकारिक सार्वजनिक सत्यापन यूआरएल:
+                    </p>
+                    <p className="text-[10px] font-mono text-amber-800 truncate">
+                      https://jeevanjyotifoundation.org/?verify={inspectingVerification.certificateId}
+                    </p>
+                  </div>
+                  <CertificateVerificationQR
+                    certificateId={inspectingVerification.certificateId}
+                    size={50}
+                  />
                 </div>
-                <CertificateVerificationQR
-                  certificateId={inspectingVerification.certificateId}
-                  size={50}
-                />
+
+                <div className="pt-2 border-t border-amber-200/80 flex items-center justify-between">
+                  <span className="text-[10px] text-amber-900 font-bold">
+                    ऑफलाइन शेयरिंग एवं प्रिंटिंग हेतु:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      downloadVerificationQrBadge({
+                        certificateId: inspectingVerification.certificateId,
+                        recipientName: inspectingVerification.recipientName,
+                        verificationUrl: `https://jeevanjyotifoundation.org/?verify=${inspectingVerification.certificateId}`
+                      });
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#8B0000] hover:bg-[#6b0000] text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                    title="सत्यापन QR कोड इमेज डाउनलोड करें (Download QR Code Image for Offline Sharing)"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>QR कोड डाउनलोड करें</span>
+                  </button>
+                </div>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    downloadVerificationQrBadge({
+                      certificateId: inspectingVerification.certificateId,
+                      recipientName: inspectingVerification.recipientName,
+                      verificationUrl: `https://jeevanjyotifoundation.org/?verify=${inspectingVerification.certificateId}`
+                    });
+                  }}
+                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer text-xs"
+                  title="सत्यापन QR कोड इमेज डाउनलोड करें (Download QR Code Image)"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>QR कोड डाउनलोड करें</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setInspectingVerification(null)}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl cursor-pointer"
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl cursor-pointer text-xs"
                 >
                   बंद करें
                 </button>

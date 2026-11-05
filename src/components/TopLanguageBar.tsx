@@ -296,7 +296,7 @@ export const TopLanguageBar: React.FC<TopLanguageBarProps> = ({ onOpenAdmin, onO
 
           <span className="hidden md:inline-flex items-center gap-1 bg-amber-400/20 text-amber-200 text-[10px] px-2 py-0.5 rounded-full border border-amber-400/30 font-semibold">
             <Sparkles className="w-2.5 h-2.5 text-yellow-300" />
-            <span>12A पंजीकृत एवं नीति आयोग मान्यता प्राप्त</span>
+            <span>शासन पंजीकृत एवं नीति आयोग मान्यता प्राप्त</span>
           </span>
         </div>
 

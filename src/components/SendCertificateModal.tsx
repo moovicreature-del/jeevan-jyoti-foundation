@@ -23,12 +23,15 @@ import {
   AlertCircle,
   Globe,
   Award,
-  Facebook
+  Facebook,
+  Download,
+  QrCode
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { FOUNDATION_INFO } from '../data/foundationData';
 import { triggerDonationReceiptEmail } from '../services/emailService';
 import { DonationRecord } from '../types';
+import { downloadVerificationQrBadge } from '../utils/downloadVerificationQr';
 
 export interface CertificateShareData {
   certificateType:
@@ -83,6 +86,23 @@ export const SendCertificateModal: React.FC<Props> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSentSuccess, setEmailSentSuccess] = useState(false);
+  const [downloadingQr, setDownloadingQr] = useState(false);
+
+  const handleDownloadQr = async () => {
+    if (!data.certificateNo) return;
+    setDownloadingQr(true);
+    try {
+      await downloadVerificationQrBadge({
+        certificateId: data.certificateNo,
+        recipientName: data.recipientName,
+        categoryTitle: data.titleHindi,
+        issueDate: data.issueDate,
+        verificationUrl: verifyUrl
+      });
+    } finally {
+      setDownloadingQr(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -367,7 +387,16 @@ ${verifyUrl}
             <Sparkles className="w-3.5 h-3.5 text-amber-600" />
             <span>त्वरित शेयरिंग विकल्प (Quick Share):</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={handleDownloadQr}
+              disabled={downloadingQr}
+              className="p-1.5 rounded-lg bg-amber-100 text-amber-900 hover:bg-amber-200 transition text-xs font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              title="सत्यापन QR कोड इमेज डाउनलोड करें (Download QR Code Image for Offline Sharing)"
+            >
+              <Download className="w-3.5 h-3.5 text-amber-700" />
+              <span className="text-[11px]">{downloadingQr ? 'डाउनलोड...' : 'QR डाउनलोड'}</span>
+            </button>
             <button
               onClick={handleBroadcastWhatsApp}
               className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition text-xs font-bold flex items-center gap-1 cursor-pointer"

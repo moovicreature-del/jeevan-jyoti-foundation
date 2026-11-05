@@ -53,6 +53,7 @@ export const TabDonationPaymentSettings: React.FC = () => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [previewTab, setPreviewTab] = useState<'quick_donate' | 'bank_details'>('quick_donate');
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
 
   const UPI_SUFFIX_CHIPS = ['@sbi', '@okaxis', '@paytm', '@ybl', '@icici', '@ibl', '@axl', '@postbank', '@kotak', '@barodampay'];
 
@@ -278,11 +279,8 @@ export const TabDonationPaymentSettings: React.FC = () => {
   };
 
   // Reset to Foundation Defaults
-  const handleResetToDefault = async () => {
-    if (!window.confirm('क्या आप सचमुच दान विवरण को मूल डिफ़ॉल्ट (Bank of India खाता) पर रीसेट करना चाहते हैं?')) {
-      return;
-    }
-
+  const handleConfirmReset = async () => {
+    setShowResetConfirmModal(false);
     setIsSaving(true);
     try {
       const adminName = adminProfile?.name || 'व्यवस्थापक';
@@ -332,7 +330,7 @@ export const TabDonationPaymentSettings: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
-              onClick={handleResetToDefault}
+              onClick={() => setShowResetConfirmModal(true)}
               disabled={isSaving}
               className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition border border-white/20 cursor-pointer"
               title="मूल बैंक ऑफ इंडिया खाते पर रीसेट करें"
@@ -1101,6 +1099,39 @@ export const TabDonationPaymentSettings: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* IN-APP CONFIRMATION MODAL */}
+      {showResetConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 text-center space-y-4">
+            <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto border-2 border-amber-200">
+              <RotateCcw className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800">डिफ़ॉल्ट विवरण रीसेट करें?</h3>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                क्या आप सचमुच दान विवरण को मूल डिफ़ॉल्ट (Bank of India खाता व मूल UPI) पर रीसेट करना चाहते हैं?
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirmModal(false)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                रद्द करें (Cancel)
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReset}
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer"
+              >
+                हाँ, रीसेट करें
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -46,6 +46,11 @@ export const TabUserManagement: React.FC = () => {
   const [filterRole, setFilterRole] = useState<'all' | 'superadmin' | 'admin' | 'pending'>('all');
   const [logStatusFilter, setLogStatusFilter] = useState<'all' | 'SUCCESS' | 'FAILED'>('all');
   const [logSearchQuery, setLogSearchQuery] = useState<string>('');
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<
+    | { type: 'user'; user: AdminUser }
+    | { type: 'log'; logId: string }
+    | null
+  >(null);
 
   // Load admins and logs
   const loadData = async () => {
@@ -90,17 +95,8 @@ export const TabUserManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteLog = async (logId: string) => {
-    if (!window.confirm('क्या आप वाकई इस सुरक्षा ऑडिट लॉग प्रविष्टि को हटाना चाहते हैं?')) {
-      return;
-    }
-    try {
-      await deleteAdminOtpLog(logId);
-      setLogs((prev) => prev.filter((l) => l.id !== logId));
-      toast.success('लॉग प्रविष्टि सफलतापूर्वक हटाई गई।');
-    } catch {
-      toast.error('लॉग हटाने में त्रुटि।');
-    }
+  const handleDeleteLog = (logId: string) => {
+    setDeleteConfirmTarget({ type: 'log', logId });
   };
 
   // Filtered logs computation
@@ -197,16 +193,30 @@ export const TabUserManagement: React.FC = () => {
       return;
     }
 
-    if (!window.confirm(`क्या आप वाकई एडमिन "${targetUser.name}" को हमेशा के लिए हटाना चाहते हैं?`)) {
-      return;
-    }
+    setDeleteConfirmTarget({ type: 'user', user: targetUser });
+  };
 
-    try {
-      await deleteAdminUser(targetUser.uid, targetUser.name, adminProfile.name, adminProfile.uid);
-      toast.success(`एडमिन ${targetUser.name} को हटा दिया गया।`);
-      loadData();
-    } catch {
-      toast.error('हटाने में त्रुटि आई।');
+  const handleConfirmAction = async () => {
+    if (!deleteConfirmTarget) return;
+    const target = deleteConfirmTarget;
+    setDeleteConfirmTarget(null);
+
+    if (target.type === 'log') {
+      try {
+        await deleteAdminOtpLog(target.logId);
+        setLogs((prev) => prev.filter((l) => l.id !== target.logId));
+        toast.success('लॉग प्रविष्टि सफलतापूर्वक हटाई गई।');
+      } catch {
+        toast.error('लॉग हटाने में त्रुटि।');
+      }
+    } else if (target.type === 'user') {
+      try {
+        await deleteAdminUser(target.user.uid, target.user.name, adminProfile?.name || 'Admin', adminProfile?.uid || '');
+        toast.success(`एडमिन ${target.user.name} को हटा दिया गया।`);
+        loadData();
+      } catch {
+        toast.error('हटाने में त्रुटि आई।');
+      }
     }
   };
 
@@ -677,6 +687,43 @@ export const TabUserManagement: React.FC = () => {
                 })}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* IN-APP CONFIRMATION MODAL */}
+      {deleteConfirmTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 text-center space-y-4">
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border-2 border-red-200">
+              <Trash2 className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800">
+                {deleteConfirmTarget.type === 'user' ? 'एडमिन खाता हटाएं?' : 'ऑडिट लॉग हटाएं?'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                {deleteConfirmTarget.type === 'user'
+                  ? `क्या आप वाकई एडमिन "${deleteConfirmTarget.user.name}" को हमेशा के लिए हटाना चाहते हैं?`
+                  : 'क्या आप वाकई इस सुरक्षा ऑडिट लॉग प्रविष्टि को हटाना चाहते हैं?'}
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmTarget(null)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                रद्द करें
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAction}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer"
+              >
+                हाँ, हटाएं
+              </button>
+            </div>
           </div>
         </div>
       )}

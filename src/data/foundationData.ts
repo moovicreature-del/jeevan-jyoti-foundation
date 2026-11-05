@@ -9,7 +9,7 @@ export const FOUNDATION_INFO: FoundationInfo = {
   nitiAayogUid: 'UP/2018/0207700',
   pan: 'AAEAJ3141Q',
   urn80G: '',
-  urn10A: 'AAEAJ3141QE20231',
+  urn10A: '',
   address: 'ग्राम मीरानपुर उर्फ मदियावडीह, पोस्ट मीरानपुर, ब्लॉक मोहम्मदाबाद, जनपद ग़ाज़ीपुर, उत्तर प्रदेश, भारत - 233303 (DIGIPIN 2J6T226CL2)',
   fullAddressHindi: 'ग्राम मीरानपुर उर्फ मदियावडीह, पोस्ट मीरानपुर, ब्लॉक मोहम्मदाबाद, जनपद ग़ाज़ीपुर, उत्तर प्रदेश, भारत (पिन कोड: 233303 [DIGIPIN 2J6T226CL2])',
   fullAddressEnglish: 'Village Meeranpur Urf Madiyawadih, Post Meeranpur, Block Mohammadabad, District Ghazipur, Uttar Pradesh, India - 233303 (DIGIPIN 2J6T226CL2)',

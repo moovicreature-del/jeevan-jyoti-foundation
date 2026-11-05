@@ -42,6 +42,7 @@ export const TabNoticeBoardManager: React.FC = () => {
 
   const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [noticeToDelete, setNoticeToDelete] = useState<NoticeItem | null>(null);
 
   // नया नोटिस सबमिट करें या एडिट सेव करें
   const handleSubmitNotice = async (e: React.FormEvent) => {
@@ -145,19 +146,22 @@ export const TabNoticeBoardManager: React.FC = () => {
     }
   };
 
-  // नोटिस डिलीट करें
-  const handleDeleteClick = async (notice: NoticeItem) => {
-    if (!adminProfile) return;
-    if (!window.confirm(`क्या आप वाकई सूचना "${notice.title}" को हमेशा के लिए हटाना चाहते हैं?`)) {
-      return;
-    }
+  // नोटिस डिलीट करने की पुष्टि
+  const handleConfirmDeleteNotice = async () => {
+    if (!adminProfile || !noticeToDelete) return;
+    const target = noticeToDelete;
+    setNoticeToDelete(null);
 
     try {
-      await deleteNotice(notice.id, notice.title, adminProfile.name, adminProfile.uid);
+      await deleteNotice(target.id, target.title, adminProfile.name, adminProfile.uid);
       toast.success('सूचना हटा दी गई।');
     } catch {
       toast.error('डिलीट करने में त्रुटि आई।');
     }
+  };
+
+  const handleDeleteClick = (notice: NoticeItem) => {
+    setNoticeToDelete(notice);
   };
 
   return (
@@ -418,6 +422,39 @@ export const TabNoticeBoardManager: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* IN-APP NOTICE DELETE CONFIRMATION MODAL */}
+      {noticeToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 text-center space-y-4">
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border-2 border-red-200">
+              <Trash2 className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800">सूचना हटाएं?</h3>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                क्या आप वाकई सूचना <strong className="text-slate-800 font-bold">"{noticeToDelete.title}"</strong> को हमेशा के लिए हटाना चाहते हैं? यह क्रिया वापस नहीं ली जा सकती।
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setNoticeToDelete(null)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                रद्द करें
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteNotice}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer"
+              >
+                हाँ, हटाएं
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

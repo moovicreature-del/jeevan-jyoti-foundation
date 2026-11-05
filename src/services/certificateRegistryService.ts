@@ -247,17 +247,21 @@ export function getAllRegisteredCertificates(): RegisteredCertificateItem[] {
         return filtered
           .map((item) => {
             const cleanedTitleHindi = (item.titleHindi || '')
+              .replace(/आयकर\s*अधिनियम\s*12A\s*एवं\s*80G\s*अधिकृत/gi, '')
               .replace(/धारा\s*80G\s*आयकर\s*/gi, '')
               .replace(/80G\s*आयकर\s*/gi, '')
               .replace(/80G\s*/gi, '')
+              .replace(/12A[A-Z]?\s*/gi, '')
               .trim();
             const cleanedTitleEnglish = (item.titleEnglish || '')
               .replace(/80G\s*Tax\s*Exemption\s*/gi, '')
               .replace(/80G\s*/gi, '')
+              .replace(/12A[A-Z]?\s*/gi, '')
               .trim();
             const cleanedDetails = (item.details || '')
               .replace(/•\s*80G\s*URN\s*अधिकृत/gi, '• अधिकृत रसीद')
               .replace(/80G/gi, '')
+              .replace(/12A[A-Z]?/gi, '')
               .trim();
             return {
               ...item,

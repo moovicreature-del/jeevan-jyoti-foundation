@@ -47,6 +47,7 @@ import {
 } from '../services/adminBotNotificationService';
 import { saveCertificateToRegistry } from '../services/certificateRegistryService';
 import { registerNewVolunteer } from '../services/volunteerService';
+import { downloadVerificationQrBadge } from '../utils/downloadVerificationQr';
 
 interface Props {
   selectedTab?: FormTab | null;
@@ -950,7 +951,7 @@ export const ProfessionalFormsPortal: React.FC<Props> = ({
                       5. दान रसीद फॉर्म
                     </div>
                     <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">
-                      डिजिटल दान रसीद एवं 80G आयकर छूट प्रमाण पत्र
+                      डिजिटल दान रसीद एवं आधिकारिक प्रशस्ति पत्र
                     </p>
                   </div>
                   <div className="mt-3 pt-2 border-t border-red-100 text-[11px] font-bold text-red-700 flex items-center gap-1">
@@ -2357,6 +2358,23 @@ export const ProfessionalFormsPortal: React.FC<Props> = ({
                   </div>
 
                   <div className="pt-3 border-t border-emerald-200 flex flex-wrap gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        downloadVerificationQrBadge({
+                          certificateId: verResult.certId,
+                          recipientName: verResult.holder,
+                          categoryTitle: verResult.type,
+                          issueDate: verResult.date
+                        });
+                      }}
+                      className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      title="सत्यापन QR कोड इमेज डाउनलोड करें (Download QR Code Image for Offline Sharing)"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>QR कोड डाउनलोड करें</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => {

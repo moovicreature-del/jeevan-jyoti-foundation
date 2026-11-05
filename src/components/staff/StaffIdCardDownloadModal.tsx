@@ -36,6 +36,7 @@ import { exportElementAsPng, exportElementsAsMultiPagePdf, directPrintElement } 
 import { OtpVerificationModal } from '../OtpVerificationModal';
 import { AppointmentLetterModal } from '../common/AppointmentLetterModal';
 import { FOUNDATION_INFO } from '../../data/foundationData';
+import toast from 'react-hot-toast';
 
 interface StaffIdCardDownloadModalProps {
   initialStaff?: StaffMember | null;
@@ -143,14 +144,16 @@ export const StaffIdCardDownloadModal: React.FC<StaffIdCardDownloadModalProps> =
     if (!selectedStaff) return;
 
     if (isPending) {
-      alert(
-        '⚠️ यह स्टाफ पहचान पत्र वर्तमान में संस्था प्रशासन (Admin) के अनुमोदन हेतु लंबित है। एडमिन लॉगिन से फॉर्म Approve होने के बाद ही कार्ड जारी एवं डाउनलोड होगा।'
+      toast.error(
+        '⚠️ यह स्टाफ पहचान पत्र वर्तमान में संस्था प्रशासन (Admin) के अनुमोदन हेतु लंबित है। एडमिन लॉगिन से फॉर्म Approve होने के बाद ही कार्ड जारी एवं डाउनलोड होगा।',
+        { duration: 6000 }
       );
       return;
     }
     if (isRejected) {
-      alert(
-        `⚠️ यह स्टाफ पंजीकरण संस्था प्रशासन द्वारा अस्वीकृत किया गया है। ${selectedStaff.rejectionReason ? `(कारण: ${selectedStaff.rejectionReason})` : ''}`
+      toast.error(
+        `⚠️ यह स्टाफ पंजीकरण संस्था प्रशासन द्वारा अस्वीकृत किया गया है। ${selectedStaff.rejectionReason ? `(कारण: ${selectedStaff.rejectionReason})` : ''}`,
+        { duration: 6000 }
       );
       return;
     }

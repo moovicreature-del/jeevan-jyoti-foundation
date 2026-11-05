@@ -174,9 +174,12 @@ export const Donation80GReceiptView: React.FC<Props> = ({
 
   // Handle Instant Direct Automated Email Trigger with PDF Receipt
   const handleDirectEmailResend = async () => {
-    const targetEmail = donation.email || prompt('कृपया दान रसीद PDF प्राप्त करने हेतु ईमेल पता दर्ज करें:', 'moovicreature@gmail.com');
+    const targetEmail = donation.email;
     if (!targetEmail || !targetEmail.includes('@')) {
-      toast.error('मान्य ईमेल पता दर्ज करना आवश्यक है।');
+      // If no valid email on donation record, seamlessly open the email share tab
+      setShareModalTab('email');
+      setShareModalOpen(true);
+      toast('कृपया ईमेल शेयरिंग डायलॉग में प्राप्तकर्ता का ईमेल दर्ज करें।', { icon: '📧' });
       return;
     }
 

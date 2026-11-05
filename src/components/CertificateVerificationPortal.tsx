@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ShieldCheck, CheckCircle2, AlertCircle, Share2, Mail } from 'lucide-react';
+import { Search, ShieldCheck, CheckCircle2, AlertCircle, Share2, Mail, Download, QrCode } from 'lucide-react';
 import { FOUNDATION_INFO } from '../data/foundationData';
 import { INITIAL_VOLUNTEERS } from '../data/taskData';
 import { INITIAL_DONORS } from '../data/donorsData';
@@ -11,6 +11,8 @@ import { useLanguage } from '../context/LanguageContext';
 import { SendCertificateModal } from './SendCertificateModal';
 import { getCertificateById } from '../services/certificateRegistryService';
 import { fetchPublicArchivedCertificate } from '../services/publicVerifiedArchiveService';
+import { CertificateVerificationQR } from './CertificateVerificationQR';
+import { downloadVerificationQrBadge } from '../utils/downloadVerificationQr';
 
 interface VerificationResult {
   type: string;
@@ -31,6 +33,22 @@ export const CertificateVerificationPortal: React.FC = () => {
   const [searched, setSearched] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareModalTab, setShareModalTab] = useState<'whatsapp' | 'email'>('whatsapp');
+  const [downloadingQr, setDownloadingQr] = useState(false);
+
+  const handleDownloadQr = async () => {
+    if (!searchResult) return;
+    setDownloadingQr(true);
+    try {
+      await downloadVerificationQrBadge({
+        certificateId: searchResult.certNo,
+        recipientName: searchResult.holderName,
+        categoryTitle: searchResult.details,
+        issueDate: searchResult.issueDate
+      });
+    } finally {
+      setDownloadingQr(false);
+    }
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,14 +247,29 @@ export const CertificateVerificationPortal: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-black font-bold pt-2">
-                  <div><span className="text-gray-600">{isHindi ? 'प्रमाण पत्र संख्या (Cert No):' : 'Certificate ID:'}</span> <span className="font-mono font-black">{searchResult.certNo}</span></div>
-                  <div><span className="text-gray-600">{isHindi ? 'नाम (Holder Name):' : 'Holder Name:'}</span> <span className="text-base font-black text-[#8B0000]">{searchResult.holderName}</span></div>
-                  {searchResult.fatherName && (
-                    <div><span className="text-gray-600">{isHindi ? 'अभिभावक (Guardian):' : 'Guardian:'}</span> Shri {searchResult.fatherName}</div>
-                  )}
-                  <div><span className="text-gray-600">{isHindi ? 'जारी दिनांक (Issue Date):' : 'Issue Date:'}</span> {searchResult.issueDate}</div>
-                  <div className="sm:col-span-2"><span className="text-gray-600">{isHindi ? 'विवरण (Details):' : 'Details:'}</span> {searchResult.details}</div>
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pt-2">
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-black font-bold w-full">
+                    <div><span className="text-gray-600">{isHindi ? 'प्रमाण पत्र संख्या (Cert No):' : 'Certificate ID:'}</span> <span className="font-mono font-black">{searchResult.certNo}</span></div>
+                    <div><span className="text-gray-600">{isHindi ? 'नाम (Holder Name):' : 'Holder Name:'}</span> <span className="text-base font-black text-[#8B0000]">{searchResult.holderName}</span></div>
+                    {searchResult.fatherName && (
+                      <div><span className="text-gray-600">{isHindi ? 'अभिभावक (Guardian):' : 'Guardian:'}</span> Shri {searchResult.fatherName}</div>
+                    )}
+                    <div><span className="text-gray-600">{isHindi ? 'जारी दिनांक (Issue Date):' : 'Issue Date:'}</span> {searchResult.issueDate}</div>
+                    <div className="sm:col-span-2"><span className="text-gray-600">{isHindi ? 'विवरण (Details):' : 'Details:'}</span> {searchResult.details}</div>
+                  </div>
+
+                  {/* Scannable Verification QR Thumbnail */}
+                  <div className="shrink-0 flex flex-col items-center justify-center p-2 bg-amber-50/60 rounded-xl border border-amber-200">
+                    <CertificateVerificationQR
+                      certificateId={searchResult.certNo}
+                      size={72}
+                      showId={false}
+                      subText="सत्यापन QR"
+                    />
+                    <span className="text-[8.5px] font-mono font-bold text-slate-700 mt-1">
+                      {searchResult.certNo}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="bg-[#FFFDE7] p-2.5 rounded-lg border border-yellow-300 text-[10.5px] text-black font-extrabold flex items-center justify-between">
@@ -244,8 +277,18 @@ export const CertificateVerificationPortal: React.FC = () => {
                   <span className="text-emerald-800">100% Genuine</span>
                 </div>
 
-                {/* Share Verified Record via WhatsApp / Email */}
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                {/* Share & Download Actions */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 flex-wrap">
+                  <button
+                    onClick={handleDownloadQr}
+                    disabled={downloadingQr}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                    title="सत्यापन QR कोड इमेज डाउनलोड करें (Download Scannable QR Code for Offline Sharing)"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{downloadingQr ? 'QR तैयार हो रहा...' : 'QR कोड डाउनलोड करें'}</span>
+                  </button>
+
                   <button
                     onClick={() => {
                       setShareModalTab('whatsapp');

@@ -111,6 +111,10 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
   const [cancelModalCert, setCancelModalCert] = useState<RegisteredCertificateItem | null>(null);
   const [cancellationReason, setCancellationReason] = useState<string>('प्रशासनिक समीक्षा के उपरांत निरस्त');
 
+  // Rejection Dialog State
+  const [rejectModalCert, setRejectModalCert] = useState<RegisteredCertificateItem | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string>('दस्तावेज़/विवरण अपूर्ण होने के कारण अस्वीकृत');
+
   // Delete Dialog State
   const [deleteModalCert, setDeleteModalCert] = useState<RegisteredCertificateItem | null>(null);
 
@@ -265,15 +269,20 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
     }
   };
 
-  // Admin Rejection Action: Reject certificate with prompt for reason
-  const handleRejectCertificate = async (cert: RegisteredCertificateItem, e?: React.MouseEvent) => {
+  // Admin Rejection Action: Open rejection modal
+  const handleRejectCertificate = (cert: RegisteredCertificateItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const reason = window.prompt(`प्रमाण पत्र (${cert.id}) अस्वीकार करने का कारण दर्ज करें:`, 'दस्तावेज़/विवरण अपूर्ण होने के कारण अस्वीकृत');
-    if (reason === null) return; // User cancelled
+    setRejectionReason('दस्तावेज़/विवरण अपूर्ण होने के कारण अस्वीकृत');
+    setRejectModalCert(cert);
+  };
 
+  // Confirm Rejection in in-app modal
+  const handleConfirmReject = async () => {
+    if (!rejectModalCert) return;
+    const cert = rejectModalCert;
     setActionProcessingId(cert.id);
     try {
-      const updated = rejectCertificateInRegistry(cert.id, reason.trim() || 'दस्तावेज़/विवरण अपूर्ण होने के कारण अस्वीकृत');
+      const updated = rejectCertificateInRegistry(cert.id, rejectionReason.trim() || 'दस्तावेज़/विवरण अपूर्ण होने के कारण अस्वीकृत');
       if (updated) {
         toast.error(`प्रमाण पत्र ${cert.id} अस्वीकृत (Rejected) कर दिया गया।`);
         await loadAnalyticsData(false);
@@ -285,6 +294,7 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
       toast.error(err.message || 'त्रुटि हुई');
     } finally {
       setActionProcessingId(null);
+      setRejectModalCert(null);
     }
   };
 
@@ -1677,6 +1687,66 @@ export const TabCertificatePipelineDashboard: React.FC<TabCertificatePipelineDas
               >
                 <Ban className="w-4 h-4 text-white" />
                 <span>हाँ, निरस्त करें (Revoke Certificate)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REJECTION CONFIRMATION MODAL */}
+      {rejectModalCert && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5 my-auto border-2 border-red-300">
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-red-100 text-red-800 flex items-center justify-center shrink-0">
+                  <X className="w-6 h-6 text-red-700" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900 leading-tight">
+                    प्रमाण पत्र अस्वीकार करें (Reject Certificate)
+                  </h3>
+                  <span className="text-xs text-red-700 font-bold block mt-0.5">
+                    {rejectModalCert.id} — {rejectModalCert.recipientName}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setRejectModalCert(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-black text-slate-800">
+                अस्वीकृति का कारण दर्ज करें:
+              </label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="अस्वीकृति का स्पष्ट कारण दर्ज करें..."
+                rows={3}
+                className="w-full p-3 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setRejectModalCert(null)}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                रद्द करें
+              </button>
+              <button
+                type="button"
+                disabled={actionProcessingId === rejectModalCert.id}
+                onClick={handleConfirmReject}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <span>हाँ, अस्वीकार करें</span>
               </button>
             </div>
           </div>

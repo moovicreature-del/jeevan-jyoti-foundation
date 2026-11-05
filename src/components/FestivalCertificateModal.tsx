@@ -421,7 +421,7 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
                     Reg. No: <span className="font-mono">{FOUNDATION_INFO.regNo}</span> | NITI Aayog: <span className="font-mono">{FOUNDATION_INFO.nitiAayogUid}</span>
                   </div>
                   <div className="text-[9px] text-gray-600 font-semibold">
-                    12A URN: {FOUNDATION_INFO.urn10A} • Darpan Verified
+                    PAN: <span className="font-mono">{FOUNDATION_INFO.pan}</span> • Darpan Verified
                   </div>
                 </div>
 

@@ -758,7 +758,7 @@ export const PwaInstallBanner: React.FC = () => {
               </div>
               <div className="flex items-center gap-1.5 text-amber-800 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span>डिजिटल 80G दान रसीदें</span>
+                <span>डिजिटल दान रसीदें</span>
               </div>
             </div>
 

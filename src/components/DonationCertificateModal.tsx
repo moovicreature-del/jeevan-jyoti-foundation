@@ -378,7 +378,7 @@ export const DonationCertificateModal: React.FC<Props> = ({ donation, onClose })
                 <div className="text-left font-sans text-[11px] text-black font-extrabold space-y-0.5 pt-1">
                   <div><strong className="text-[#8B0000] font-black">{certMatter.regNoLabel}:</strong> {FOUNDATION_INFO.regNo}</div>
                   <div><strong className="text-[#8B0000] font-black">{certMatter.nitiLabel}:</strong> {FOUNDATION_INFO.nitiAayogUid}</div>
-                  <div><strong className="text-[#8B0000] font-black">{certMatter.urn12ALabel}:</strong> {FOUNDATION_INFO.urn10A}</div>
+                  <div><strong className="text-[#8B0000] font-black">{certLanguage === 'hi' ? 'संस्था पैन' : 'PAN'}:</strong> {FOUNDATION_INFO.pan}</div>
                 </div>
 
                 {/* Top Center Title & Logo */}
@@ -400,7 +400,7 @@ export const DonationCertificateModal: React.FC<Props> = ({ donation, onClose })
                 <div className="text-right font-sans text-[11px] text-black font-extrabold space-y-0.5 pt-1">
                   <div><strong className="text-[#8B0000] font-black">{certMatter.receiptNoLabel}:</strong> <span className="font-mono font-black">{certNumber}</span></div>
                   <div><strong className="text-[#8B0000] font-black">{certMatter.dateLabel}:</strong> <span className="font-mono font-black">{donation.date}</span></div>
-                  <div><strong className="text-[#8B0000] font-black">{certMatter.panLabel}:</strong> <span className="font-mono font-black">{FOUNDATION_INFO.pan}</span></div>
+                  <div><strong className="text-[#8B0000] font-black">{certLanguage === 'hi' ? 'कार्यक्षेत्र' : 'District'}:</strong> <span>गाज़ीपुर (उ.प्र.)</span></div>
                 </div>
               </div>
 
