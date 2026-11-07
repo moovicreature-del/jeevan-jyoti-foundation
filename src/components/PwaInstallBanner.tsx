@@ -19,6 +19,7 @@ import {
 import { useHomeContent } from '../context/HomeContentContext';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useHttpsCheck } from '../hooks/useHttpsCheck';
+import { BrandLogo } from './common/BrandLogo';
 
 export const PwaInstallBanner: React.FC = () => {
   const homeContext = useHomeContent();
@@ -51,16 +52,17 @@ export const PwaInstallBanner: React.FC = () => {
             localThumb &&
             localThumb !== '/pwa-icon-512.png' &&
             !localThumb.includes('1791445209912') &&
-            !localThumb.includes('1791445272050')
+            !localThumb.includes('1791445272050') &&
+            !localThumb.includes('1793441166525')
           ) {
             return localThumb;
           }
         }
       } catch {}
     }
-    const candidate = content?.appThumbnailUrl || content?.appLogoUrl || '/pwa-icon-512.png';
-    if (candidate.includes('1791445209912') || candidate.includes('1791445272050') || candidate.includes('ngo_logo')) {
-      return '/pwa-icon-512.png';
+    const candidate = content?.appThumbnailUrl || content?.appLogoUrl || '/logo.png';
+    if (candidate.includes('1791445209912') || candidate.includes('1791445272050') || candidate.includes('1793441166525') || candidate.includes('ngo_logo')) {
+      return '/logo.png';
     }
     return candidate;
   });
@@ -241,14 +243,11 @@ export const PwaInstallBanner: React.FC = () => {
             {/* Left: Organization icon & text */}
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-white/20 border border-amber-300/80 p-0.5 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
-                <img
-                  src={activeThumbnail}
-                  alt="App Icon"
+                <BrandLogo
+                  size={28}
+                  customLogoUrl={activeThumbnail || content?.appThumbnailUrl || content?.appLogoUrl || '/pwa-icon-512.png'}
                   className="w-full h-full object-cover rounded-md"
-                  onError={(e) => {
-                    const img = e.currentTarget as HTMLImageElement;
-                    img.src = '/pwa-icon-512.png';
-                  }}
+                  alt="App Icon"
                 />
               </div>
               <div className="min-w-0">
@@ -300,17 +299,14 @@ export const PwaInstallBanner: React.FC = () => {
 
             {/* Header */}
             <div className="text-center mb-3">
-              <div className="relative w-16 h-16 mx-auto mb-2">
-                <img
-                  src={activeThumbnail}
+              <div className="relative w-16 h-16 mx-auto mb-2 flex items-center justify-center">
+                <BrandLogo
+                  size={64}
+                  customLogoUrl={activeThumbnail || content?.appThumbnailUrl || content?.appLogoUrl || '/pwa-icon-512.png'}
+                  className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shadow-md bg-white overflow-hidden"
                   alt="Jeevan Jyoti Foundation App Icon"
-                  className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-400 shadow-md bg-white"
-                  onError={(e) => {
-                    const img = e.currentTarget as HTMLImageElement;
-                    img.src = '/pwa-icon-512.png';
-                  }}
                 />
-                <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-0.5 rounded-full border-2 border-white shadow-xs">
+                <div className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-0.5 rounded-full border-2 border-white shadow-xs z-10">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                 </div>
               </div>
@@ -544,14 +540,14 @@ export const PwaInstallBanner: React.FC = () => {
 
             {/* Live App Icon Confirmation Box */}
             <div className="mb-3.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-2.5 flex items-center gap-3">
-              <img
-                src={activeThumbnail}
-                alt="Active App Icon"
-                className="w-11 h-11 rounded-xl object-cover border border-amber-300 shadow-xs bg-white shrink-0"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = '/pwa-icon-512.png';
-                }}
-              />
+              <div className="w-11 h-11 rounded-xl border border-amber-300 shadow-xs bg-white shrink-0 overflow-hidden flex items-center justify-center">
+                <BrandLogo
+                  size={44}
+                  customLogoUrl={activeThumbnail || content?.appThumbnailUrl || content?.appLogoUrl || '/pwa-icon-512.png'}
+                  className="w-full h-full object-cover"
+                  alt="Active App Icon"
+                />
+              </div>
               <div className="min-w-0 text-left">
                 <div className="text-xs font-black text-slate-800 flex items-center gap-1.5">
                   <span>आधिकारिक ऐप आइकन (App Icon)</span>

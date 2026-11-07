@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Printer, Download, Share2, Sparkles, ShieldCheck, Calendar, CheckCircle2, Camera, AlertCircle, Trash2, UploadCloud, Check, FileText, Mail, Languages, Palette, ChevronDown } from 'lucide-react';
+import { X, Printer, Download, Share2, Sparkles, ShieldCheck, Calendar, CheckCircle2, Camera, AlertCircle, Trash2, UploadCloud, Check, FileText, Mail, Languages, Palette, ChevronDown, Award } from 'lucide-react';
 import { FestivalGreetingRecord } from '../types';
 import { FOUNDATION_INFO } from '../data/foundationData';
 import { FESTIVALS_LIST, getFestivalsForYear } from '../data/festivalsData';
@@ -24,6 +24,7 @@ import { CertificateLanguage, getFestivalCertMatter } from '../utils/certificate
 import { CertificateLanguageToggle } from './common/CertificateLanguageToggle';
 import { OfficialVerifiedBadge } from './common/OfficialVerifiedBadge';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { JJFOfficialAttachedPoster } from './common/JJFOfficialAttachedPoster';
 
 interface Props {
   greeting: FestivalGreetingRecord;
@@ -42,6 +43,7 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareModalTab, setShareModalTab] = useState<'whatsapp' | 'email'>('whatsapp');
   const [certLanguage, setCertLanguage] = useState<CertificateLanguage>('bilingual');
+  const [displayFormat, setDisplayFormat] = useState<'poster' | 'certificate'>('poster');
   const [activeThemeId, setActiveThemeId] = useState<string>(() => {
     return greeting.themeId || getThemeForFestival(greeting.festivalId).id;
   });
@@ -101,13 +103,7 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
   };
 
   const validatePhotoRequirement = (): boolean => {
-    if (!photoUrl) {
-      setPhotoError('⚠️ शुभकामना प्रमाण पत्र डाउनलोड/प्रिंट करने हेतु प्राप्तकर्ता की फोटो अपलोड करना अनिवार्य है।');
-      setTimeout(() => {
-        fileInputRef.current?.click();
-      }, 150);
-      return false;
-    }
+    // Photo is recommended but optional for festive greetings certificates
     setPhotoError(null);
     return true;
   };
@@ -135,14 +131,15 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
     if (!certificateRef.current || downloading) return;
     setDownloading('jpg');
     try {
-      const fileName = `${greeting.recipientName.replace(/\s+/g, '_')}_${greeting.festivalId}_Greeting_Certificate`;
+      const formatTag = displayFormat === 'poster' ? 'Official_Social_Poster' : 'Greeting_Certificate';
+      const fileName = `${greeting.recipientName.replace(/\s+/g, '_')}_${greeting.festivalId}_${formatTag}`;
       const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
       await exportElementAsJpg(certificateRef.current, fileName, {
         quality: 0.98,
         pixelRatio: highResScale
       });
     } catch (err) {
-      console.error('Error downloading JPG certificate:', err);
+      console.error('Error downloading JPG:', err);
     } finally {
       setDownloading(null);
     }
@@ -152,14 +149,15 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
     if (!certificateRef.current || downloading) return;
     setDownloading('png');
     try {
-      const fileName = `${greeting.recipientName.replace(/\s+/g, '_')}_${greeting.festivalId}_Greeting_Certificate`;
+      const formatTag = displayFormat === 'poster' ? 'Official_Social_Poster' : 'Greeting_Certificate';
+      const fileName = `${greeting.recipientName.replace(/\s+/g, '_')}_${greeting.festivalId}_${formatTag}`;
       const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
       await exportElementAsPng(certificateRef.current, fileName, {
         backgroundColor: '#FFFFFF',
         pixelRatio: highResScale
       });
     } catch (err) {
-      console.error('Error downloading certificate:', err);
+      console.error('Error downloading PNG:', err);
     } finally {
       setDownloading(null);
     }
@@ -169,14 +167,15 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
     if (!certificateRef.current || downloading) return;
     setDownloading('pdf');
     try {
-      const fileName = `${greeting.recipientName.replace(/\s+/g, '_')}_${greeting.festivalId}_Greeting_Certificate_A4`;
+      const formatTag = displayFormat === 'poster' ? 'Official_Social_Poster_Portrait' : 'Greeting_Certificate_A4';
+      const fileName = `${greeting.recipientName.replace(/\s+/g, '_')}_${greeting.festivalId}_${formatTag}`;
       const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
       await exportElementAsPdf(certificateRef.current, fileName, {
-        orientation: 'landscape',
+        orientation: displayFormat === 'poster' ? 'portrait' : 'landscape',
         pixelRatio: highResScale
       });
     } catch (err) {
-      console.error('Error downloading PDF certificate:', err);
+      console.error('Error downloading PDF:', err);
     } finally {
       setDownloading(null);
     }
@@ -371,20 +370,73 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
           />
         </div>
 
-        {/* Certificate Container with Scroll on Mobile */}
+        {/* Format Selector Bar: Official Social Poster (Attached Format) vs Classic A4 Certificate */}
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-y border-amber-200 px-4 py-2.5 flex items-center justify-between flex-wrap gap-2 no-print shadow-xs">
+          <div className="flex items-center gap-1.5 p-1 bg-amber-200/60 rounded-xl border border-amber-300">
+            <button
+              type="button"
+              onClick={() => setDisplayFormat('poster')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                displayFormat === 'poster'
+                  ? 'bg-[#8B0000] text-white shadow-md'
+                  : 'text-amber-950 hover:bg-amber-100'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+              <span>🖼️ आधिकारिक सेवा-कोलाज सोशल पोस्टर (Attached Format)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDisplayFormat('certificate')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                displayFormat === 'certificate'
+                  ? 'bg-[#8B0000] text-white shadow-md'
+                  : 'text-amber-950 hover:bg-amber-100'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5 text-yellow-300" />
+              <span>📜 शास्त्रीय A4 प्रमाण पत्र (Classic Certificate)</span>
+            </button>
+          </div>
+
+          <div className="text-[11px] font-bold text-amber-900 hidden sm:flex items-center gap-1">
+            <span>{displayFormat === 'poster' ? '📱 WhatsApp / Facebook स्टेटस हेतु 1080p वर्टिकल पोस्टर' : '📄 प्रिंट व लैमिनेशन हेतु A4 लैंडस्केप प्रमाण पत्र'}</span>
+          </div>
+        </div>
+
+        {/* Certificate / Poster Container with Scroll on Mobile */}
         <div className="p-3 sm:p-6 bg-[#FFFDF8] overflow-x-auto flex justify-center">
-          {/* A4 Landscape Ratio Certificate Board */}
-          <div
-            ref={certificateRef}
-            id="festival-certificate-card"
-            data-printable="true"
-            className="printable-certificate w-[860px] min-w-[860px] p-6 sm:p-8 rounded-2xl relative overflow-hidden text-gray-900 select-none shadow-2xl transition-all duration-300"
-            style={{
-              border: `9px solid ${activeTheme.outerBorderColor}`,
-              boxShadow: `0 0 0 3px ${activeTheme.innerBorderColor}, 0 0 0 6px ${activeTheme.outerBorderColor}88, 0 16px 45px rgba(0, 0, 0, 0.28)`,
-              background: activeTheme.bgGradient
-            }}
-          >
+          {displayFormat === 'poster' ? (
+            /* OFFICIAL ATTACHED SOCIAL MEDIA POSTER */
+            <div ref={certificateRef} className="w-full max-w-[480px]">
+              <JJFOfficialAttachedPoster
+                salutation={greeting.recipientName ? `प्रिय ${greeting.recipientName} जी,` : 'प्रिय देशवासियों,'}
+                headline={`${greeting.festivalNameHindi} के पावन पर्व की\nहार्दिक शुभकामनाएं!`}
+                message={greeting.customMessage || festivalInfo.blessingHindi || 'यह पावन पर्व आपके जीवन में सुख, समृद्धि, खुशहाली और नई रोशनी लेकर आए।'}
+                subMessage={greeting.shloka || festivalInfo.shloka}
+                recipientName={greeting.recipientName}
+                recipientTitle={greeting.recipientTitle}
+                recipientPhoto={photoUrl || greeting.photoUrl}
+                signoff="- जीवन ज्योति फाउंडेशन, गाज़ीपुर"
+                symbolEmoji={greeting.symbolEmoji || festivalInfo.symbolEmoji}
+                festivalId={greeting.festivalId}
+                showDiya={true}
+              />
+            </div>
+          ) : (
+            /* A4 Landscape Ratio Certificate Board */
+            <div
+              ref={certificateRef}
+              id="festival-certificate-card"
+              data-printable="true"
+              className="printable-certificate w-[860px] min-w-[860px] p-6 sm:p-8 rounded-2xl relative overflow-hidden text-gray-900 select-none shadow-2xl transition-all duration-300"
+              style={{
+                border: `9px solid ${activeTheme.outerBorderColor}`,
+                boxShadow: `0 0 0 3px ${activeTheme.innerBorderColor}, 0 0 0 6px ${activeTheme.outerBorderColor}88, 0 16px 45px rgba(0, 0, 0, 0.28)`,
+                background: activeTheme.bgGradient
+              }}
+            >
             {/* Inner Golden Ornate Border */}
             <div
               className="absolute inset-2 sm:inset-3 rounded-xl pointer-events-none"
@@ -540,18 +592,18 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
                         </div>
                       </>
                     ) : (
-                      <>
-                        <Camera className="w-5 h-5 text-red-600 mb-0.5 group-hover:scale-110 transition-transform" />
-                        <span className="text-[7pt] font-black text-red-700 uppercase leading-tight">
-                          {certLanguage === 'hi' ? 'फोटो अपलोड *' : 'PHOTO UPLOAD *'}
+                      <div className="flex flex-col items-center justify-center p-1 text-center">
+                        <BrandLogo size={42} className="mx-auto mb-1 opacity-90 drop-shadow-xs" />
+                        <span className="text-[6.5pt] font-black text-amber-900 leading-tight">
+                          {certLanguage === 'hi' ? 'शुभकामना पत्र' : 'GREETINGS'}
                         </span>
-                      </>
+                      </div>
                     )}
                   </div>
                   <span className={`text-[6.5pt] font-black uppercase tracking-wider mt-1 px-1 rounded ${
-                    photoUrl ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700 animate-pulse'
+                    photoUrl ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
                   }`}>
-                    {photoUrl ? (certLanguage === 'hi' ? '✓ सत्यापित फोटो' : '✓ VERIFIED') : (certLanguage === 'hi' ? '⚠️ फोटो *' : '⚠️ PHOTO *')}
+                    {photoUrl ? (certLanguage === 'hi' ? '✓ सत्यापित फोटो' : '✓ VERIFIED') : (certLanguage === 'hi' ? '✓ आधिकारिक पत्र' : '✓ OFFICIAL')}
                   </span>
                 </div>
 
@@ -675,7 +727,8 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
               </div>
             </div>
           </div>
-        </div>
+        )}
+      </div>
 
         {/* OTP Verification Modal for Secure Festival Greeting Certificate Download */}
         <OtpVerificationModal

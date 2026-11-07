@@ -259,7 +259,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   } else if (typeof window !== 'undefined') {
     try {
       const stored = localStorage.getItem('jjf_custom_logo') || '';
-      if (stored && !stored.includes('ngo_logo') && !stored.includes('1791445209912') && !stored.includes('1791445272050')) {
+      if (
+        stored &&
+        !stored.includes('ngo_logo') &&
+        !stored.includes('1791445209912') &&
+        !stored.includes('1791445272050') &&
+        !stored.includes('1793441166525')
+      ) {
         activeLogoUrl = stored;
       }
     } catch {
@@ -267,12 +273,18 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     }
   }
 
-  if (activeLogoUrl && (activeLogoUrl.includes('1791445209912') || activeLogoUrl.includes('1791445272050') || activeLogoUrl.includes('ngo_logo.png'))) {
+  if (
+    activeLogoUrl &&
+    (activeLogoUrl.includes('1791445209912') ||
+      activeLogoUrl.includes('1791445272050') ||
+      activeLogoUrl.includes('1793441166525') ||
+      activeLogoUrl.includes('ngo_logo.png'))
+  ) {
     activeLogoUrl = '';
   }
 
-  // Default to official authentic logo /logo.png if no custom logo is active
-  if (!activeLogoUrl && !isPermanentlyDeleted) {
+  // Always guarantee a valid fallback logo URL - never allow empty string
+  if (!activeLogoUrl) {
     activeLogoUrl = '/logo.png';
   }
 
@@ -292,7 +304,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   const finalOpacity = watermark ? (opacity ?? 0.12) : (opacity ?? 1);
 
   // If forceVector is explicitly requested, or fallback exceeds image stages, render inline SVG emblem
-  if (forceVector || fallbackStage >= 4 || (!activeLogoUrl && isPermanentlyDeleted)) {
+  if (forceVector || fallbackStage >= 3 || !activeLogoUrl) {
     return (
       <OfficialVectorEmblem
         id={id || 'jjf-official-brand-logo'}
@@ -310,7 +322,6 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   // 0: Preferred active URL (cache-busted)
   // 1: Direct active URL without cache-busting
   // 2: Authentic official /logo.png
-  // 3: Authentic /logo.svg
   let currentSrc = '';
   if (fallbackStage === 0) {
     currentSrc = getCacheBustedImageUrl(activeLogoUrl);
@@ -318,8 +329,10 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     currentSrc = activeLogoUrl;
   } else if (fallbackStage === 2) {
     currentSrc = '/logo.png';
-  } else if (fallbackStage === 3) {
-    currentSrc = '/logo.svg';
+  }
+
+  if (!currentSrc || currentSrc.trim() === '') {
+    currentSrc = '/logo.png';
   }
 
   const handleImageError = () => {

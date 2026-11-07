@@ -362,6 +362,18 @@ export async function optimizeImageFile(file: File, maxDim = 800, quality = 0.9)
   });
 }
 
+export const isCustomPhotoItem = (item: any): boolean =>
+  Boolean(
+    item &&
+    typeof item.url === 'string' &&
+    item.url.trim().length > 0 &&
+    !item.url.includes('images.unsplash.com') &&
+    !item.id?.startsWith('hero-slide-') &&
+    !item.id?.startsWith('camp-slide-') &&
+    !item.id?.startsWith('event-slide-') &&
+    !item.id?.startsWith('rural-slide-')
+  );
+
 function sanitizeContentData(raw: any): AppHomeContent {
   const merged: AppHomeContent = { ...DEFAULT_HOME_CONTENT, ...raw };
   
@@ -397,7 +409,13 @@ function sanitizeContentData(raw: any): AppHomeContent {
     : '';
   const isThumbPermanentlyDeleted = typeof localStorage !== 'undefined' && localStorage.getItem('jjf_thumb_permanently_deleted') === 'true';
 
-  if (rawThumb && !rawThumb.includes('ngo_logo.png') && !rawThumb.includes('1791445209912') && !rawThumb.includes('1791445272050')) {
+  if (
+    rawThumb &&
+    !rawThumb.includes('ngo_logo.png') &&
+    !rawThumb.includes('1791445209912') &&
+    !rawThumb.includes('1791445272050') &&
+    !rawThumb.includes('1793441166525')
+  ) {
     // If a new active thumbnail exists in database or payload, it overrides any old delete flag!
     merged.appThumbnailUrl = rawThumb;
     if (typeof localStorage !== 'undefined') {
@@ -411,9 +429,16 @@ function sanitizeContentData(raw: any): AppHomeContent {
   } else {
     try {
       const localThumb = localStorage.getItem('jjf_custom_thumbnail') || '';
-      merged.appThumbnailUrl = (!localThumb.includes('ngo_logo.png') && !localThumb.includes('1791445209912') && !localThumb.includes('1791445272050') && localThumb.trim() && localThumb !== '/pwa-icon-512.png') ? localThumb.trim() : '/pwa-icon-512.png';
+      merged.appThumbnailUrl = (
+        !localThumb.includes('ngo_logo.png') &&
+        !localThumb.includes('1791445209912') &&
+        !localThumb.includes('1791445272050') &&
+        !localThumb.includes('1793441166525') &&
+        localThumb.trim() &&
+        localThumb !== '/pwa-icon-512.png'
+      ) ? localThumb.trim() : '/logo.png';
     } catch {
-      merged.appThumbnailUrl = '/pwa-icon-512.png';
+      merged.appThumbnailUrl = '/logo.png';
     }
   }
 
@@ -486,43 +511,13 @@ function sanitizeContentData(raw: any): AppHomeContent {
     return valid.length > 0 ? valid : defaultList;
   };
 
-  const isCustomPhotoItem = (item: any): boolean =>
-    Boolean(
-      item &&
-      typeof item.url === 'string' &&
-      item.url.trim().length > 0 &&
-      !item.url.includes('images.unsplash.com') &&
-      (
-        item.id?.startsWith('photo-') ||
-        item.id?.startsWith('url-photo-') ||
-        item.url.startsWith('data:') ||
-        (item.url.startsWith('/uploads/') &&
-         !item.id?.startsWith('hero-slide-') &&
-         !item.id?.startsWith('camp-slide-') &&
-         !item.id?.startsWith('event-slide-') &&
-         !item.id?.startsWith('rural-slide-'))
-      )
-    );
-
   const resolveSectionPhotos = (
     rawList: any,
     storageKey: string,
     defaultList: SliderPhotoItem[]
   ): SliderPhotoItem[] => {
-    // 1. If raw list contains user uploaded photos, sanitize, persist and return
-    if (Array.isArray(rawList) && rawList.length > 0) {
-      const sanitized = sanitizePhotoList(rawList, defaultList);
-      if (sanitized.some(isCustomPhotoItem)) {
-        try {
-          if (typeof localStorage !== 'undefined') {
-            safeSetLocalStorage(storageKey, JSON.stringify(sanitized));
-          }
-        } catch {}
-        return sanitized;
-      }
-    }
-
-    // 2. Check dedicated storage key for previously uploaded user photos
+    // 1. First retrieve any previously saved user photos from dedicated backup storage
+    let customStored: SliderPhotoItem[] | null = null;
     try {
       if (typeof localStorage !== 'undefined') {
         const stored = localStorage.getItem(storageKey);
@@ -531,14 +526,70 @@ function sanitizeContentData(raw: any): AppHomeContent {
           if (Array.isArray(parsed) && parsed.length > 0) {
             const sanitizedStored = sanitizePhotoList(parsed, defaultList);
             if (sanitizedStored.some(isCustomPhotoItem)) {
-              return sanitizedStored;
+              customStored = sanitizedStored;
             }
           }
         }
       }
     } catch {}
 
-    // 3. Fallback to raw list or defaultList
+    // 2. Inspect incoming raw list
+    let sanitizedRaw: SliderPhotoItem[] | null = null;
+    if (Array.isArray(rawList) && rawList.length > 0) {
+      const sanitized = sanitizePhotoList(rawList, defaultList);
+      if (sanitized.some(isCustomPhotoItem)) {
+        sanitizedRaw = sanitized;
+      }
+    }
+
+    // 3. Priority decision:
+    // If incoming list has custom photos AND there is no customStored, adopt incoming and persist
+    if (sanitizedRaw && !customStored) {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          safeSetLocalStorage(storageKey, JSON.stringify(sanitizedRaw));
+        }
+      } catch {}
+      return sanitizedRaw;
+    }
+
+    // If customStored exists and incoming rawList only has default samples, PERMANENTLY PRESERVE customStored!
+    if (customStored && (!sanitizedRaw || !sanitizedRaw.some(isCustomPhotoItem))) {
+      return customStored;
+    }
+
+    // If both have custom photos:
+    if (customStored && sanitizedRaw) {
+      // Merge unique custom photos, prioritizing newly added items
+      const seenUrls = new Set<string>();
+      const mergedList: SliderPhotoItem[] = [];
+
+      // Add customStored items first (most recently uploaded in this browser)
+      for (const item of customStored) {
+        if (item.url && !seenUrls.has(item.url.trim())) {
+          seenUrls.add(item.url.trim());
+          mergedList.push(item);
+        }
+      }
+
+      // Add incoming items that are not already present
+      for (const item of sanitizedRaw) {
+        if (item.url && !seenUrls.has(item.url.trim())) {
+          seenUrls.add(item.url.trim());
+          mergedList.push(item);
+        }
+      }
+
+      const finalList = mergedList.slice(0, 15);
+      try {
+        if (typeof localStorage !== 'undefined') {
+          safeSetLocalStorage(storageKey, JSON.stringify(finalList));
+        }
+      } catch {}
+      return finalList;
+    }
+
+    // 4. Fallback to raw list if present, else default sample list
     return sanitizePhotoList(rawList, defaultList);
   };
 
@@ -2735,7 +2786,7 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
           const preserved: SliderPhotoItem[] = (localSliderParsed && hasUserPhotos(localSliderParsed))
             ? localSliderParsed
             : (existingLocal?.sliderPhotos || []);
-          if (preserved.length > 0 && !hasUserPhotos(data.homeContent.sliderPhotos)) {
+          if (preserved.length > 0) {
             sanitized.sliderPhotos = preserved;
             sanitized.bannerImages = preserved.map((p) => p.url);
             sanitized.bannerImageUrl = preserved[0]?.url || sanitized.bannerImageUrl;
@@ -2749,7 +2800,7 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
           const preserved: SliderPhotoItem[] = (localCampParsed && hasUserPhotos(localCampParsed))
             ? localCampParsed
             : (existingLocal?.campaignGalleryPhotos || []);
-          if (preserved.length > 0 && !hasUserPhotos(data.homeContent.campaignGalleryPhotos)) {
+          if (preserved.length > 0) {
             sanitized.campaignGalleryPhotos = preserved;
           }
         }
@@ -2761,7 +2812,7 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
           const preserved: SliderPhotoItem[] = (localRecentParsed && hasUserPhotos(localRecentParsed))
             ? localRecentParsed
             : (existingLocal?.recentEventsPhotos || []);
-          if (preserved.length > 0 && !hasUserPhotos(data.homeContent.recentEventsPhotos)) {
+          if (preserved.length > 0) {
             sanitized.recentEventsPhotos = preserved;
           }
         }
@@ -2773,7 +2824,7 @@ export async function autoHydrateFromGitHubSyncedData(): Promise<boolean> {
           const preserved: SliderPhotoItem[] = (localRuralParsed && hasUserPhotos(localRuralParsed))
             ? localRuralParsed
             : (existingLocal?.ruralWorkPhotos || []);
-          if (preserved.length > 0 && !hasUserPhotos(data.homeContent.ruralWorkPhotos)) {
+          if (preserved.length > 0) {
             sanitized.ruralWorkPhotos = preserved;
           }
         }
@@ -2967,8 +3018,44 @@ export function subscribeToHomeContent(callback: (content: AppHomeContent) => vo
       contentDocRef,
       (snap: DocumentSnapshot<DocumentData>) => {
         if (snap.exists()) {
-          const liveData = sanitizeContentData(snap.data() as AppHomeContent);
+          const rawSnap = snap.data() as AppHomeContent;
+          const liveData = sanitizeContentData(rawSnap);
+
           try {
+            // Check if client has newer local photos
+            const rawLocal = localStorage.getItem('jjf_home_content');
+            let localContent: AppHomeContent | null = null;
+            let localTime = 0;
+            if (rawLocal) {
+              localContent = JSON.parse(rawLocal);
+              localTime = localContent?.updatedAt ? new Date(localContent.updatedAt).getTime() : 0;
+            }
+            const snapTime = rawSnap.updatedAt ? new Date(rawSnap.updatedAt).getTime() : 0;
+            const photosLastSaved = Number(localStorage.getItem('jjf_photos_last_saved_at') || 0);
+
+            // If client has newer photos or user recently saved photos, preserve them!
+            const isLocalPhotoNewer = (localTime > 0 && localTime > snapTime) || (photosLastSaved > 0 && photosLastSaved > snapTime);
+
+            if (isLocalPhotoNewer && localContent) {
+              const hasCustom = (list?: SliderPhotoItem[]) =>
+                Array.isArray(list) && list.some(isCustomPhotoItem);
+
+              if (localContent.sliderPhotos && hasCustom(localContent.sliderPhotos)) {
+                liveData.sliderPhotos = localContent.sliderPhotos;
+                liveData.bannerImages = localContent.sliderPhotos.map((p) => p.url);
+                liveData.bannerImageUrl = localContent.sliderPhotos[0]?.url || liveData.bannerImageUrl;
+              }
+              if (localContent.campaignGalleryPhotos && hasCustom(localContent.campaignGalleryPhotos)) {
+                liveData.campaignGalleryPhotos = localContent.campaignGalleryPhotos;
+              }
+              if (localContent.recentEventsPhotos && hasCustom(localContent.recentEventsPhotos)) {
+                liveData.recentEventsPhotos = localContent.recentEventsPhotos;
+              }
+              if (localContent.ruralWorkPhotos && hasCustom(localContent.ruralWorkPhotos)) {
+                liveData.ruralWorkPhotos = localContent.ruralWorkPhotos;
+              }
+            }
+
             localStorage.setItem('jjf_home_content', JSON.stringify(liveData));
           } catch {
             // Ignore
@@ -3126,6 +3213,7 @@ export async function saveHomeContent(
     safeSetLocalStorage('jjf_custom_campaign_photos', JSON.stringify(payload.campaignGalleryPhotos));
     safeSetLocalStorage('jjf_custom_recent_photos', JSON.stringify(payload.recentEventsPhotos));
     safeSetLocalStorage('jjf_custom_rural_photos', JSON.stringify(payload.ruralWorkPhotos));
+    localStorage.setItem('jjf_photos_last_saved_at', String(Date.now()));
     localStorage.setItem('jjf_last_github_hydrated_time', String(Date.now()));
   } catch {
     // Ignore
@@ -3136,12 +3224,12 @@ export async function saveHomeContent(
     window.dispatchEvent(new CustomEvent('jjf-content-updated', { detail: payload }));
   }
 
-  // Firestore save with 2-second fast timeout (ensures 100% upload completion without stalling)
+  // Firestore save with 5-second fast timeout (ensures 100% cloud sync without stalling)
   if (!isMockFirebase && db) {
     try {
       const contentDocRef = doc(db, 'appContent', 'home');
       const writePromise = setDoc(contentDocRef, payload, { merge: true });
-      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2000));
+      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 5000));
       await Promise.race([writePromise, timeoutPromise]);
     } catch (error) {
       console.warn('Notice saving home content to Firestore (saved locally):', error);

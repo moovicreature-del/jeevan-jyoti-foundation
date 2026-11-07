@@ -231,8 +231,14 @@ export const RecentEventsCarousel: React.FC<RecentEventsCarouselProps> = ({ onOp
                 loading="lazy"
                 decoding="async"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    getOptimizedImageUrl('/uploads/jjf_media_1793250700283_83f32964.jpg');
+                  const target = e.target as HTMLImageElement;
+                  if (!target.dataset.tried) {
+                    target.dataset.tried = '1';
+                    target.src = current.url;
+                  } else if (target.dataset.tried === '1' && current.url.startsWith('/uploads/')) {
+                    target.dataset.tried = '2';
+                    target.src = './' + current.url.replace(/^\/+/, '');
+                  }
                 }}
               />
             ) : (

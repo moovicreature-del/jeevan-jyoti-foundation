@@ -4,7 +4,7 @@
 // Offline Cache Fallback for Certificates, Official Seal, and Static Assets
 // ============================================================================
 
-const CACHE_NAME = 'jeevan-jyoti-v9-live-sync';
+const CACHE_NAME = 'jeevan-jyoti-v10-live-sync';
 
 // Static branding assets to pre-cache for offline availability
 const ASSETS_TO_CACHE = [
@@ -177,7 +177,14 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(dynamicCustomThumbnail).then((cached) => {
         if (cached) return cached;
-        return fetch(dynamicCustomThumbnail, { mode: 'cors' }).catch(() => caches.match(event.request));
+        return fetch(dynamicCustomThumbnail, { mode: 'cors' })
+          .then((resp) => {
+            if (resp && resp.status === 200) {
+              return resp;
+            }
+            return caches.match(event.request).then((c) => c || fetch(event.request));
+          })
+          .catch(() => caches.match(event.request).then((c) => c || fetch(event.request)));
       })
     );
     return;

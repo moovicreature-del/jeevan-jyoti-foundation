@@ -11,7 +11,8 @@ export type QuoteCategoryKey =
   | 'family'
   | 'friends'
   | 'life'
-  | 'patriotism';
+  | 'patriotism'
+  | 'festivals';
 
 export interface MotivationalQuote {
   id: string;
@@ -130,6 +131,15 @@ export const QUOTE_CATEGORIES: QuoteCategoryMeta[] = [
     taglineHi: 'उठो, जागो और तब तक मत रुको जब तक लक्ष्य की प्राप्ति न हो जाए।',
     description: 'देशभक्ति, युवा शक्ति, समाज निर्माण और राष्ट्र के प्रति कर्तव्यबोध',
     defaultThemeId: 'theme-patriot-tricolor'
+  },
+  {
+    key: 'festivals',
+    labelHi: 'त्यौहार एवं पावन महापर्व',
+    labelEn: 'Festivals & Celebrations',
+    icon: '🪔',
+    taglineHi: 'दीपोत्सव व सभी पावन महापर्व आपके जीवन में सुख, समृद्धि और नई रोशनी लेकर आएं।',
+    description: 'दिवाली, धनतेरस, छठ पूजा, होली, रामनवमी, राष्ट्रीय पर्व व शुभकामना संदेश',
+    defaultThemeId: 'theme-official-attached-poster'
   }
 ];
 
@@ -137,6 +147,49 @@ import { EXTRA_QUOTES_PART1 } from './extraQuotesPart1';
 import { EXTRA_QUOTES_PART2 } from './extraQuotesPart2';
 
 const BASE_MOTIVATIONAL_QUOTES: MotivationalQuote[] = [
+  // ==========================================================================
+  // 0. FESTIVALS & CELEBRATIONS (त्यौहार एवं पावन महापर्व) - MATCHING ATTACHED POSTER
+  // ==========================================================================
+  {
+    id: 'fest-diwali-official',
+    category: 'festivals',
+    quoteHi: 'दिवाली के पावन पर्व की हार्दिक शुभकामनाएं! यह दिवाली आपके जीवन में सुख, समृद्धि, खुशहाली और नई रोशनी लेकर आए।',
+    quoteEn: 'Heartiest greetings on the auspicious festival of Diwali! May this Diwali bring happiness, prosperity, joy, and new light into your life.',
+    author: 'जीवन ज्योति फाउंडेशन, गाज़ीपुर',
+    suggestedThemeIndex: 0
+  },
+  {
+    id: 'fest-dhanteras-official',
+    category: 'festivals',
+    quoteHi: 'धनतेरस एवं भगवान धन्वंतरि जयंती (आरोग्य दिवस) की हार्दिक बधाई! कुबेर देव और मां लक्ष्मी आपके घर में धन, धान्य और आरोग्य की वर्षा करें।',
+    quoteEn: 'Heartiest greetings on Dhanteras and Lord Dhanvantari Jayanti! May health, abundance, and auspicious blessings shower upon your family.',
+    author: 'जीवन ज्योति फाउंडेशन, गाज़ीपुर',
+    suggestedThemeIndex: 0
+  },
+  {
+    id: 'fest-chhath-official',
+    category: 'festivals',
+    quoteHi: 'लोक-आस्था एवं पवित्रता के महापर्व छठ पूजा की कोटिशः मंगलकामनाएं! भगवान सूर्य और छठी मइया आपके परिवार को दीर्घायु, स्वास्थ्य और शांति प्रदान करें।',
+    quoteEn: 'Heartiest greetings on Chhath Puja! May Lord Sun and Chhathi Maiya bless your household with longevity, vitality, and peace.',
+    author: 'जीवन ज्योति फाउंडेशन, गाज़ीपुर',
+    suggestedThemeIndex: 0
+  },
+  {
+    id: 'fest-holi-official',
+    category: 'festivals',
+    quoteHi: 'रंग, उमंग, सौहार्द और समरसता के महापर्व होली की हार्दिक शुभकामनाएं! यह पर्व आपके जीवन में प्रेम, आनंद और सफलता के इंद्रधनुषी रंग भरे।',
+    quoteEn: 'Heartiest greetings on the festival of colors Holi! May this festival fill your life with vibrant colors of love, joy, and harmony.',
+    author: 'जीवन ज्योति फाउंडेशन, गाज़ीपुर',
+    suggestedThemeIndex: 0
+  },
+  {
+    id: 'fest-ramnavami-official',
+    category: 'festivals',
+    quoteHi: 'मर्यादा पुरुषोत्तम भगवान श्री राम के जन्मोत्सव श्री राम नवमी की हार्दिक बधाई! प्रभु श्री राम का जीवन चरित्र हम सभी को सत्य, धर्म और सेवा के मार्ग पर चलने की प्रेरणा दे।',
+    quoteEn: 'Heartiest greetings on Shri Ram Navami! May the righteous ideals of Lord Rama inspire us toward truth, duty, and service.',
+    author: 'जीवन ज्योति फाउंडेशन, गाज़ीपुर',
+    suggestedThemeIndex: 0
+  },
   // ==========================================================================
   // 1. EDUCATIONAL & KNOWLEDGE (शिक्षा एवं ज्ञान) - TOP 20 QUOTES
   // ==========================================================================
@@ -1457,7 +1510,32 @@ export const MOTIVATIONAL_QUOTES: MotivationalQuote[] = [
 ];
 
 export const POSTER_THEMES: PosterThemePreset[] = [
-  // 0. Educational Wisdom (Light Solar Ivory & Amber Gold)
+  // 0. JJF Official Fieldwork Collage (Attached Poster Format)
+  {
+    id: 'theme-official-attached-poster',
+    name: 'JJF Official Collage (Attached Poster)',
+    nameHi: 'फाउंडेशन सेवा-कोलाज पोस्टर (Official Attached Format)',
+    category: 'universal',
+    bgGradient: 'radial-gradient(ellipse at 50% 35%, #9E1010 0%, #800000 35%, #520000 70%, #2A0000 100%)',
+    canvasBg: '#800000',
+    cardBg: 'rgba(0, 0, 0, 0.45)',
+    textColor: '#ffffff',
+    quoteColor: '#ffffff',
+    authorColor: '#ffe57f',
+    accentColor: '#d4af37',
+    borderGlow: 'rgba(212, 175, 55, 0.4)',
+    badgeBg: '#450a0a',
+    badgeText: '#ffd54f',
+    patternType: 'mandala',
+    mood: 'regal',
+    isLight: false,
+    headerColor: '#ffd54f',
+    subHeaderColor: '#fef08a',
+    cardTextColor: '#ffffff',
+    cardSubTextColor: '#ffd54f'
+  },
+
+  // 1. Educational Wisdom (Light Solar Ivory & Amber Gold)
   {
     id: 'theme-edu-wisdom',
     name: 'Academic Knowledge (Light)',

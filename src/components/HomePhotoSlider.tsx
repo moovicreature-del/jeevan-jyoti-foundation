@@ -191,10 +191,10 @@ export const HomePhotoSlider: React.FC<HomePhotoSliderProps> = ({
                     const target = e.target as HTMLImageElement;
                     if (!target.dataset.tried) {
                       target.dataset.tried = '1';
-                      target.src = getOptimizedImageUrl('/uploads/jjf_media_1793250700283_83f32964.jpg');
-                    } else if (target.dataset.tried === '1') {
+                      target.src = slide.url;
+                    } else if (target.dataset.tried === '1' && slide.url.startsWith('/uploads/')) {
                       target.dataset.tried = '2';
-                      target.src = getOptimizedImageUrl('./uploads/jjf_media_1793250700283_83f32964.jpg');
+                      target.src = './' + slide.url.replace(/^\/+/, '');
                     }
                   }}
                 />

@@ -40,6 +40,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { toPng } from 'html-to-image';
 import { RoyalFourCorners, RoyalCenterFlourish } from '../common/RoyalCertificateBorder';
 
 // Dedicated Official WhatsApp Icon SVG
@@ -121,6 +122,7 @@ import { WeeklyDeityMantrasPortal } from './WeeklyDeityMantrasPortal';
 import { FOUNDATION_INFO } from '../../data/foundationData';
 import { BrandLogo } from '../common/BrandLogo';
 import { RoyalCertificateSeal } from '../common/RoyalCertificateSeal';
+import { JJFOfficialAttachedPoster } from '../common/JJFOfficialAttachedPoster';
 import {
   DEFAULT_OFFICIAL_SEAL_URL,
   OFFICIAL_SEAL_BASE64_DATA_URL,
@@ -191,10 +193,10 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
   const [selectedRatioId, setSelectedRatioId] = useState<PosterRatioConfig['id']>('square-post');
   const activeRatio = POSTER_RATIO_CONFIGS.find((r) => r.id === selectedRatioId) || POSTER_RATIO_CONFIGS[0];
 
-  // 5. Theme & Background state
+  // 5. Theme & Background state (defaults to official attached poster format)
   const defaultTheme =
+    POSTER_THEMES.find((t) => t.id === 'theme-official-attached-poster') ||
     POSTER_THEMES.find((t) => t.category === selectedCategory) ||
-    POSTER_THEMES.find((t) => t.id === 'theme-royal-maroon') ||
     POSTER_THEMES[0];
   const [selectedThemeId, setSelectedThemeId] = useState<string>(defaultTheme.id);
   const activeTheme = POSTER_THEMES.find((t) => t.id === selectedThemeId) || defaultTheme;
@@ -249,9 +251,14 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
     setQuoteAuthor(newQuote.author);
 
     // Auto-update theme matching the category
-    const matchingTheme = POSTER_THEMES.find((t) => t.category === catKey);
-    if (matchingTheme) {
-      setSelectedThemeId(matchingTheme.id);
+    const catConfig = QUOTE_CATEGORIES.find((c) => c.key === catKey);
+    if (catConfig?.defaultThemeId) {
+      setSelectedThemeId(catConfig.defaultThemeId);
+    } else {
+      const matchingTheme = POSTER_THEMES.find((t) => t.category === catKey);
+      if (matchingTheme) {
+        setSelectedThemeId(matchingTheme.id);
+      }
     }
   };
 
@@ -361,6 +368,38 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
 
     if (!ctx) {
       throw new Error('Canvas context could not be created');
+    }
+
+    // If the official attached poster format is active and DOM preview exists, capture directly via html-to-image
+    if (activeTheme.id === 'theme-official-attached-poster' && posterPreviewRef.current) {
+      try {
+        const dataUrl = await toPng(posterPreviewRef.current, {
+          quality: 0.98,
+          pixelRatio: 2.5,
+          cacheBust: true,
+        });
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const fileName = `JJF_Official_Poster_${Date.now()}.png`;
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        const img = new Image();
+        await new Promise<void>((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = dataUrl;
+        });
+
+        canvas.width = img.naturalWidth || width;
+        canvas.height = img.naturalHeight || height;
+        if (img.naturalWidth > 0) {
+          ctx.drawImage(img, 0, 0);
+        }
+        setGeneratedPosterUri(dataUrl);
+        return { canvas, blob, dataUrl, file };
+      } catch (err) {
+        console.warn('html-to-image toPng fallback to canvas 2d', err);
+      }
     }
 
     // 1. Draw Background Gradient
@@ -2438,9 +2477,36 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
 
             {/* POSTER CARD (Styled dynamically matching the selected aspect ratio and theme) */}
             <div className="flex justify-center" id="poster-live-preview-box">
-              <div
-                ref={posterPreviewRef}
-                className={`w-full max-w-[480px] rounded-2xl p-6 sm:p-7 relative overflow-hidden shadow-2xl transition-all duration-300 flex flex-col justify-between ${
+              {activeTheme.id === 'theme-official-attached-poster' ? (
+                <div
+                  ref={posterPreviewRef}
+                  className="w-full max-w-[480px] shadow-2xl rounded-2xl overflow-hidden transition-all duration-300"
+                >
+                  <JJFOfficialAttachedPoster
+                    salutation={userName ? `प्रिय ${userName} जी,` : 'प्रिय देशवासियों,'}
+                    headline={
+                      selectedCategory === 'festivals'
+                        ? activeQuote.author || 'पावन पर्व की हार्दिक शुभकामनाएं!'
+                        : (activeQuote.author ? `${activeQuote.author}` : 'सद्प्रेरणा संदेश')
+                    }
+                    message={quoteText}
+                    subMessage={
+                      selectedCategory === 'festivals'
+                        ? (activeQuote.source || 'सद्भावना एवं सेवा संकल्प')
+                        : (quoteAuthor && quoteAuthor !== activeQuote.author ? quoteAuthor : undefined)
+                    }
+                    recipientName={fullDisplayName || userName || undefined}
+                    recipientTitle={userTitle || undefined}
+                    recipientPhoto={userPhoto || undefined}
+                    signoff="- जीवन ज्योति फाउंडेशन, गाज़ीपुर"
+                    showDiya={true}
+                    symbolEmoji={selectedCategory === 'festivals' ? '🪔' : '✨'}
+                  />
+                </div>
+              ) : (
+                <div
+                  ref={posterPreviewRef}
+                  className={`w-full max-w-[480px] rounded-2xl p-6 sm:p-7 relative overflow-hidden shadow-2xl transition-all duration-300 flex flex-col justify-between ${
                   activeRatio.id === 'whatsapp-status'
                     ? 'min-h-[660px]'
                     : activeRatio.id === 'facebook-portrait'
@@ -2763,6 +2829,7 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                   )}
                 </div>
               </div>
+            )}
             </div>
 
             {/* DIRECT SOCIAL SHARING BAR UNDER PREVIEW */}

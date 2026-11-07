@@ -42,13 +42,19 @@ if (fs.existsSync(publicSyncedJsonPath)) {
     syncedContent.syncedAt = nowIso;
     syncedContent.version = versionTag;
 
-    // Ensure branding fields are clean if deleted
+    // Ensure branding fields are clean if deleted or missing on disk
     if (syncedContent.homeContent) {
       if (syncedContent.homeContent.appLogoUrl && syncedContent.homeContent.appLogoUrl.includes('ngo_logo')) {
-        syncedContent.homeContent.appLogoUrl = '';
+        syncedContent.homeContent.appLogoUrl = '/logo.png';
       }
-      if (syncedContent.homeContent.appThumbnailUrl && syncedContent.homeContent.appThumbnailUrl.includes('ngo_logo')) {
-        syncedContent.homeContent.appThumbnailUrl = '';
+      if (
+        syncedContent.homeContent.appThumbnailUrl &&
+        (syncedContent.homeContent.appThumbnailUrl.includes('ngo_logo') ||
+          syncedContent.homeContent.appThumbnailUrl.includes('1793441166525') ||
+          (syncedContent.homeContent.appThumbnailUrl.startsWith('/uploads/') &&
+            !fs.existsSync(path.join(rootDir, 'public', syncedContent.homeContent.appThumbnailUrl))))
+      ) {
+        syncedContent.homeContent.appThumbnailUrl = '/logo.png';
       }
       if (syncedContent.homeContent.logoUrl) {
         delete syncedContent.homeContent.logoUrl;

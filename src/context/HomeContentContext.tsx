@@ -35,7 +35,7 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
           const parsed = JSON.parse(local);
 
           // Purge stale or corrupted media paths
-          if (parsed.appThumbnailUrl && (parsed.appThumbnailUrl.includes('1791445209912') || parsed.appThumbnailUrl.includes('1791445272050') || parsed.appThumbnailUrl.includes('old'))) {
+          if (parsed.appThumbnailUrl && (parsed.appThumbnailUrl.includes('1791445209912') || parsed.appThumbnailUrl.includes('1791445272050') || parsed.appThumbnailUrl.includes('1793441166525') || parsed.appThumbnailUrl.includes('old'))) {
             parsed.appThumbnailUrl = '';
             localStorage.removeItem('jjf_custom_thumbnail');
           }
@@ -185,9 +185,45 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
 
     // 1. होम पेज कंटेंट का रियल-टाइम लिसनर
     const unsubContent = subscribeToHomeContent((updatedContent) => {
-      setContent(updatedContent);
-      if (updatedContent?.appThumbnailUrl) {
-        applyDynamicAppThumbnail(updatedContent.appThumbnailUrl);
+      // Ensure custom uploaded photos are NEVER replaced by default sample photos
+      const restoreSectionPhotos = (currentList: any[], key: string) => {
+        try {
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            const arr = JSON.parse(stored);
+            if (Array.isArray(arr) && arr.length > 0) {
+              const hasCustom = arr.some((item: any) =>
+                item &&
+                typeof item.url === 'string' &&
+                item.url.trim().length > 0 &&
+                !item.url.includes('images.unsplash.com') &&
+                !item.id?.startsWith('hero-slide-') &&
+                !item.id?.startsWith('camp-slide-') &&
+                !item.id?.startsWith('event-slide-') &&
+                !item.id?.startsWith('rural-slide-')
+              );
+              if (hasCustom) return arr;
+            }
+          }
+        } catch {}
+        return currentList;
+      };
+
+      const finalContent = {
+        ...updatedContent,
+        sliderPhotos: restoreSectionPhotos(updatedContent.sliderPhotos || [], 'jjf_custom_slider_photos'),
+        campaignGalleryPhotos: restoreSectionPhotos(updatedContent.campaignGalleryPhotos || [], 'jjf_custom_campaign_photos'),
+        recentEventsPhotos: restoreSectionPhotos(updatedContent.recentEventsPhotos || [], 'jjf_custom_recent_photos'),
+        ruralWorkPhotos: restoreSectionPhotos(updatedContent.ruralWorkPhotos || [], 'jjf_custom_rural_photos')
+      };
+      if (finalContent.sliderPhotos && finalContent.sliderPhotos.length > 0) {
+        finalContent.bannerImages = finalContent.sliderPhotos.map((p: any) => p.url);
+        finalContent.bannerImageUrl = finalContent.sliderPhotos[0]?.url || finalContent.bannerImageUrl;
+      }
+
+      setContent(finalContent);
+      if (finalContent?.appThumbnailUrl) {
+        applyDynamicAppThumbnail(finalContent.appThumbnailUrl);
       }
       setIsLoading(false);
     });

@@ -44,6 +44,17 @@ import { useLanguage } from '../context/LanguageContext';
 import { StructuredAddressSelector } from './StructuredAddressSelector';
 import { EMPTY_STRUCTURED_ADDRESS, StructuredAddress } from '../data/locationData';
 import { CandidatePhotoUploader } from './CandidatePhotoUploader';
+import toast from 'react-hot-toast';
+
+const DEFAULT_FESTIVAL_ADDRESS: StructuredAddress = {
+  country: 'भारत (India)',
+  state: 'उत्तर प्रदेश (Uttar Pradesh)',
+  district: 'गाज़ीपुर (Ghazipur)',
+  block: 'गाज़ीपुर सदर',
+  panchayatOrWardType: 'panchayat',
+  wardOrVillage: 'गाज़ीपुर',
+  pincode: '233001'
+};
 
 interface Props {
   onOpenCertificate: (greeting: FestivalGreetingRecord) => void;
@@ -126,11 +137,11 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
     }
   }, [selectedFestival?.id]);
 
-  // Form State (No prefilled details, all empty by default)
+  // Form State (Prefilled with authentic foundation address defaults)
   const [recipientPhoto, setRecipientPhoto] = useState<string>('');
   const [recipientName, setRecipientName] = useState('');
-  const [recipientTitle, setRecipientTitle] = useState('');
-  const [address, setAddress] = useState<StructuredAddress>(EMPTY_STRUCTURED_ADDRESS);
+  const [recipientTitle, setRecipientTitle] = useState('सम्मानित नागरिक');
+  const [address, setAddress] = useState<StructuredAddress>(DEFAULT_FESTIVAL_ADDRESS);
   const [phone, setPhone] = useState('');
   const [senderName, setSenderName] = useState('');
   const [customMessage, setCustomMessage] = useState('');
@@ -183,38 +194,40 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
   // Form Submit Handler
   const handleRegisterGreeting = (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanName = recipientName.trim() || 'समस्त परिवारजन एवं सम्मानित नागरिक';
     if (!recipientName.trim()) {
-      setFormError('⚠️ कृपया प्राप्तकर्ता का पूरा नाम दर्ज करें।');
-      return;
-    }
-
-    if (!address.country || !address.state || !address.district || !address.block || !address.wardOrVillage?.trim()) {
-      setFormError('⚠️ प्रमाण पत्र के लिए देश, राज्य, जिला, ब्लॉक और वार्ड/ग्राम का चयन/दर्ज करना अनिवार्य है।');
-      return;
+      setRecipientName('समस्त परिवारजन एवं सम्मानित नागरिक');
     }
 
     setFormError(null);
     setIsSubmitting(true);
+    const toastId = toast.loading('शुभकामना प्रमाण पत्र तैयार किया जा रहा है...');
 
     const newId = formatCertificateNumber('FEST', new Date());
-    const formattedCity = `${address.wardOrVillage}, ${address.block}, ${address.district}`;
+    const addressParts = [
+      address.wardOrVillage,
+      address.block,
+      address.district || 'गाज़ीपुर',
+      address.state || 'उत्तर प्रदेश'
+    ].filter(Boolean);
+    const formattedCity = addressParts.length > 0 ? addressParts.join(', ') : 'गाज़ीपुर, उत्तर प्रदेश, भारत';
 
     const newGreeting: FestivalGreetingRecord = {
       id: newId,
       festivalId: selectedFestival.id,
       festivalNameHindi: selectedFestival.nameHindi,
       festivalNameEnglish: selectedFestival.nameEnglish,
-      recipientName: recipientName.trim(),
+      recipientName: cleanName,
       recipientTitle: recipientTitle || 'सम्मानित नागरिक',
-      senderName: senderName.trim() || 'जीवन ज्योति फाउंडेशन',
+      senderName: senderName.trim() || 'जीवन ज्योति फाउंडेशन गाज़ीपुर, उत्तर प्रदेश, भारत',
       photoUrl: recipientPhoto || undefined,
       phone: phone.trim() || undefined,
       city: formattedCity,
-      country: address.country,
-      state: address.state,
-      district: address.district,
-      block: address.block,
-      wardOrVillage: address.wardOrVillage,
+      country: address.country || 'भारत (India)',
+      state: address.state || 'उत्तर प्रदेश',
+      district: address.district || 'गाज़ीपुर',
+      block: address.block || 'गाज़ीपुर सदर',
+      wardOrVillage: address.wardOrVillage || 'गाज़ीपुर',
       customMessage: customMessage.trim() || selectedFestival.blessingHindi,
       date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       shloka: selectedFestival.shloka,
@@ -227,14 +240,13 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
       setGreetings((prev) => [newGreeting, ...prev]);
       setIsSubmitting(false);
       setShowSuccessToast(true);
+      toast.success(`🎉 ${selectedFestival.nameHindi} प्रमाण पत्र तैयार हो गया!`, { id: toastId });
 
       // Auto open newly generated certificate
       onOpenCertificate(newGreeting);
 
-      // Reset form slightly
-      setRecipientName('');
       setTimeout(() => setShowSuccessToast(false), 4000);
-    }, 400);
+    }, 250);
   };
 
   return (
@@ -336,7 +348,7 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
               }`}
             >
               <Gift className="w-4 h-4" />
-              <span>प्रमाण पत्र बनाएं</span>
+              <span>पोस्टर व प्रमाण पत्र बनाएं</span>
             </button>
 
             <button
@@ -563,16 +575,47 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
                   {/* Name & Title */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold text-gray-800 mb-1">
-                        प्राप्तकर्ता का पूरा नाम (Recipient Full Name)
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-extrabold text-gray-800">
+                          प्राप्तकर्ता का पूरा नाम (Recipient Full Name) <span className="text-red-600">*</span>
+                        </label>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRecipientName('आदरणीय परिवारजन एवं शुभचिंतक');
+                              setFormError(null);
+                            }}
+                            className="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md font-bold transition cursor-pointer"
+                          >
+                            + परिवारजन
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRecipientName('समस्त ग्रामवासी व क्षेत्रवासी');
+                              setFormError(null);
+                            }}
+                            className="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md font-bold transition cursor-pointer"
+                          >
+                            + क्षेत्रवासी
+                          </button>
+                        </div>
+                      </div>
                       <input
+                        id="festival-recipient-name-input"
                         type="text"
-                        required
                         value={recipientName}
-                        onChange={(e) => setRecipientName(e.target.value)}
-                        placeholder="उदा. श्री राहुल शर्मा / श्रीमती रीता देवी"
-                        className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-[#FFFDF9] font-bold"
+                        onChange={(e) => {
+                          setRecipientName(e.target.value);
+                          if (formError) setFormError(null);
+                        }}
+                        placeholder="उदा. श्री राहुल शर्मा / श्रीमती रीता देवी / परिवारजन"
+                        className={`w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-none focus:ring-2 bg-[#FFFDF9] font-bold transition-all ${
+                          formError && !recipientName.trim()
+                            ? 'border-red-500 ring-2 ring-red-400 bg-red-50/20'
+                            : 'border-gray-300 focus:ring-amber-500'
+                        }`}
                       />
                     </div>
 
@@ -750,12 +793,29 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
                     </div>
                   </div>
 
+                  {/* Visible Error Banner above Submit Button */}
+                  {formError && (
+                    <div className="p-3 rounded-xl bg-red-50 border-2 border-red-300 text-red-800 text-xs font-bold flex items-center justify-between gap-2 shadow-sm animate-pulse">
+                      <span>{formError}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRecipientName('आदरणीय परिवारजन एवं शुभचिंतक');
+                          setFormError(null);
+                        }}
+                        className="underline text-[11px] text-red-900 font-extrabold hover:text-black shrink-0 cursor-pointer"
+                      >
+                        'परिवारजन' नाम से बनाएं
+                      </button>
+                    </div>
+                  )}
+
                   {/* Submit Button */}
-                  <div className="pt-2">
+                  <div className="pt-1">
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#8B0000] via-red-800 to-amber-700 hover:from-red-900 hover:to-amber-800 text-white font-extrabold text-sm sm:text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#8B0000] via-red-800 to-amber-700 hover:from-red-900 hover:to-amber-800 text-white font-extrabold text-sm sm:text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       {isSubmitting ? (
                         <>
@@ -766,7 +826,7 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
                         <>
                           <Award className="w-5 h-5 text-yellow-300" />
                           <span>
-                            {selectedFestival.nameHindi} प्रमाण पत्र बनाएं व डाउनलोड करें ({selectedYear})
+                            {selectedFestival.nameHindi} पोस्टर व प्रमाण पत्र बनाएं ({selectedYear})
                           </span>
                         </>
                       )}
@@ -932,7 +992,7 @@ export const FestivalGreetingsPortal: React.FC<Props> = ({ onOpenCertificate }) 
                           className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
                         >
                           <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
-                          <span>शुभकामना पत्र बनाएं ({selectedYear})</span>
+                          <span>शुभकामना पोस्टर व प्रमाण पत्र बनाएं ({selectedYear})</span>
                         </button>
                       </div>
                     </div>

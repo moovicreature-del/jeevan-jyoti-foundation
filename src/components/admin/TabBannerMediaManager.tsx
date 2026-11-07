@@ -156,35 +156,64 @@ export const TabBannerMediaManager: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper to check if an item is a stock default sample
+  const isDefaultItem = (it: SliderPhotoItem) =>
+    Boolean(
+      it.id.startsWith('hero-slide-') ||
+      it.id.startsWith('camp-slide-') ||
+      it.id.startsWith('event-slide-') ||
+      it.id.startsWith('rural-slide-') ||
+      it.url.includes('images.unsplash.com')
+    );
+
+  const hasCustomPhotos = (list?: SliderPhotoItem[]) =>
+    Array.isArray(list) && list.some((it) => !isDefaultItem(it));
+
   // Synchronize state with Home Content
   useEffect(() => {
     if (content) {
-      // 1. Hero slides
-      if (content.sliderPhotos && content.sliderPhotos.length > 0) {
-        setSliderPhotos(content.sliderPhotos.slice(0, 15));
-      } else {
-        setSliderPhotos(DEFAULT_SLIDER_PHOTOS.slice(0, 15));
+      // 1. Hero slides: preserve custom photos if present in local state or incoming content
+      if (hasCustomPhotos(content.sliderPhotos)) {
+        setSliderPhotos(content.sliderPhotos?.slice(0, 15) || []);
+      } else if (!hasCustomPhotos(sliderPhotos)) {
+        if (content.sliderPhotos && content.sliderPhotos.length > 0) {
+          setSliderPhotos(content.sliderPhotos.slice(0, 15));
+        } else {
+          setSliderPhotos(DEFAULT_SLIDER_PHOTOS.slice(0, 15));
+        }
       }
 
       // 2. Campaign gallery
-      if (content.campaignGalleryPhotos && content.campaignGalleryPhotos.length > 0) {
-        setCampaignGalleryPhotos(content.campaignGalleryPhotos.slice(0, 15));
-      } else {
-        setCampaignGalleryPhotos(DEFAULT_CAMPAIGN_GALLERY_PHOTOS.slice(0, 15));
+      if (hasCustomPhotos(content.campaignGalleryPhotos)) {
+        setCampaignGalleryPhotos(content.campaignGalleryPhotos?.slice(0, 15) || []);
+      } else if (!hasCustomPhotos(campaignGalleryPhotos)) {
+        if (content.campaignGalleryPhotos && content.campaignGalleryPhotos.length > 0) {
+          setCampaignGalleryPhotos(content.campaignGalleryPhotos.slice(0, 15));
+        } else {
+          setCampaignGalleryPhotos(DEFAULT_CAMPAIGN_GALLERY_PHOTOS.slice(0, 15));
+        }
       }
 
       // 3. Recent events
-      if (content.recentEventsPhotos && content.recentEventsPhotos.length > 0) {
-        setRecentEventsPhotos(content.recentEventsPhotos.slice(0, 15));
-      } else {
-        setRecentEventsPhotos(DEFAULT_RECENT_EVENTS_PHOTOS.slice(0, 15));
+      if (hasCustomPhotos(content.recentEventsPhotos)) {
+        setRecentEventsPhotos(content.recentEventsPhotos?.slice(0, 15) || []);
+      } else if (!hasCustomPhotos(recentEventsPhotos)) {
+        if (content.recentEventsPhotos && content.recentEventsPhotos.length > 0) {
+          setRecentEventsPhotos(content.recentEventsPhotos.slice(0, 15));
+        } else {
+          setRecentEventsPhotos(DEFAULT_RECENT_EVENTS_PHOTOS.slice(0, 15));
+        }
       }
 
       // 4. Rural work
-      if (content.ruralWorkPhotos && content.ruralWorkPhotos.length > 0) {
-        setRuralWorkPhotos(content.ruralWorkPhotos.slice(0, 15));
-      } else {
-        setRuralWorkPhotos(DEFAULT_RURAL_WORK_PHOTOS.slice(0, 15));
+      if (hasCustomPhotos(content.ruralWorkPhotos)) {
+        setRuralWorkPhotos(content.ruralWorkPhotos?.slice(0, 15) || []);
+      } else if (!hasCustomPhotos(ruralWorkPhotos)) {
+        if (content.ruralWorkPhotos && content.ruralWorkPhotos.length > 0) {
+          setRuralWorkPhotos(content.ruralWorkPhotos.slice(0, 15));
+        } else {
+          setRuralWorkPhotos(DEFAULT_RURAL_WORK_PHOTOS.slice(0, 15));
+        }
       }
 
       // Video & settings

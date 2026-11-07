@@ -161,8 +161,15 @@ export function App() {
             }
           }
           if (hc.appThumbnailUrl) {
-            if (hc.appThumbnailUrl.includes('ngo_logo') || hc.appThumbnailUrl.includes('1791445209912') || hc.appThumbnailUrl.includes('1791445272050') || hc.appThumbnailUrl.includes('old')) {
+            if (
+              hc.appThumbnailUrl.includes('ngo_logo') ||
+              hc.appThumbnailUrl.includes('1791445209912') ||
+              hc.appThumbnailUrl.includes('1791445272050') ||
+              hc.appThumbnailUrl.includes('1793441166525') ||
+              hc.appThumbnailUrl.includes('old')
+            ) {
               hc.appThumbnailUrl = '';
+              localStorage.removeItem('jjf_custom_thumbnail');
               changed = true;
             } else {
               localStorage.removeItem('jjf_thumb_permanently_deleted');
