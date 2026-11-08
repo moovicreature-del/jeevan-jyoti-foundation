@@ -23,7 +23,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useHomeContent } from '../context/HomeContentContext';
 import { SliderPhotoItem } from '../types';
 import { DEFAULT_RECENT_EVENTS_PHOTOS } from '../services/adminService';
-import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { getOptimizedImageUrl, handleImageErrorWithFallback, getAuthenticFallbackImage } from '../utils/imageOptimizer';
 
 export const RecentEventsCarouselSkeleton: React.FC = () => (
   <section id="events" className="py-16 bg-amber-50/50 border-t border-slate-200">
@@ -225,21 +225,12 @@ export const RecentEventsCarousel: React.FC<RecentEventsCarouselProps> = ({ onOp
           <div className="lg:col-span-7 relative h-72 sm:h-96 lg:h-[480px] overflow-hidden bg-slate-900 group">
             {isInView ? (
               <img
-                src={getOptimizedImageUrl(current.url, { width: 1000, quality: 75 })}
+                src={current.url ? getOptimizedImageUrl(current.url, { width: 1000, quality: 75 }) : getAuthenticFallbackImage(currentIndex + 2)}
                 alt={current.title || 'सेवा कार्यक्रम'}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 loading="lazy"
                 decoding="async"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  if (!target.dataset.tried) {
-                    target.dataset.tried = '1';
-                    target.src = current.url;
-                  } else if (target.dataset.tried === '1' && current.url.startsWith('/uploads/')) {
-                    target.dataset.tried = '2';
-                    target.src = './' + current.url.replace(/^\/+/, '');
-                  }
-                }}
+                onError={(e) => handleImageErrorWithFallback(e, currentIndex + 2)}
               />
             ) : (
               <div className="w-full h-full bg-slate-900 animate-pulse" />
@@ -373,10 +364,11 @@ export const RecentEventsCarousel: React.FC<RecentEventsCarouselProps> = ({ onOp
 
             <div className="w-full flex-1 max-h-[70vh] flex items-center justify-center p-2 bg-black">
               <img
-                src={getOptimizedImageUrl(zoomPhoto.url, { width: 1400, quality: 80 })}
+                src={zoomPhoto.url ? getOptimizedImageUrl(zoomPhoto.url, { width: 1400, quality: 80 }) : getAuthenticFallbackImage(currentIndex + 2)}
                 alt={zoomPhoto.title || 'कार्यक्रम फ़ोटो'}
                 className="max-w-full max-h-[68vh] object-contain rounded-lg"
                 decoding="async"
+                onError={(e) => handleImageErrorWithFallback(e, currentIndex + 2)}
               />
             </div>
 

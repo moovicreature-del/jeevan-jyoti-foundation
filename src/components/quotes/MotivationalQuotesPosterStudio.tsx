@@ -119,10 +119,9 @@ import {
   getCurrentDayOfWeekKey
 } from '../../data/weeklyDeityMantrasData';
 import { WeeklyDeityMantrasPortal } from './WeeklyDeityMantrasPortal';
-import { FOUNDATION_INFO } from '../../data/foundationData';
 import { BrandLogo } from '../common/BrandLogo';
 import { RoyalCertificateSeal } from '../common/RoyalCertificateSeal';
-import { JJFOfficialAttachedPoster } from '../common/JJFOfficialAttachedPoster';
+import { JJFOfficialAttachedPoster, PosterThemeGraphicKey } from '../common/JJFOfficialAttachedPoster';
 import {
   DEFAULT_OFFICIAL_SEAL_URL,
   OFFICIAL_SEAL_BASE64_DATA_URL,
@@ -214,6 +213,7 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
   // Theme-Related Picture & Artwork State ("थीम के अनुसार बैकग्राउंड का कलर और उस थीम से रिलेटेड तस्वीर बने")
   const [includeThemePicture, setIncludeThemePicture] = useState<boolean>(true);
   const [themePictureStyle, setThemePictureStyle] = useState<'both' | 'emblem' | 'watermark'>('both');
+  const [selectedPosterThemeGraphic, setSelectedPosterThemeGraphic] = useState<PosterThemeGraphicKey>('auto');
 
   // UI state
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -2336,6 +2336,55 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                 )}
               </div>
 
+              {/* JJF Official Poster Center Graphic Selector */}
+              <div className="space-y-2 pt-2 p-3 bg-gradient-to-r from-red-950/70 via-slate-900/90 to-amber-950/70 rounded-2xl border border-amber-400/50 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-amber-200 block leading-tight">
+                        पोस्टर केंद्रीय प्रतीक (Center Theme Graphic)
+                      </span>
+                      <span className="text-[10px] text-slate-300">
+                        सुविचार के अनुसार चित्र स्वतः बदलता है (दीपक, ज्ञान पुस्तक, विजय ट्रॉफी, आदि)
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded border border-amber-400/40">
+                    थीम अनुकूलित
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
+                  {[
+                    { id: 'auto', label: '⚡ ऑटो (थीम अनुसार)' },
+                    { id: 'diya', label: '🪔 स्वर्णिम दिव्य दीपक' },
+                    { id: 'education', label: '📖 ज्ञान पुस्तक' },
+                    { id: 'career', label: '🏆 विजय ट्रॉफी' },
+                    { id: 'devotional', label: '🕉️ ॐ व कमल' },
+                    { id: 'humanity', label: '🤲 सेवा हस्त' },
+                    { id: 'patriotism', label: '🇮🇳 तिरंगा मशाल' },
+                    { id: 'none', label: '🚫 बिना चित्र के' }
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setSelectedPosterThemeGraphic(opt.id as any)}
+                      className={`px-2 py-1.5 rounded-xl text-[11px] font-bold cursor-pointer transition border text-center truncate ${
+                        selectedPosterThemeGraphic === opt.id
+                          ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md font-black'
+                          : 'bg-slate-950/80 text-slate-300 border-slate-800 hover:border-slate-700'
+                      }`}
+                      title={opt.label}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Additional Options */}
               <div className="grid grid-cols-2 gap-3 pt-2 text-xs text-slate-300">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -2499,7 +2548,8 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                     recipientTitle={userTitle || undefined}
                     recipientPhoto={userPhoto || undefined}
                     signoff="- जीवन ज्योति फाउंडेशन, गाज़ीपुर"
-                    showDiya={true}
+                    themeCategory={selectedCategory}
+                    themeGraphic={selectedPosterThemeGraphic}
                     symbolEmoji={selectedCategory === 'festivals' ? '🪔' : '✨'}
                   />
                 </div>

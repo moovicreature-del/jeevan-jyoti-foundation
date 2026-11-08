@@ -50,7 +50,14 @@ import {
 import { AppLogoManager } from './AppLogoManager';
 import { SliderPhotoItem } from '../../types';
 import { extractYouTubeId } from '../VideoShowcase';
-import { getOptimizedImageUrl, compressImageToSafeDataUrl } from '../../utils/imageOptimizer';
+import {
+  getOptimizedImageUrl,
+  compressImageToSafeDataUrl,
+  handleImageErrorWithFallback,
+  getAuthenticFallbackImage,
+  isBrokenOrEphemeralUrl,
+  sanitizePhotoListUrls
+} from '../../utils/imageOptimizer';
 import toast from 'react-hot-toast';
 
 type ActiveSectionTab =
@@ -169,15 +176,18 @@ export const TabBannerMediaManager: React.FC = () => {
   const hasCustomPhotos = (list?: SliderPhotoItem[]) =>
     Array.isArray(list) && list.some((it) => !isDefaultItem(it));
 
-  // Synchronize state with Home Content
+  // Track broken images per card to show clear repair UI
+  const [brokenCardImages, setBrokenCardImages] = useState<Record<string, boolean>>({});
+
+  // Synchronize state with Home Content with automatic photo healing
   useEffect(() => {
     if (content) {
       // 1. Hero slides: preserve custom photos if present in local state or incoming content
       if (hasCustomPhotos(content.sliderPhotos)) {
-        setSliderPhotos(content.sliderPhotos?.slice(0, 15) || []);
+        setSliderPhotos(sanitizePhotoListUrls(content.sliderPhotos?.slice(0, 15) || [], 0));
       } else if (!hasCustomPhotos(sliderPhotos)) {
         if (content.sliderPhotos && content.sliderPhotos.length > 0) {
-          setSliderPhotos(content.sliderPhotos.slice(0, 15));
+          setSliderPhotos(sanitizePhotoListUrls(content.sliderPhotos.slice(0, 15), 0));
         } else {
           setSliderPhotos(DEFAULT_SLIDER_PHOTOS.slice(0, 15));
         }
@@ -185,10 +195,10 @@ export const TabBannerMediaManager: React.FC = () => {
 
       // 2. Campaign gallery
       if (hasCustomPhotos(content.campaignGalleryPhotos)) {
-        setCampaignGalleryPhotos(content.campaignGalleryPhotos?.slice(0, 15) || []);
+        setCampaignGalleryPhotos(sanitizePhotoListUrls(content.campaignGalleryPhotos?.slice(0, 15) || [], 1));
       } else if (!hasCustomPhotos(campaignGalleryPhotos)) {
         if (content.campaignGalleryPhotos && content.campaignGalleryPhotos.length > 0) {
-          setCampaignGalleryPhotos(content.campaignGalleryPhotos.slice(0, 15));
+          setCampaignGalleryPhotos(sanitizePhotoListUrls(content.campaignGalleryPhotos.slice(0, 15), 1));
         } else {
           setCampaignGalleryPhotos(DEFAULT_CAMPAIGN_GALLERY_PHOTOS.slice(0, 15));
         }
@@ -196,10 +206,10 @@ export const TabBannerMediaManager: React.FC = () => {
 
       // 3. Recent events
       if (hasCustomPhotos(content.recentEventsPhotos)) {
-        setRecentEventsPhotos(content.recentEventsPhotos?.slice(0, 15) || []);
+        setRecentEventsPhotos(sanitizePhotoListUrls(content.recentEventsPhotos?.slice(0, 15) || [], 2));
       } else if (!hasCustomPhotos(recentEventsPhotos)) {
         if (content.recentEventsPhotos && content.recentEventsPhotos.length > 0) {
-          setRecentEventsPhotos(content.recentEventsPhotos.slice(0, 15));
+          setRecentEventsPhotos(sanitizePhotoListUrls(content.recentEventsPhotos.slice(0, 15), 2));
         } else {
           setRecentEventsPhotos(DEFAULT_RECENT_EVENTS_PHOTOS.slice(0, 15));
         }
@@ -207,10 +217,10 @@ export const TabBannerMediaManager: React.FC = () => {
 
       // 4. Rural work
       if (hasCustomPhotos(content.ruralWorkPhotos)) {
-        setRuralWorkPhotos(content.ruralWorkPhotos?.slice(0, 15) || []);
+        setRuralWorkPhotos(sanitizePhotoListUrls(content.ruralWorkPhotos?.slice(0, 15) || [], 3));
       } else if (!hasCustomPhotos(ruralWorkPhotos)) {
         if (content.ruralWorkPhotos && content.ruralWorkPhotos.length > 0) {
-          setRuralWorkPhotos(content.ruralWorkPhotos.slice(0, 15));
+          setRuralWorkPhotos(sanitizePhotoListUrls(content.ruralWorkPhotos.slice(0, 15), 3));
         } else {
           setRuralWorkPhotos(DEFAULT_RURAL_WORK_PHOTOS.slice(0, 15));
         }
@@ -225,6 +235,45 @@ export const TabBannerMediaManager: React.FC = () => {
       setBannerSubtitle(content.bannerSubtitle || 'हमारे सेवा अभियानों से जुड़ें और समाज निर्माण में अपना योगदान दें');
     }
   }, [content]);
+
+  // Single-Card Photo Replacement (when an individual photo has an error)
+  const handleCardImageSelect = async (tab: ActiveSectionTab, photoId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const toastId = toast.loading('फ़ोटो अपडेट व सुरक्षित की जा रही है...');
+    try {
+      const uploadedUrl = await uploadMediaFile(file, 'slider');
+      handleUpdatePhotoField(tab, photoId, 'url', uploadedUrl);
+      setBrokenCardImages((prev) => ({ ...prev, [photoId]: false }));
+      toast.dismiss(toastId);
+      toast.success('फ़ोटो सफलतापूर्वक बदल दी गई!');
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      toast.error('फ़ोटो बदलने में त्रुटि: ' + (err?.message || 'पुनः प्रयास करें'));
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  // Auto-Fix all broken/dead photos in the active section
+  const handleAutoFixBrokenPhotos = () => {
+    const currentItems = activeSectionState.items;
+    const baseSeed = activeTab === 'section_campaign_gallery' ? 1 : activeTab === 'section_recent_events' ? 2 : activeTab === 'section_rural_work' ? 3 : 0;
+    const updatedItems = currentItems.map((item, idx) => {
+      if (isBrokenOrEphemeralUrl(item.url) || brokenCardImages[item.id]) {
+        return {
+          ...item,
+          url: getAuthenticFallbackImage(baseSeed + idx)
+        };
+      }
+      return item;
+    });
+
+    const finalSanitized = sanitizePhotoListUrls(updatedItems, baseSeed);
+    activeSectionState.setItems(finalSanitized);
+    setBrokenCardImages({});
+    toast.success(`✨ सभी ${finalSanitized.length} फ़ोटो सफलतापूर्वक सत्यापित व ठीक कर दी गईं!`);
+  };
 
   // Helper to get active list and its setter
   const getSectionState = (
@@ -790,10 +839,10 @@ export const TabBannerMediaManager: React.FC = () => {
       updateProgress(65, 'क्लाउड व लोकल स्टोरेज में सिंक हो रहा है...');
       await saveHomeContent(
         {
-          sliderPhotos: sliderPhotos.slice(0, 15),
-          campaignGalleryPhotos: campaignGalleryPhotos.slice(0, 15),
-          recentEventsPhotos: recentEventsPhotos.slice(0, 15),
-          ruralWorkPhotos: ruralWorkPhotos.slice(0, 15),
+          sliderPhotos: sanitizePhotoListUrls(sliderPhotos.slice(0, 15), 0),
+          campaignGalleryPhotos: sanitizePhotoListUrls(campaignGalleryPhotos.slice(0, 15), 1),
+          recentEventsPhotos: sanitizePhotoListUrls(recentEventsPhotos.slice(0, 15), 2),
+          ruralWorkPhotos: sanitizePhotoListUrls(ruralWorkPhotos.slice(0, 15), 3),
           sliderAutoPlay,
           sliderInterval,
           bannerImageUrl: sliderPhotos[0]?.url || bannerImageUrl,
@@ -989,6 +1038,16 @@ export const TabBannerMediaManager: React.FC = () => {
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">डिफ़ॉल्ट लोड करें</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAutoFixBrokenPhotos}
+                className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl font-bold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                title="खाली अथवा टूटी हुई फ़ोटो को स्वतः उच्च गुणवत्ता वाली सत्यापित सेवा फ़ोटो से ठीक करें"
+              >
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                <span>✨ फ़ोटो एरर ठीक करें</span>
               </button>
             </div>
           </div>
@@ -1240,24 +1299,46 @@ export const TabBannerMediaManager: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Image Preview */}
-                      <div className="relative w-28 h-20 rounded-xl overflow-hidden bg-slate-900 border border-slate-300 group shrink-0">
-                        <img
-                          src={getOptimizedImageUrl(item.url)}
-                          alt={item.title || 'Slide'}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=300&auto=format&fit=crop&q=80';
-                          }}
+                      {/* Image Preview & Quick Replace */}
+                      <div className="flex flex-col items-center gap-1.5 shrink-0">
+                        <div className={`relative w-28 h-20 rounded-xl overflow-hidden bg-slate-900 border group shrink-0 ${
+                          brokenCardImages[item.id] ? 'border-red-500 ring-2 ring-red-400' : 'border-slate-300'
+                        }`}>
+                          <img
+                            src={item.url ? getOptimizedImageUrl(item.url) : getAuthenticFallbackImage(index)}
+                            alt={item.title || 'Slide'}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            onError={(e) => {
+                              handleImageErrorWithFallback(e, index);
+                              setBrokenCardImages((prev) => ({ ...prev, [item.id]: true }));
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPreviewZoomPhoto(item)}
+                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer"
+                            title="बड़ा करके देखें"
+                          >
+                            <Maximize2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Replace photo for this specific card */}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          id={`replace-input-${item.id}`}
+                          onChange={(e) => handleCardImageSelect(activeTab, item.id, e)}
                         />
                         <button
                           type="button"
-                          onClick={() => setPreviewZoomPhoto(item)}
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer"
-                          title="बड़ा करके देखें"
+                          onClick={() => document.getElementById(`replace-input-${item.id}`)?.click()}
+                          className="w-full px-2 py-1 rounded-md bg-amber-100 hover:bg-amber-200 text-[#8B0000] text-[10px] font-bold transition flex items-center justify-center gap-1 cursor-pointer border border-amber-300 shadow-2xs"
+                          title="इस कार्ड की फ़ोटो बदलें / नई फ़ोटो अपलोड करें"
                         >
-                          <Maximize2 className="w-4 h-4" />
+                          <Camera className="w-3 h-3 text-[#8B0000]" />
+                          <span>फ़ोटो बदलें</span>
                         </button>
                       </div>
                     </div>
@@ -1408,12 +1489,11 @@ export const TabBannerMediaManager: React.FC = () => {
 
                 <div className="relative w-full h-64 sm:h-80 md:h-96 rounded-2xl overflow-hidden bg-black border-2 border-amber-400/60 shadow-lg group">
                   <img
-                    src={getOptimizedImageUrl(currentPreviewItem?.url || '')}
+                    src={currentPreviewItem?.url ? getOptimizedImageUrl(currentPreviewItem.url) : getAuthenticFallbackImage(previewSlideIndex)}
                     alt={currentPreviewItem?.title || 'Preview'}
                     className="w-full h-full object-cover transition-all duration-300"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1000&auto=format&fit=crop&q=75';
+                      handleImageErrorWithFallback(e, previewSlideIndex);
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
@@ -1454,14 +1534,19 @@ export const TabBannerMediaManager: React.FC = () => {
                       key={it.id || idx}
                       type="button"
                       onClick={() => setPreviewSlideIndex(idx)}
-                      className={`shrink-0 w-16 h-12 rounded-xl overflow-hidden border-2 transition-all cursor-pointer relative ${
+                      className={`shrink-0 w-16 h-12 rounded-xl overflow-hidden border-2 transition-all cursor-pointer relative bg-slate-900 ${
                         previewSlideIndex === idx
                           ? 'border-amber-400 scale-105 shadow-md ring-2 ring-amber-300/60'
                           : 'border-slate-300 opacity-60 hover:opacity-100'
                       }`}
                       title={`स्लाइड #${idx + 1}: ${it.title}`}
                     >
-                      <img src={getOptimizedImageUrl(it.url)} alt="" className="w-full h-full object-cover" />
+                      <img
+                        src={it.url ? getOptimizedImageUrl(it.url) : getAuthenticFallbackImage(idx)}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => handleImageErrorWithFallback(e, idx)}
+                      />
                       <span className="absolute bottom-0 right-0 px-1 py-0.2 bg-black/70 text-white font-mono text-[9px] font-bold rounded-tl">
                         #{idx + 1}
                       </span>

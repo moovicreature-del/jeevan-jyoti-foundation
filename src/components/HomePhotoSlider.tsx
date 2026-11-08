@@ -23,7 +23,7 @@ import { useHomeContent } from '../context/HomeContentContext';
 import { useLanguage } from '../context/LanguageContext';
 import { SliderPhotoItem } from '../types';
 import { DEFAULT_SLIDER_PHOTOS } from '../services/adminService';
-import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { getOptimizedImageUrl, handleImageErrorWithFallback, getAuthenticFallbackImage } from '../utils/imageOptimizer';
 
 interface HomePhotoSliderProps {
   onOpenAdmin?: () => void;
@@ -182,21 +182,12 @@ export const HomePhotoSlider: React.FC<HomePhotoSliderProps> = ({
                 }`}
               >
                 <img
-                  src={getOptimizedImageUrl(slide.url, { width: 1000, quality: 75 })}
+                  src={slide.url ? getOptimizedImageUrl(slide.url, { width: 1000, quality: 75 }) : getAuthenticFallbackImage(idx)}
                   alt={slide.title || 'जीवन ज्योति फाउंडेशन गाजीपुर'}
                   className="w-full h-full object-cover object-center transform transition-transform duration-7000 ease-linear scale-100 group-hover:scale-105"
                   loading={idx === 0 ? 'eager' : 'lazy'}
                   decoding="async"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    if (!target.dataset.tried) {
-                      target.dataset.tried = '1';
-                      target.src = slide.url;
-                    } else if (target.dataset.tried === '1' && slide.url.startsWith('/uploads/')) {
-                      target.dataset.tried = '2';
-                      target.src = './' + slide.url.replace(/^\/+/, '');
-                    }
-                  }}
+                  onError={(e) => handleImageErrorWithFallback(e, idx)}
                 />
 
                 {/* Ambient Bottom Gradient for Title Readability */}
@@ -331,9 +322,10 @@ export const HomePhotoSlider: React.FC<HomePhotoSliderProps> = ({
             {/* Modal Image */}
             <div className="relative max-h-[75vh] overflow-hidden flex items-center justify-center bg-black">
               <img
-                src={zoomPhoto.url}
+                src={zoomPhoto.url ? getOptimizedImageUrl(zoomPhoto.url, { width: 1400, quality: 85 }) : getAuthenticFallbackImage(currentIndex)}
                 alt={zoomPhoto.title || 'जीवन ज्योति फाउंडेशन'}
                 className="max-h-[75vh] w-auto object-contain select-none"
+                onError={(e) => handleImageErrorWithFallback(e, currentIndex)}
               />
             </div>
 

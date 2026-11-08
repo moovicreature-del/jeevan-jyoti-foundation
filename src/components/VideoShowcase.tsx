@@ -25,7 +25,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useHomeContent } from '../context/HomeContentContext';
 import { SliderPhotoItem } from '../types';
 import { DEFAULT_RURAL_WORK_PHOTOS } from '../services/adminService';
-import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { getOptimizedImageUrl, handleImageErrorWithFallback, getAuthenticFallbackImage } from '../utils/imageOptimizer';
 
 interface VideoShowcaseProps {
   onOpenAdmin?: () => void;
@@ -381,15 +381,12 @@ export const VideoShowcase: React.FC<VideoShowcaseProps> = ({ onOpenAdmin }) => 
                     }`}
                   >
                     <img
-                      src={getOptimizedImageUrl(slide.url, { width: 1000, quality: 75 })}
+                      src={slide.url ? getOptimizedImageUrl(slide.url, { width: 1000, quality: 75 }) : getAuthenticFallbackImage(idx + 3)}
                       alt={slide.title || 'ग्रामीण सेवा कार्य'}
                       className="w-full h-full object-cover object-center transform transition-transform duration-1000 ease-out hover:scale-105"
                       loading="lazy"
                       decoding="async"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          getOptimizedImageUrl('/uploads/jjf_media_1793250699745_ff3bcd1a.jpg');
-                      }}
+                      onError={(e) => handleImageErrorWithFallback(e, idx + 3)}
                     />
 
                     {/* Gradient Overlay */}
@@ -486,7 +483,13 @@ export const VideoShowcase: React.FC<VideoShowcaseProps> = ({ onOpenAdmin }) => 
                     }`}
                     title={slide.title || `फ़ोटो ${idx + 1}`}
                   >
-                    <img src={getOptimizedImageUrl(slide.url)} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    <img
+                      src={slide.url ? getOptimizedImageUrl(slide.url, { width: 140, quality: 65 }) : getAuthenticFallbackImage(idx + 3)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => handleImageErrorWithFallback(e, idx + 3)}
+                    />
                     <span className="absolute bottom-0.5 right-0.5 px-1 py-0.2 bg-black/70 text-[9px] font-mono text-white rounded">
                       {idx + 1}
                     </span>
@@ -540,9 +543,10 @@ export const VideoShowcase: React.FC<VideoShowcaseProps> = ({ onOpenAdmin }) => 
 
             <div className="w-full flex-1 max-h-[70vh] flex items-center justify-center p-2 bg-black">
               <img
-                src={getOptimizedImageUrl(zoomPhoto.url)}
+                src={zoomPhoto.url ? getOptimizedImageUrl(zoomPhoto.url, { width: 1400, quality: 80 }) : getAuthenticFallbackImage(currentIndex + 3)}
                 alt={zoomPhoto.title || 'ग्रामीण सेवा फ़ोटो'}
                 className="max-w-full max-h-[68vh] object-contain rounded-lg"
+                onError={(e) => handleImageErrorWithFallback(e, currentIndex + 3)}
               />
             </div>
 

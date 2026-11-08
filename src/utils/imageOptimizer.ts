@@ -286,3 +286,85 @@ export async function compressImageToSafeDataUrl(
     reader.readAsDataURL(file);
   });
 }
+
+/**
+ * Authentic, verified high-resolution photographs of Jeevan Jyoti Foundation Ghazipur
+ * Used as reliable failover targets whenever an uploaded image is broken, expired, or missing.
+ */
+export const AUTHENTIC_JJF_FALLBACK_IMAGES: string[] = [
+  '/uploads/jjf_media_1793250700283_83f32964.jpg', // सांध्यकालीन बाल संस्कार एवं निःशुल्क अध्ययन केंद्र (Education)
+  '/uploads/jjf_media_1793250697644_9b7cd9be.jpg', // मेधावी व जरूरतमंद छात्र-छात्राओं को पाठ्य सामग्री वितरण (Child welfare)
+  '/uploads/jjf_media_1793250696936_585f911c.jpg', // ग़ाज़ीपुर सेवा दल एवं युवा स्वयंसेवक महासम्मेलन (Volunteer team)
+  '/uploads/jjf_media_1793250699745_ff3bcd1a.jpg', // धरातलीय सर्वेक्षण एवं राहत वितरण (Rural relief)
+  '/uploads/jjf_media_1793250694886_6819b5c4.jpg', // संस्था कार्यकारिणी बैठक एवं सेवा संकल्प (Executive meeting)
+  '/uploads/jjf_media_1793251014300_0792dd75.jpg', // सामुदायिक जन-जागरूकता एवं अधिकार चेतना अभियान (Awareness)
+  '/uploads/jjf_media_1793251016980_5fc0cb9a.jpg'  // ग़ाज़ीपुर सेवा अभियानों की कर्मठ टीम (Seva team)
+];
+
+/**
+ * Returns a guaranteed valid authentic JJF image based on index or hash.
+ */
+export function getAuthenticFallbackImage(seedIndex: number = 0): string {
+  const idx = Math.abs(seedIndex) % AUTHENTIC_JJF_FALLBACK_IMAGES.length;
+  const path = AUTHENTIC_JJF_FALLBACK_IMAGES[idx] || AUTHENTIC_JJF_FALLBACK_IMAGES[0];
+  return resolveAssetUrl(path);
+}
+
+/**
+ * Checks whether an image URL is broken, empty, null, or a transient ephemeral blob: URL
+ * that cannot survive browser reloads.
+ */
+export function isBrokenOrEphemeralUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== 'string') return true;
+  const t = url.trim();
+  if (t === '' || t === 'undefined' || t === 'null') return true;
+  // Blob URLs expire when page unloads or reloads
+  if (t.startsWith('blob:')) return true;
+  return false;
+}
+
+/**
+ * Safe Image onError event handler.
+ * Prevents broken image icons, infinite loops, and black screens by falling back
+ * to verified authentic foundation photographs from Ghazipur.
+ */
+export function handleImageErrorWithFallback(
+  event: React.SyntheticEvent<HTMLImageElement, Event>,
+  fallbackIndex: number = 0
+): void {
+  const target = event.currentTarget as HTMLImageElement;
+  if (!target) return;
+
+  // Prevent infinite retry loops
+  if (target.dataset.fallbackApplied === 'true') {
+    return;
+  }
+  target.dataset.fallbackApplied = 'true';
+  target.onerror = null; // Detach handler to prevent recursion
+
+  const fallback = getAuthenticFallbackImage(fallbackIndex);
+  target.src = fallback;
+}
+
+/**
+ * Sanitizes an array of photo items, replacing any dead blob:, empty, or invalid URLs
+ * with authentic high-resolution foundation photographs while keeping title, description,
+ * location, date, and other metadata completely intact.
+ */
+export function sanitizePhotoListUrls<T extends { url: string; [key: string]: any }>(
+  list: T[] | null | undefined,
+  baseSeed: number = 0
+): T[] {
+  if (!Array.isArray(list)) return [];
+  return list.map((item, idx) => {
+    if (!item) return item;
+    if (isBrokenOrEphemeralUrl(item.url)) {
+      return {
+        ...item,
+        url: getAuthenticFallbackImage(baseSeed + idx)
+      };
+    }
+    return item;
+  });
+}
+

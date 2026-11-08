@@ -1,6 +1,21 @@
 import React from 'react';
 import { Sparkles, Award } from 'lucide-react';
 import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
+import { PosterThemePictureSvg } from '../quotes/posterThemeArt';
+
+export type PosterThemeGraphicKey =
+  | 'auto'
+  | 'diya'
+  | 'education'
+  | 'career'
+  | 'devotional'
+  | 'humanity'
+  | 'patriotism'
+  | 'life'
+  | 'family'
+  | 'friends'
+  | 'festivals'
+  | 'none';
 
 export interface JJFOfficialAttachedPosterProps {
   salutation?: string; // e.g. "प्रिय देशवासियों," or "प्रिय श्री प्रकाश नारायण चौबे जी,"
@@ -12,12 +27,261 @@ export interface JJFOfficialAttachedPosterProps {
   recipientPhoto?: string;
   signoff?: string; // default: "- जीवन ज्योति फाउंडेशन, गाज़ीपुर"
   showDiya?: boolean; // default: true
+  themeCategory?: string; // e.g. "educational", "career", "festivals", etc.
+  themeGraphic?: PosterThemeGraphicKey; // specific graphic override
+  customCenterImage?: string; // optional user custom center graphic
   symbolEmoji?: string;
   festivalId?: string;
   className?: string;
   containerRef?: React.RefObject<HTMLDivElement | null>;
   id?: string;
 }
+
+/**
+ * Resolves the theme graphic based on explicit override, festivalId, or quote category.
+ */
+export function resolvePosterGraphic(
+  themeGraphic?: PosterThemeGraphicKey,
+  themeCategory?: string,
+  festivalId?: string,
+  showDiya?: boolean
+): PosterThemeGraphicKey {
+  if (themeGraphic && themeGraphic !== 'auto') {
+    return themeGraphic;
+  }
+  if (festivalId) {
+    const f = festivalId.toLowerCase();
+    if (f.includes('diwali') || f.includes('deepawali') || f.includes('dhanteras') || f.includes('deepotsav')) {
+      return 'diya';
+    }
+    if (f.includes('chhath')) return 'devotional';
+    if (f.includes('holi')) return 'festivals';
+    if (f.includes('navratri') || f.includes('durga') || f.includes('dussehra')) return 'devotional';
+    if (f.includes('shivratri') || f.includes('krishna') || f.includes('ganesh')) return 'devotional';
+    if (f.includes('republic') || f.includes('independence')) return 'patriotism';
+    return 'diya';
+  }
+  if (themeCategory) {
+    switch (themeCategory) {
+      case 'educational':
+        return 'education';
+      case 'career':
+        return 'career';
+      case 'devotional':
+        return 'devotional';
+      case 'humanity':
+        return 'humanity';
+      case 'patriotism':
+        return 'patriotism';
+      case 'life':
+        return 'life';
+      case 'family':
+        return 'family';
+      case 'friends':
+        return 'friends';
+      case 'festivals':
+        return 'diya';
+    }
+  }
+  if (showDiya === false) {
+    return 'none';
+  }
+  return 'diya';
+}
+
+/**
+ * Central Thematic Graphic Component
+ * Faithfully reproduces the ornate golden diya from the attached image when festive/diya,
+ * and renders high-fidelity category-specific artwork for education, career, seva, etc.
+ */
+export const PosterCenterThemeGraphic: React.FC<{
+  graphicKey: PosterThemeGraphicKey;
+  customImage?: string;
+}> = ({ graphicKey, customImage }) => {
+  if (graphicKey === 'none') return null;
+
+  if (customImage) {
+    return (
+      <div className="relative w-full flex flex-col items-center justify-center my-2 pointer-events-none select-none">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-44 h-44 rounded-full bg-amber-400/30 blur-2xl pointer-events-none" />
+          <img
+            src={getOptimizedImageUrl(customImage)}
+            alt="Center Thematic Graphic"
+            className="relative w-28 sm:w-36 h-28 sm:h-36 object-contain rounded-2xl border-2 border-amber-400/60 shadow-2xl"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // 1. FESTIVE ORNATE BRASS DIYA (दीपक) - Centered, radiant, exact match to Image 2
+  if (graphicKey === 'diya' || graphicKey === 'festivals') {
+    return (
+      <div className="relative w-full flex flex-col items-center justify-center my-2 sm:my-3 pointer-events-none select-none">
+        <div className="relative flex items-center justify-center">
+          {/* Luminous Warm Golden Radiance Halo */}
+          <div className="absolute w-56 sm:w-72 h-36 sm:h-44 rounded-full bg-gradient-to-r from-amber-500/35 via-yellow-400/40 to-amber-500/35 blur-2xl pointer-events-none" />
+          <img
+            src="/assets/jjf_ornate_diya_transparent.png"
+            alt="Ornate Auspicious Diya"
+            className="relative w-52 sm:w-64 md:w-72 max-w-[85%] h-auto drop-shadow-[0_0_24px_rgba(255,215,0,0.7)] object-contain select-none"
+            loading="eager"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = '/assets/jjf_festive_diya.png';
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // 2. EDUCATIONAL & WISDOM (शिक्षा एवं ज्ञान) - Open Book of Knowledge, Lamp of Wisdom, Golden Laurel
+  if (graphicKey === 'education') {
+    return (
+      <div className="relative w-full flex flex-col items-center justify-center my-2 sm:my-3 pointer-events-none select-none">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-48 sm:w-60 h-32 sm:h-40 rounded-full bg-amber-400/25 blur-2xl pointer-events-none" />
+          <div className="relative p-2.5 rounded-2xl bg-black/30 border border-amber-400/40 backdrop-blur-xs shadow-xl flex items-center justify-center">
+            <PosterThemePictureSvg
+              themeId="theme-edu-wisdom"
+              size={135}
+              className="w-28 sm:w-36 md:w-40 h-auto drop-shadow-[0_0_16px_rgba(255,215,0,0.6)]"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. CAREER & VICTORY (कर्म एवं सफलता) - Summit Peak, Rising Sun & Victory Trophy
+  if (graphicKey === 'career') {
+    return (
+      <div className="relative w-full flex flex-col items-center justify-center my-2 sm:my-3 pointer-events-none select-none">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-48 sm:w-60 h-32 sm:h-40 rounded-full bg-emerald-400/25 blur-2xl pointer-events-none" />
+          <div className="relative p-2.5 rounded-2xl bg-black/30 border border-emerald-400/40 backdrop-blur-xs shadow-xl flex items-center justify-center">
+            <PosterThemePictureSvg
+              themeId="theme-career-gold"
+              size={135}
+              className="w-28 sm:w-36 md:w-40 h-auto drop-shadow-[0_0_16px_rgba(16,185,129,0.6)]"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 4. DEVOTIONAL & SPIRITUAL (भक्ति एवं आध्यात्म) - Sacred ॐ (Om) & Divine Lotus
+  if (graphicKey === 'devotional') {
+    return (
+      <div className="relative w-full flex flex-col items-center justify-center my-2 sm:my-3 pointer-events-none select-none">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-48 sm:w-60 h-32 sm:h-40 rounded-full bg-amber-400/30 blur-2xl pointer-events-none" />
+          <div className="relative p-2.5 rounded-2xl bg-black/30 border border-amber-400/40 backdrop-blur-xs shadow-xl flex items-center justify-center">
+            <PosterThemePictureSvg
+              themeId="theme-devo-saffron"
+              size={135}
+              className="w-28 sm:w-36 md:w-40 h-auto drop-shadow-[0_0_16px_rgba(251,191,36,0.65)]"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 5. HUMANITY & COMPASSION (मानवता एवं सेवा) - Helping Hands, Radiant Heart & Green Sapling
+  if (graphicKey === 'humanity') {
+    return (
+      <div className="relative w-full flex flex-col items-center justify-center my-2 sm:my-3 pointer-events-none select-none">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-48 sm:w-60 h-32 sm:h-40 rounded-full bg-sky-400/25 blur-2xl pointer-events-none" />
+          <div className="relative p-2.5 rounded-2xl bg-black/30 border border-sky-400/40 backdrop-blur-xs shadow-xl flex items-center justify-center">
+            <PosterThemePictureSvg
+              themeId="theme-humanity-emerald"
+              size={135}
+              className="w-28 sm:w-36 md:w-40 h-auto drop-shadow-[0_0_16px_rgba(56,189,248,0.6)]"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 6. PATRIOTISM & NATION (राष्ट्रसेवा एवं देशभक्ति) - Ashoka Chakra, Flaming Torch & Tiranga Waves
+  if (graphicKey === 'patriotism') {
+    return (
+      <div className="relative w-full flex flex-col items-center justify-center my-2 sm:my-3 pointer-events-none select-none">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-48 sm:w-60 h-32 sm:h-40 rounded-full bg-orange-400/25 blur-2xl pointer-events-none" />
+          <div className="relative p-2.5 rounded-2xl bg-black/30 border border-orange-400/40 backdrop-blur-xs shadow-xl flex items-center justify-center">
+            <PosterThemePictureSvg
+              themeId="theme-patriot-tricolor"
+              size={135}
+              className="w-28 sm:w-36 md:w-40 h-auto drop-shadow-[0_0_16px_rgba(249,115,22,0.6)]"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 7. LIFE & PHILOSOPHY (जीवन दर्शन एवं शांति) - Zen Lotus & Dawn Sun
+  if (graphicKey === 'life') {
+    return (
+      <div className="relative w-full flex flex-col items-center justify-center my-2 sm:my-3 pointer-events-none select-none">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-48 sm:w-60 h-32 sm:h-40 rounded-full bg-rose-400/25 blur-2xl pointer-events-none" />
+          <div className="relative p-2.5 rounded-2xl bg-black/30 border border-rose-400/40 backdrop-blur-xs shadow-xl flex items-center justify-center">
+            <PosterThemePictureSvg
+              themeId="theme-life-serene"
+              size={135}
+              className="w-28 sm:w-36 md:w-40 h-auto drop-shadow-[0_0_16px_rgba(244,63,94,0.6)]"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 8. FAMILY & HERITAGE (परिवार एवं संस्कार) - Kalpavriksha Banyan Tree of Heritage
+  if (graphicKey === 'family') {
+    return (
+      <div className="relative w-full flex flex-col items-center justify-center my-2 sm:my-3 pointer-events-none select-none">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-48 sm:w-60 h-32 sm:h-40 rounded-full bg-pink-400/25 blur-2xl pointer-events-none" />
+          <div className="relative p-2.5 rounded-2xl bg-black/30 border border-pink-400/40 backdrop-blur-xs shadow-xl flex items-center justify-center">
+            <PosterThemePictureSvg
+              themeId="theme-family-terracotta"
+              size={135}
+              className="w-28 sm:w-36 md:w-40 h-auto drop-shadow-[0_0_16px_rgba(244,114,182,0.6)]"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 9. FRIENDS & BROTHERHOOD (मित्रता एवं एकता) - Clasping Hands of Unity & Twin Stars
+  if (graphicKey === 'friends') {
+    return (
+      <div className="relative w-full flex flex-col items-center justify-center my-2 sm:my-3 pointer-events-none select-none">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute w-48 sm:w-60 h-32 sm:h-40 rounded-full bg-cyan-400/25 blur-2xl pointer-events-none" />
+          <div className="relative p-2.5 rounded-2xl bg-black/30 border border-cyan-400/40 backdrop-blur-xs shadow-xl flex items-center justify-center">
+            <PosterThemePictureSvg
+              themeId="theme-friends-teal"
+              size={135}
+              className="w-28 sm:w-36 md:w-40 h-auto drop-shadow-[0_0_16px_rgba(6,182,212,0.6)]"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+};
 
 /**
  * Universal SVG Golden Lotus Blossom for Poster Bottom Corners
@@ -136,11 +400,16 @@ export const JJFOfficialAttachedPoster: React.FC<JJFOfficialAttachedPosterProps>
   recipientPhoto,
   signoff = '- जीवन ज्योति फाउंडेशन, गाज़ीपुर',
   showDiya = true,
+  themeCategory,
+  themeGraphic = 'auto',
+  customCenterImage,
+  festivalId,
   symbolEmoji = '🪔',
   className = '',
   containerRef,
   id = 'jjf-official-attached-poster'
 }) => {
+  const resolvedGraphic = resolvePosterGraphic(themeGraphic, themeCategory, festivalId, showDiya);
   return (
     <div
       ref={containerRef as any}
@@ -264,21 +533,11 @@ export const JJFOfficialAttachedPoster: React.FC<JJFOfficialAttachedPosterProps>
             {headline}
           </h2>
 
-          {/* Glowing Brass Diya (दीपक) on the Left / Center - Exact match to attachment */}
-          {showDiya && (
-            <div className="relative w-full flex items-center justify-start pl-3 sm:pl-6 my-1 pointer-events-none">
-              <div className="relative">
-                {/* Diya Radiance Aura */}
-                <div className="absolute -inset-4 bg-amber-400/35 rounded-full blur-xl pointer-events-none" />
-                <img
-                  src="/assets/jjf_festive_diya.png"
-                  alt="Auspicious Diya"
-                  className="relative w-24 sm:w-32 h-auto drop-shadow-[0_0_18px_rgba(255,200,50,0.7)] object-contain"
-                  loading="eager"
-                />
-              </div>
-            </div>
-          )}
+          {/* Central Thematic Graphic (CENTERED, exactly positioned like in Image 2) */}
+          <PosterCenterThemeGraphic
+            graphicKey={resolvedGraphic}
+            customImage={customCenterImage}
+          />
 
           {/* Wishing Message / Core Blessing Text */}
           <p

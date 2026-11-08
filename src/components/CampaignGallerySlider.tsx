@@ -20,7 +20,7 @@ import { useHomeContent } from '../context/HomeContentContext';
 import { useLanguage } from '../context/LanguageContext';
 import { SliderPhotoItem } from '../types';
 import { DEFAULT_CAMPAIGN_GALLERY_PHOTOS } from '../services/adminService';
-import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { getOptimizedImageUrl, handleImageErrorWithFallback, getAuthenticFallbackImage } from '../utils/imageOptimizer';
 
 export const CampaignGallerySliderSkeleton: React.FC<{ className?: string }> = ({ className = '' }) => (
   <div className={`relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-2 border-amber-300/40 bg-slate-950 animate-pulse ${className}`}>
@@ -178,21 +178,12 @@ export const CampaignGallerySlider: React.FC<CampaignGallerySliderProps> = ({
                   }`}
                 >
                   <img
-                    src={getOptimizedImageUrl(slide.url, { width: 1000, quality: 75 })}
+                    src={slide.url ? getOptimizedImageUrl(slide.url, { width: 1000, quality: 75 }) : getAuthenticFallbackImage(index + 1)}
                     alt={slide.title || `गाजीपुर सेवा अभियान ${index + 1}`}
                     className="w-full h-full object-cover object-center transform transition-transform duration-1000 ease-out hover:scale-105"
                     loading={index === 0 ? 'eager' : 'lazy'}
                     decoding="async"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      if (!target.dataset.tried) {
-                        target.dataset.tried = '1';
-                        target.src = slide.url;
-                      } else if (target.dataset.tried === '1' && slide.url.startsWith('/uploads/')) {
-                        target.dataset.tried = '2';
-                        target.src = './' + slide.url.replace(/^\/+/, '');
-                      }
-                    }}
+                    onError={(e) => handleImageErrorWithFallback(e, index + 1)}
                   />
 
                   {/* Cinematic Vignette Overlay */}
@@ -307,11 +298,12 @@ export const CampaignGallerySlider: React.FC<CampaignGallerySliderProps> = ({
                       title={slide.title || `फ़ोटो ${index + 1}`}
                     >
                       <img
-                        src={getOptimizedImageUrl(slide.url, { width: 140, quality: 65 })}
+                        src={slide.url ? getOptimizedImageUrl(slide.url, { width: 140, quality: 65 }) : getAuthenticFallbackImage(index + 1)}
                         alt={slide.title || `Thumb ${index + 1}`}
                         className="w-full h-full object-cover"
                         loading="lazy"
                         decoding="async"
+                        onError={(e) => handleImageErrorWithFallback(e, index + 1)}
                       />
                       {isActive && (
                         <div className="absolute inset-0 bg-amber-400/10 pointer-events-none" />
@@ -370,10 +362,11 @@ export const CampaignGallerySlider: React.FC<CampaignGallerySliderProps> = ({
 
             <div className="w-full flex-1 max-h-[70vh] flex items-center justify-center p-2 bg-black">
               <img
-                src={getOptimizedImageUrl(zoomPhoto.url, { width: 1400, quality: 80 })}
+                src={zoomPhoto.url ? getOptimizedImageUrl(zoomPhoto.url, { width: 1400, quality: 80 }) : getAuthenticFallbackImage(currentIndex + 1)}
                 alt={zoomPhoto.title || 'सेवा फ़ोटो'}
                 className="max-w-full max-h-[68vh] object-contain rounded-lg"
                 decoding="async"
+                onError={(e) => handleImageErrorWithFallback(e, currentIndex + 1)}
               />
             </div>
 

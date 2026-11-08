@@ -421,7 +421,14 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
                 signoff="- जीवन ज्योति फाउंडेशन, गाज़ीपुर"
                 symbolEmoji={greeting.symbolEmoji || festivalInfo.symbolEmoji}
                 festivalId={greeting.festivalId}
-                showDiya={true}
+                themeCategory="festivals"
+                themeGraphic={
+                  greeting.festivalId?.toLowerCase().includes('diwali') ||
+                  greeting.festivalId?.toLowerCase().includes('dhanteras') ||
+                  greeting.festivalId?.toLowerCase().includes('deepotsav')
+                    ? 'diya'
+                    : 'auto'
+                }
               />
             </div>
           ) : (

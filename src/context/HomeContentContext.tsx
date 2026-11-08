@@ -11,6 +11,7 @@ import {
   subscribeToNotices,
   applyDynamicAppThumbnail
 } from '../services/adminService';
+import { sanitizePhotoListUrls } from '../utils/imageOptimizer';
 
 interface HomeContentContextType {
   content: AppHomeContent;
@@ -115,10 +116,10 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
             return currentList;
           };
 
-          parsed.sliderPhotos = restoreSectionPhotos(parsed.sliderPhotos || [], 'jjf_custom_slider_photos');
-          parsed.campaignGalleryPhotos = restoreSectionPhotos(parsed.campaignGalleryPhotos || [], 'jjf_custom_campaign_photos');
-          parsed.recentEventsPhotos = restoreSectionPhotos(parsed.recentEventsPhotos || [], 'jjf_custom_recent_photos');
-          parsed.ruralWorkPhotos = restoreSectionPhotos(parsed.ruralWorkPhotos || [], 'jjf_custom_rural_photos');
+          parsed.sliderPhotos = sanitizePhotoListUrls(restoreSectionPhotos(parsed.sliderPhotos || [], 'jjf_custom_slider_photos'), 0);
+          parsed.campaignGalleryPhotos = sanitizePhotoListUrls(restoreSectionPhotos(parsed.campaignGalleryPhotos || [], 'jjf_custom_campaign_photos'), 1);
+          parsed.recentEventsPhotos = sanitizePhotoListUrls(restoreSectionPhotos(parsed.recentEventsPhotos || [], 'jjf_custom_recent_photos'), 2);
+          parsed.ruralWorkPhotos = sanitizePhotoListUrls(restoreSectionPhotos(parsed.ruralWorkPhotos || [], 'jjf_custom_rural_photos'), 3);
           if (parsed.sliderPhotos && parsed.sliderPhotos.length > 0) {
             parsed.bannerImages = parsed.sliderPhotos.map((p: any) => p.url);
             parsed.bannerImageUrl = parsed.sliderPhotos[0]?.url || parsed.bannerImageUrl;
@@ -148,10 +149,10 @@ export const HomeContentProvider: React.FC<{ children: ReactNode }> = ({ childre
           return def;
         };
 
-        const fallbackSlider = restoreListFallback('jjf_custom_slider_photos', DEFAULT_HOME_CONTENT.sliderPhotos || []);
-        const fallbackCampaign = restoreListFallback('jjf_custom_campaign_photos', DEFAULT_HOME_CONTENT.campaignGalleryPhotos || []);
-        const fallbackRecent = restoreListFallback('jjf_custom_recent_photos', DEFAULT_HOME_CONTENT.recentEventsPhotos || []);
-        const fallbackRural = restoreListFallback('jjf_custom_rural_photos', DEFAULT_HOME_CONTENT.ruralWorkPhotos || []);
+        const fallbackSlider = sanitizePhotoListUrls(restoreListFallback('jjf_custom_slider_photos', DEFAULT_HOME_CONTENT.sliderPhotos || []), 0);
+        const fallbackCampaign = sanitizePhotoListUrls(restoreListFallback('jjf_custom_campaign_photos', DEFAULT_HOME_CONTENT.campaignGalleryPhotos || []), 1);
+        const fallbackRecent = sanitizePhotoListUrls(restoreListFallback('jjf_custom_recent_photos', DEFAULT_HOME_CONTENT.recentEventsPhotos || []), 2);
+        const fallbackRural = sanitizePhotoListUrls(restoreListFallback('jjf_custom_rural_photos', DEFAULT_HOME_CONTENT.ruralWorkPhotos || []), 3);
 
         if (validLogo || validThumb || validSeal || fallbackSlider !== DEFAULT_HOME_CONTENT.sliderPhotos) {
           return {
