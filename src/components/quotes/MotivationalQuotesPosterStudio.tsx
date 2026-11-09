@@ -119,6 +119,7 @@ import {
   getCurrentDayOfWeekKey
 } from '../../data/weeklyDeityMantrasData';
 import { WeeklyDeityMantrasPortal } from './WeeklyDeityMantrasPortal';
+import { DailyWisdomTab } from './DailyWisdomTab';
 import { BrandLogo } from '../common/BrandLogo';
 import { RoyalCertificateSeal } from '../common/RoyalCertificateSeal';
 import { JJFOfficialAttachedPoster, PosterThemeGraphicKey } from '../common/JJFOfficialAttachedPoster';
@@ -156,12 +157,17 @@ const SAMPLE_AVATARS = [
 ];
 
 export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isModal = false }) => {
-  // Master Studio Mode: 'quotes' (प्रेरक सुविचार संग्रह) or 'deity-mantras' (साप्ताहिक देवी-देवता एवं कष्ट निवारण मंत्र)
-  const [studioMode, setStudioMode] = useState<'quotes' | 'deity-mantras'>('quotes');
+  // Master Studio Mode: 'quotes' (प्रेरक सुविचार संग्रह) or 'daily-wisdom' (दैनिक प्रज्ञा) or 'deity-mantras' (साप्ताहिक देवी-देवता एवं कष्ट निवारण मंत्र)
+  const [studioMode, setStudioMode] = useState<'quotes' | 'daily-wisdom' | 'deity-mantras'>('quotes');
   const [selectedDay, setSelectedDay] = useState<DayOfWeekKey>(getCurrentDayOfWeekKey());
   const [selectedDeityFilter, setSelectedDeityFilter] = useState<DeityKey | 'all'>('all');
   const [mantraSearchQuery, setMantraSearchQuery] = useState<string>('');
   const [activeDeityMantra, setActiveDeityMantra] = useState<WeeklyDeityMantra | null>(null);
+
+  // Daily Wisdom Customizable Background State
+  const [customBgPhoto, setCustomBgPhoto] = useState<string>('');
+  const [bgOverlayDarkness, setBgOverlayDarkness] = useState<number>(45);
+  const [bgBlur, setBgBlur] = useState<number>(0);
 
   // 1. Category state
   const [selectedCategory, setSelectedCategory] = useState<QuoteCategoryKey>('educational');
@@ -459,6 +465,26 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, width, height);
+
+    // If Daily Wisdom Custom Background photo is provided, draw it over gradient
+    if (customBgPhoto) {
+      try {
+        const bgImg = new Image();
+        bgImg.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve) => {
+          bgImg.onload = () => resolve();
+          bgImg.onerror = () => resolve();
+          bgImg.src = customBgPhoto;
+        });
+        if (bgImg.naturalWidth > 0) {
+          ctx.drawImage(bgImg, 0, 0, width, height);
+          ctx.fillStyle = `rgba(0, 0, 0, ${bgOverlayDarkness / 100})`;
+          ctx.fillRect(0, 0, width, height);
+        }
+      } catch (err) {
+        console.warn('Canvas custom bg draw error', err);
+      }
+    }
 
     // 2. Decorative Vignette & Overlay Darkness (only on dark themes or if manually set)
     if (!activeTheme.isLight && overlayDarkness > 0) {
@@ -1639,20 +1665,20 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
         </div>
 
         {/* ========================================================================= */}
-        {/* 🌟 MASTER STUDIO TAB SWITCHER: QUOTES vs WEEKLY DEITY MANTRAS 🌟 */}
+        {/* 🌟 MASTER STUDIO TAB SWITCHER: QUOTES vs DAILY WISDOM vs DEITY MANTRAS 🌟 */}
         {/* ========================================================================= */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-2 bg-slate-950/90 rounded-2xl border-2 border-amber-500/40 shadow-xl">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 p-2 bg-slate-950/90 rounded-2xl border-2 border-amber-500/40 shadow-xl">
           <button
             type="button"
             onClick={() => setStudioMode('quotes')}
-            className={`flex-1 py-3 px-4 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
+            className={`flex-1 py-3 px-3.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
               studioMode === 'quotes'
                 ? 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.01] border border-yellow-300'
                 : 'text-slate-300 hover:text-white hover:bg-slate-900/80 border border-transparent'
             }`}
           >
             <Quote className="w-4 h-4" />
-            <span>🌟 प्रेरक सुविचार एवं फोटो पोस्टर</span>
+            <span>🌟 प्रेरक सुविचार</span>
             <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
               studioMode === 'quotes' ? 'bg-slate-950 text-amber-300' : 'bg-slate-800 text-slate-400'
             }`}>
@@ -1662,26 +1688,73 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
 
           <button
             type="button"
-            onClick={() => setStudioMode('deity-mantras')}
-            className={`flex-1 py-3 px-4 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer ${
-              studioMode === 'deity-mantras'
-                ? 'bg-gradient-to-r from-orange-500 via-amber-500 to-rose-600 text-slate-950 shadow-lg shadow-orange-500/30 scale-[1.01] border border-orange-300'
+            onClick={() => setStudioMode('daily-wisdom')}
+            className={`flex-1 py-3 px-3.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              studioMode === 'daily-wisdom'
+                ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 text-slate-950 shadow-lg shadow-amber-500/30 scale-[1.01] border border-amber-300'
                 : 'text-amber-300 hover:text-white hover:bg-slate-900/80 border border-amber-500/20'
             }`}
           >
+            <span className="text-base sm:text-lg">🌅</span>
+            <span>दैनिक प्रज्ञा (Daily Wisdom)</span>
+            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+              studioMode === 'daily-wisdom' ? 'bg-slate-950 text-amber-300' : 'bg-slate-800 text-amber-300'
+            }`}>
+              31 दिन + फ़ोटो
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStudioMode('deity-mantras')}
+            className={`flex-1 py-3 px-3.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              studioMode === 'deity-mantras'
+                ? 'bg-gradient-to-r from-orange-500 via-amber-500 to-rose-600 text-slate-950 shadow-lg shadow-orange-500/30 scale-[1.01] border border-orange-300'
+                : 'text-orange-300 hover:text-white hover:bg-slate-900/80 border border-orange-500/20'
+            }`}
+          >
             <span className="text-base sm:text-lg">🕉️</span>
-            <span>सप्ताह के पूजनीय देवी-देवता एवं कष्ट निवारण मंत्र</span>
+            <span>कष्ट निवारण मंत्र</span>
             <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-red-600 text-white animate-pulse">
-              अति शक्तिशाली
+              सप्ताहिक
             </span>
           </button>
         </div>
 
-        {/* CONDITIONALLY RENDER: DEITY MANTRAS PORTAL OR QUOTES STUDIO */}
+        {/* CONDITIONALLY RENDER: DEITY MANTRAS PORTAL, DAILY WISDOM TAB, OR QUOTES STUDIO */}
         {studioMode === 'deity-mantras' ? (
           <WeeklyDeityMantrasPortal
             onSelectMantraForPoster={handleLoadMantraToPoster}
             onSwitchToQuotes={() => setStudioMode('quotes')}
+          />
+        ) : studioMode === 'daily-wisdom' ? (
+          <DailyWisdomTab
+            currentBgPhoto={customBgPhoto}
+            currentBgDarkness={bgOverlayDarkness}
+            currentBgBlur={bgBlur}
+            onSelectQuote={(q, a, cat, gr) => {
+              setQuoteText(q);
+              setQuoteAuthor(a);
+              if (cat) setSelectedCategory(cat as any);
+              if (gr) setSelectedPosterThemeGraphic(gr as any);
+            }}
+            onApplyBackground={(photoUrl, darkness, blur) => {
+              setCustomBgPhoto(photoUrl);
+              setBgOverlayDarkness(darkness);
+              setBgBlur(blur);
+            }}
+            onSwitchToPoster={() => setStudioMode('quotes')}
+            onDownloadOfficialPoster={async (q, a, photoUrl, darkness, blur) => {
+              setQuoteText(q);
+              setQuoteAuthor(a);
+              setCustomBgPhoto(photoUrl);
+              setBgOverlayDarkness(darkness);
+              setBgBlur(blur);
+              setStudioMode('quotes');
+              setTimeout(() => {
+                handleDownloadPoster();
+              }, 450);
+            }}
           />
         ) : (
           <>
@@ -2519,9 +2592,24 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                 <Eye className="w-4 h-4 text-amber-400" />
                 <span>लाइव पोस्टर प्रीव्यू (Live Canvas Preview):</span>
               </span>
-              <span className="font-mono text-[11px] bg-slate-800 px-2 py-0.5 rounded text-amber-400 font-bold">
-                {activeRatio.description}
-              </span>
+              <div className="flex items-center gap-2">
+                {customBgPhoto && (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full font-bold shadow-xs">
+                    <span>🖼️ बैकग्राउंड फ़ोटो सक्रिय</span>
+                    <button
+                      type="button"
+                      onClick={() => setCustomBgPhoto('')}
+                      className="hover:text-red-400 cursor-pointer ml-0.5 text-xs font-black"
+                      title="कस्टम बैकग्राउंड हटाएं"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                <span className="font-mono text-[11px] bg-slate-800 px-2 py-0.5 rounded text-amber-400 font-bold">
+                  {activeRatio.description}
+                </span>
+              </div>
             </div>
 
             {/* POSTER CARD (Styled dynamically matching the selected aspect ratio and theme) */}
@@ -2551,6 +2639,9 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                     themeCategory={selectedCategory}
                     themeGraphic={selectedPosterThemeGraphic}
                     symbolEmoji={selectedCategory === 'festivals' ? '🪔' : '✨'}
+                    customBgPhoto={customBgPhoto || undefined}
+                    bgOverlayDarkness={bgOverlayDarkness}
+                    bgBlur={bgBlur}
                   />
                 </div>
               ) : (
@@ -2572,6 +2663,27 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                     '0 0 0 2.5px #D4AF37, 0 0 0 5px #700000, 0 16px 45px rgba(139, 0, 0, 0.32)'
                 }}
               >
+                {/* Custom Background Photo Layer if set in Daily Wisdom */}
+                {customBgPhoto && (
+                  <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+                    <img
+                      src={customBgPhoto}
+                      alt="Custom Poster Background"
+                      className="w-full h-full object-cover"
+                      style={{
+                        filter: `blur(${bgBlur}px)`,
+                        transform: bgBlur > 0 ? 'scale(1.08)' : 'scale(1.01)'
+                      }}
+                    />
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        backgroundColor: `rgba(0, 0, 0, ${bgOverlayDarkness / 100})`
+                      }}
+                    />
+                  </div>
+                )}
+
                 {/* Decorative Subtle Overlay (only active if dark theme or manually set) */}
                 {!activeTheme.isLight && overlayDarkness > 0 && (
                   <div

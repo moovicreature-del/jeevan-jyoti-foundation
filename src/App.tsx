@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Share2 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { ActionCenter } from './components/ActionCenter';
@@ -108,6 +110,45 @@ export function App() {
       sessionStorage.removeItem('jjf_admin_portal_open');
     }
     setShowAdminLoginModal(false);
+  };
+
+  // Web Share API handler for #home-gallery-showcase NGO campaign showcase
+  const handleShareCampaignGallery = async () => {
+    const shareUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}#home-gallery-showcase`
+      : 'https://jeevanjyotifoundation.org/#home-gallery-showcase';
+    const shareData = {
+      title: 'जीवन ज्योति फाउंडेशन - ग़ाज़ीपुर सेवा अभियानों की लाइव फ़ोटो गैलरी',
+      text: 'जीवन ज्योति फाउंडेशन, ग़ाज़ीपुर के शिक्षा, अन्नपूर्णा भोजन व स्वास्थ्य सेवा अभियानों की लाइव फ़ोटो गैलरी देखें:',
+      url: shareUrl,
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        toast.success('अभियान गैलरी सफलतापूर्वक शेयर की गई!', { icon: '📢' });
+        return;
+      } catch (err: unknown) {
+        if ((err as Error)?.name === 'AbortError') {
+          return; // User cancelled the share dialog
+        }
+      }
+    }
+
+    // Fallback: Copy link to clipboard with friendly notification
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(`${shareData.text}\n${shareUrl}`);
+        toast.success('अभियान गैलरी का लिंक क्लिपबोर्ड में कॉपी हो गया! अब आप इसे कहीं भी शेयर कर सकते हैं।', {
+          duration: 3500,
+          icon: '📋'
+        });
+      } else {
+        toast.success(`गैलरी लिंक: ${shareUrl}`, { duration: 3000 });
+      }
+    } catch {
+      toast.error('शेयर करने में असमर्थ। कृपया लिंक मैन्युअली कॉपी करें।');
+    }
   };
 
   const [showQrScannerModal, setShowQrScannerModal] = useState(false);
@@ -450,14 +491,26 @@ export function App() {
                 </p>
               </div>
 
-              <button
-                onClick={handleOpenAdminModal}
-                className="text-xs font-bold text-[#8B0000] hover:text-[#5a0000] underline self-start sm:self-auto cursor-pointer flex items-center gap-1"
-                title="एडमिन पोर्टल से फ़ोटो जोड़ें / बदलें"
-              >
-                <span>एडमिन लॉगिन से फ़ोटो बदलें / जोड़ें</span>
-                <span>→</span>
-              </button>
+              <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={handleShareCampaignGallery}
+                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer border border-amber-300 hover:scale-[1.02] active:scale-[0.98]"
+                  title="सोशल मीडिया पर अभियान गैलरी शेयर करें"
+                >
+                  <Share2 className="w-4 h-4 text-slate-950" />
+                  <span>अभियान शेयर करें (Share)</span>
+                </button>
+
+                <button
+                  onClick={handleOpenAdminModal}
+                  className="text-xs font-bold text-[#8B0000] hover:text-[#5a0000] underline cursor-pointer flex items-center gap-1 py-1"
+                  title="एडमिन पोर्टल से फ़ोटो जोड़ें / बदलें"
+                >
+                  <span>एडमिन लॉगिन से फ़ोटो बदलें / जोड़ें</span>
+                  <span>→</span>
+                </button>
+              </div>
             </div>
 
             {/* Main Interactive Clear Slideshow (Lazy Loaded) */}
@@ -780,6 +833,8 @@ export function App() {
               onClose={() => setShowMembershipModal(false)}
             />
           )}
+          {/* Global Toast Notification Container */}
+          <Toaster position="top-center" reverseOrder={false} />
       </ErrorBoundary>
     </div>
   );

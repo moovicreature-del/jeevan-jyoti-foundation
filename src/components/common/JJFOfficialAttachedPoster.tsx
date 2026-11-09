@@ -30,6 +30,9 @@ export interface JJFOfficialAttachedPosterProps {
   themeCategory?: string; // e.g. "educational", "career", "festivals", etc.
   themeGraphic?: PosterThemeGraphicKey; // specific graphic override
   customCenterImage?: string; // optional user custom center graphic
+  customBgPhoto?: string; // Optional custom background photo (Daily Wisdom)
+  bgOverlayDarkness?: number; // 0 to 90 (default: 45)
+  bgBlur?: number; // 0 to 12 (default: 0)
   symbolEmoji?: string;
   festivalId?: string;
   className?: string;
@@ -403,6 +406,9 @@ export const JJFOfficialAttachedPoster: React.FC<JJFOfficialAttachedPosterProps>
   themeCategory,
   themeGraphic = 'auto',
   customCenterImage,
+  customBgPhoto,
+  bgOverlayDarkness = 45,
+  bgBlur = 0,
   festivalId,
   symbolEmoji = '🪔',
   className = '',
@@ -421,6 +427,26 @@ export const JJFOfficialAttachedPoster: React.FC<JJFOfficialAttachedPosterProps>
         minHeight: '740px'
       }}
     >
+      {/* Optional Custom Background Photo for Daily Wisdom */}
+      {customBgPhoto && (
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          <img
+            src={customBgPhoto}
+            alt="Custom Background"
+            className="w-full h-full object-cover"
+            style={{
+              filter: `blur(${bgBlur}px)`,
+              transform: bgBlur > 0 ? 'scale(1.08)' : 'scale(1.01)'
+            }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(to bottom, rgba(40,0,0,0.65) 0%, rgba(0,0,0,${bgOverlayDarkness / 100}) 40%, rgba(20,0,0,0.88) 100%)`
+            }}
+          />
+        </div>
+      )}
       {/* =========================================================================
           SECTION 1: TOP FIELDWORK COLLAGE & NGO BRANDING HEADER
           Exact match to attached image: rural school, medical relief, women ration,
