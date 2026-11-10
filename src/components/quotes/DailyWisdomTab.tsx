@@ -583,20 +583,269 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
     });
   };
 
-  // Direct 1080p Ultra HD Poster Download from this attached section
+  // Dedicated HTML5 Canvas 2D Poster Generator for Daily Wisdom (Guaranteed 0% Cutting)
+  const renderDailyWisdomPosterCanvas = async (): Promise<{ dataUrl: string; blob: Blob; fileName: string }> => {
+    const width = 1080;
+    const height = 1560;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not create canvas context');
+
+    // 1. Draw Background
+    const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+    bgGrad.addColorStop(0, '#5a0000');
+    bgGrad.addColorStop(0.5, '#3a0000');
+    bgGrad.addColorStop(1, '#1a0000');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // If selectedBgUrl exists, draw it with cover fit without distorting faces
+    if (selectedBgUrl) {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise<void>((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve(); // continue if image blocked
+          img.src = selectedBgUrl;
+        });
+
+        if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+          ctx.save();
+          if (bgBlur > 0) {
+            ctx.filter = `blur(${bgBlur * 2.2}px)`;
+          }
+          const scale = Math.max(width / img.naturalWidth, height / img.naturalHeight);
+          const dw = img.naturalWidth * scale;
+          const dh = img.naturalHeight * scale;
+          const dx = (width - dw) / 2;
+          const dy = (height - dh) / 2;
+          ctx.drawImage(img, dx, dy, dw, dh);
+          ctx.restore();
+        }
+      } catch (e) {
+        console.warn('Canvas image draw error', e);
+      }
+    }
+
+    // 2. Darkness & Contrast Vignette Overlay
+    const overlayGrad = ctx.createLinearGradient(0, 0, 0, height);
+    overlayGrad.addColorStop(0, 'rgba(30, 0, 0, 0.74)');
+    overlayGrad.addColorStop(0.36, `rgba(0, 0, 0, ${bgDarkness / 100})`);
+    overlayGrad.addColorStop(0.72, `rgba(0, 0, 0, ${Math.min(0.92, (bgDarkness / 100) + 0.12)})`);
+    overlayGrad.addColorStop(1, 'rgba(15, 0, 0, 0.95)');
+    ctx.fillStyle = overlayGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // 3. Official Multi-Tier Royal Crimson & Gold Border
+    const margin = 28;
+    const borderWidth = 18;
+    ctx.save();
+    // Outer Deep Crimson
+    ctx.strokeStyle = '#8B0000';
+    ctx.lineWidth = borderWidth;
+    ctx.strokeRect(margin, margin, width - margin * 2, height - margin * 2);
+
+    // Outer & Inner Gold Highlights
+    ctx.strokeStyle = '#D4AF37';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(margin - borderWidth / 2, margin - borderWidth / 2, width - (margin - borderWidth / 2) * 2, height - (margin - borderWidth / 2) * 2);
+    ctx.strokeRect(margin + borderWidth / 2, margin + borderWidth / 2, width - (margin + borderWidth / 2) * 2, height - (margin + borderWidth / 2) * 2);
+
+    // Inner Inset Dashed Frame
+    const insetMargin = margin + borderWidth + 16;
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.65)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([10, 6]);
+    ctx.strokeRect(insetMargin, insetMargin, width - insetMargin * 2, height - insetMargin * 2);
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // 4. Header: Top Pill + Foundation Name
+    const headerY = insetMargin + 48;
+    const badgeText = `🌅 दैनिक प्रज्ञा • दिन #${activeDailyQuote.dayOfMonth} / 31`;
+    ctx.font = 'bold 24px "Noto Sans Devanagari", sans-serif';
+    const badgeMetrics = ctx.measureText(badgeText);
+    const badgeW = badgeMetrics.width + 48;
+    const badgeH = 46;
+    const badgeX = (width - badgeW) / 2;
+
+    const pillGrad = ctx.createLinearGradient(badgeX, headerY, badgeX + badgeW, headerY);
+    pillGrad.addColorStop(0, '#f59e0b');
+    pillGrad.addColorStop(0.5, '#fbbf24');
+    pillGrad.addColorStop(1, '#f59e0b');
+    ctx.fillStyle = pillGrad;
+    ctx.beginPath();
+    ctx.roundRect(badgeX, headerY, badgeW, badgeH, 23);
+    ctx.fill();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(badgeText, width / 2, headerY + badgeH / 2);
+
+    // Foundation Name
+    const titleY = headerY + badgeH + 46;
+    ctx.font = '900 48px "Cinzel", "Noto Serif Devanagari", serif';
+    ctx.fillStyle = '#FFE082';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 4;
+    ctx.fillText('जीवन ज्योति फाउंडेशन', width / 2, titleY);
+
+    // Subtitle
+    ctx.font = 'bold 22px "Noto Sans Devanagari", sans-serif';
+    ctx.fillStyle = '#FDE68A';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 2;
+    ctx.fillText('ग़ाज़ीपुर (उत्तर प्रदेश) • स्थापना 2018', width / 2, titleY + 40);
+
+    // Golden separator line
+    const sepY = titleY + 70;
+    const sepGrad = ctx.createLinearGradient(width * 0.2, sepY, width * 0.8, sepY);
+    sepGrad.addColorStop(0, 'transparent');
+    sepGrad.addColorStop(0.5, '#D4AF37');
+    sepGrad.addColorStop(1, 'transparent');
+    ctx.strokeStyle = sepGrad;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(width * 0.2, sepY);
+    ctx.lineTo(width * 0.8, sepY);
+    ctx.stroke();
+
+    // 5. Quote Box in Center
+    ctx.font = '900 70px serif';
+    ctx.fillStyle = '#FBBF24';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(0,0,0,0.85)';
+    ctx.fillText('“', width / 2, sepY + 74);
+
+    // Measure & Word-wrap Quote Text cleanly
+    const quoteMaxWidth = width - insetMargin * 2 - 120;
+    const quoteWords = activeDailyQuote.quoteHi.split(/\s+/);
+    const quoteLines: string[] = [];
+    let currentLine = '';
+    const quoteFontSize = quoteWords.length > 25 ? 36 : 42;
+    ctx.font = `bold ${quoteFontSize}px "Noto Serif Devanagari", "Mukta", serif`;
+
+    for (const word of quoteWords) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      if (ctx.measureText(testLine).width > quoteMaxWidth && currentLine) {
+        quoteLines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) quoteLines.push(currentLine);
+
+    const quoteLineHeight = quoteFontSize * 1.55;
+    const totalQuoteHeight = quoteLines.length * quoteLineHeight;
+    const startQuoteY = sepY + 130;
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.98)';
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetY = 4;
+    for (let i = 0; i < quoteLines.length; i++) {
+      ctx.fillText(quoteLines[i], width / 2, startQuoteY + i * quoteLineHeight);
+    }
+
+    // Author badge pill
+    const authorY = startQuoteY + totalQuoteHeight + 45;
+    const authorText = `— ${activeDailyQuote.author}`;
+    ctx.font = 'bold 28px "Noto Sans Devanagari", sans-serif';
+    const authorMetrics = ctx.measureText(authorText);
+    const authorW = authorMetrics.width + 56;
+    const authorH = 50;
+    const authorX = (width - authorW) / 2;
+
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    ctx.beginPath();
+    ctx.roundRect(authorX, authorY, authorW, authorH, 25);
+    ctx.fill();
+
+    ctx.strokeStyle = '#D4AF37';
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    ctx.fillStyle = '#FDE68A';
+    ctx.shadowBlur = 4;
+    ctx.fillText(authorText, width / 2, authorY + authorH / 2 + 1);
+
+    // 6. Bottom Footer Ribbon
+    const footerY = height - insetMargin - 75;
+    const footerSepY = footerY - 25;
+    const fSepGrad = ctx.createLinearGradient(width * 0.15, footerSepY, width * 0.85, footerSepY);
+    fSepGrad.addColorStop(0, 'transparent');
+    fSepGrad.addColorStop(0.5, '#D4AF37');
+    fSepGrad.addColorStop(1, 'transparent');
+    ctx.strokeStyle = fSepGrad;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(width * 0.15, footerSepY);
+    ctx.lineTo(width * 0.85, footerSepY);
+    ctx.stroke();
+
+    ctx.font = 'bold 26px "Noto Sans Devanagari", sans-serif';
+    ctx.fillStyle = '#FCD34D';
+    ctx.shadowBlur = 8;
+    ctx.fillText('सेवा • शिक्षा • स्वास्थ्य', width / 2, footerY + 10);
+
+    ctx.font = 'bold 20px "Noto Sans Devanagari", sans-serif';
+    ctx.fillStyle = '#E2E8F0';
+    ctx.shadowBlur = 6;
+    ctx.fillText('नीति आयोग मान्यता प्राप्त NGO • jeevanjyotifoundation.org', width / 2, footerY + 44);
+
+    const dataUrl = canvas.toDataURL('image/png', 1.0);
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas blob failed'))), 'image/png', 1.0);
+    });
+
+    const safeAuthor = (activeDailyQuote.author || 'Quote').replace(/\s+/g, '_');
+    const fileName = `JJF_Daily_Wisdom_${safeAuthor}_Day${activeDailyQuote.dayOfMonth}_${Date.now()}.png`;
+
+    return { dataUrl, blob, fileName };
+  };
+
+  // Direct 1080p Ultra HD Poster Download from this attached section (Guaranteed 0% Cutting)
   const handleDirectDownload = async () => {
-    if (!previewCardRef.current) return;
     setIsDownloading(true);
     const toastId = toast.loading('1080p Ultra HD पोस्टर तैयार हो रहा है...');
     try {
-      const dataUrl = await toPng(previewCardRef.current, {
-        quality: 0.98,
-        pixelRatio: 3, // Ultra-sharp 3x resolution for high-res downloading
-        cacheBust: true,
-      });
+      let dataUrl: string;
+      let fileName: string;
 
-      const safeAuthor = (activeDailyQuote.author || 'Quote').replace(/\s+/g, '_');
-      const fileName = `JJF_Daily_Wisdom_${safeAuthor}_Day${activeDailyQuote.dayOfMonth}_${Date.now()}.png`;
+      try {
+        const res = await renderDailyWisdomPosterCanvas();
+        dataUrl = res.dataUrl;
+        fileName = res.fileName;
+      } catch (canvasErr) {
+        console.warn('Canvas render fallback to toPng:', canvasErr);
+        if (!previewCardRef.current) throw canvasErr;
+        const node = previewCardRef.current;
+        const scrollW = node.scrollWidth || 350;
+        const scrollH = node.scrollHeight || 540;
+        dataUrl = await toPng(node, {
+          width: scrollW,
+          height: scrollH,
+          pixelRatio: 2.5,
+          cacheBust: true,
+          style: {
+            transform: 'none',
+            maxHeight: 'none',
+            height: `${scrollH}px`,
+            width: `${scrollW}px`,
+            overflow: 'visible'
+          }
+        });
+        const safeAuthor = (activeDailyQuote.author || 'Quote').replace(/\s+/g, '_');
+        fileName = `JJF_Daily_Wisdom_${safeAuthor}_Day${activeDailyQuote.dayOfMonth}_${Date.now()}.png`;
+      }
+
       const link = document.createElement('a');
       link.download = fileName;
       link.href = dataUrl;
@@ -605,7 +854,7 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
       document.body.removeChild(link);
 
       toast.dismiss(toastId);
-      toast.success('🎉 HD पोस्टर सीधे आपके डिवाइस में डाउनलोड हो गया!', {
+      toast.success('🎉 HD पोस्टर बिना किसी कटिंग के पूरी स्पष्टता के साथ डाउनलोड हो गया!', {
         duration: 4500,
         icon: '📥'
       });
@@ -618,22 +867,45 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
     }
   };
 
-  // Direct WhatsApp Share from this attached section
+  // Direct WhatsApp Share from this attached section (No Cutting)
   const handleDirectShareWhatsApp = async () => {
-    if (!previewCardRef.current) return;
     setIsSharing(true);
     const toastId = toast.loading('WhatsApp शेयर तैयार हो रहा है...');
     try {
-      const dataUrl = await toPng(previewCardRef.current, {
-        quality: 0.98,
-        pixelRatio: 2.5,
-        cacheBust: true,
-      });
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const fileName = `JJF_Daily_Wisdom_${Date.now()}.png`;
-      const file = new File([blob], fileName, { type: 'image/png' });
+      let blob: Blob;
+      let fileName: string;
+      let dataUrl: string;
 
+      try {
+        const res = await renderDailyWisdomPosterCanvas();
+        blob = res.blob;
+        fileName = res.fileName;
+        dataUrl = res.dataUrl;
+      } catch (canvasErr) {
+        console.warn('Canvas share fallback:', canvasErr);
+        if (!previewCardRef.current) throw canvasErr;
+        const node = previewCardRef.current;
+        const scrollW = node.scrollWidth || 350;
+        const scrollH = node.scrollHeight || 540;
+        dataUrl = await toPng(node, {
+          width: scrollW,
+          height: scrollH,
+          pixelRatio: 2.5,
+          cacheBust: true,
+          style: {
+            transform: 'none',
+            maxHeight: 'none',
+            height: `${scrollH}px`,
+            width: `${scrollW}px`,
+            overflow: 'visible'
+          }
+        });
+        const res = await fetch(dataUrl);
+        blob = await res.blob();
+        fileName = `JJF_Daily_Wisdom_${Date.now()}.png`;
+      }
+
+      const file = new File([blob], fileName, { type: 'image/png' });
       const shareText = `🌅 *दैनिक प्रज्ञा सुविचार (जीवन ज्योति फाउंडेशन, ग़ाज़ीपुर)* 🌅\n\n"${activeDailyQuote.quoteHi}"\n\n— *${activeDailyQuote.author}*\n\nसेवा • शिक्षा • स्वास्थ्य अभियान ग़ाज़ीपुर\n🌐 https://jeevanjyotifoundation.org`;
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -679,24 +951,42 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
     }
   };
 
-  // Copy Poster Image to Clipboard
+  // Copy Poster Image to Clipboard (No Cutting)
   const handleCopyCardImage = async () => {
-    if (!previewCardRef.current) return;
     const toastId = toast.loading('इमेज क्लिपबोर्ड में कॉपी हो रही है...');
     try {
-      const dataUrl = await toPng(previewCardRef.current, {
-        quality: 0.98,
-        pixelRatio: 2.5,
-        cacheBust: true,
-      });
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
+      let blob: Blob;
+      try {
+        const res = await renderDailyWisdomPosterCanvas();
+        blob = res.blob;
+      } catch (canvasErr) {
+        if (!previewCardRef.current) throw canvasErr;
+        const node = previewCardRef.current;
+        const scrollW = node.scrollWidth || 350;
+        const scrollH = node.scrollHeight || 540;
+        const dataUrl = await toPng(node, {
+          width: scrollW,
+          height: scrollH,
+          pixelRatio: 2.5,
+          cacheBust: true,
+          style: {
+            transform: 'none',
+            maxHeight: 'none',
+            height: `${scrollH}px`,
+            width: `${scrollW}px`,
+            overflow: 'visible'
+          }
+        });
+        const res = await fetch(dataUrl);
+        blob = await res.blob();
+      }
+
       if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
         await navigator.clipboard.write([
           new ClipboardItem({ 'image/png': blob })
         ]);
         toast.dismiss(toastId);
-        toast.success('📋 पोस्टर इमेज क्लिपबोर्ड में कॉपी हो गई! इसे WhatsApp Web या चैट में सीधे पेस्ट (Ctrl+V) करें।');
+        toast.success('📋 पूर्ण HD पोस्टर क्लिपबोर्ड में कॉपी हो गया! इसे WhatsApp Web या चैट में सीधे पेस्ट (Ctrl+V) करें।');
       } else {
         toast.dismiss(toastId);
         toast.error('क्लिपबोर्ड सपोर्ट नहीं है, डाउनलोड बटन का प्रयोग करें।');
@@ -866,7 +1156,7 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
             <div
               ref={previewCardRef}
               id="daily-wisdom-live-card"
-              className="relative w-full aspect-[9/13] max-w-[340px] mx-auto rounded-2xl overflow-hidden shadow-2xl border-4 border-[#8B0000] ring-2 ring-amber-400/80 bg-slate-950 flex flex-col justify-between p-4 sm:p-5 text-center select-none"
+              className="relative w-full min-h-[520px] h-auto max-w-[350px] mx-auto rounded-2xl overflow-hidden shadow-2xl border-4 border-[#8B0000] ring-2 ring-amber-400/80 bg-slate-950 flex flex-col justify-between p-5 sm:p-6 text-center select-none"
             >
               {/* Underneath Background Photo */}
               {selectedBgUrl ? (
@@ -876,8 +1166,8 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
                     alt="Background Preview"
                     className="absolute inset-0 w-full h-full object-cover pointer-events-none transition-all duration-300"
                     style={{
-                      filter: `blur(${bgBlur}px)`,
-                      transform: bgBlur > 0 ? 'scale(1.08)' : 'scale(1)'
+                      filter: bgBlur > 0 ? `blur(${bgBlur}px)` : 'none',
+                      transform: bgBlur > 0 ? 'scale(1.02)' : 'none'
                     }}
                   />
                   {/* Dark Shade Overlay */}

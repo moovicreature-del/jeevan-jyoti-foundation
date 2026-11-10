@@ -423,8 +423,8 @@ export const JJFOfficialAttachedPoster: React.FC<JJFOfficialAttachedPosterProps>
       className={`relative w-full max-w-[500px] mx-auto rounded-3xl overflow-hidden shadow-2xl border-4 border-[#8B0000] ring-2 ring-[#D4AF37]/80 flex flex-col justify-between select-none ${className}`}
       style={{
         background: 'radial-gradient(ellipse at 50% 35%, #9E1010 0%, #800000 35%, #520000 70%, #2A0000 100%)',
-        aspectRatio: '9 / 18.6',
-        minHeight: '740px'
+        minHeight: '760px',
+        height: 'auto'
       }}
     >
       {/* Optional Custom Background Photo for Daily Wisdom */}
@@ -606,7 +606,7 @@ export const JJFOfficialAttachedPoster: React.FC<JJFOfficialAttachedPosterProps>
         {/* =====================================================================
             SECTION 3: FOOTER SIGNATURE & ORNATE CORNER LOTUSES
            ===================================================================== */}
-        <div className="relative w-full z-10 pt-4 pb-1">
+        <div className="relative w-full z-10 pt-4 pb-4">
           {/* Foundation Attribution Signature */}
           <div
             className="text-base sm:text-lg md:text-xl font-black text-[#FFE082] font-serif tracking-wide drop-shadow-[0_2px_5px_rgba(0,0,0,0.9)]"
@@ -616,10 +616,10 @@ export const JJFOfficialAttachedPoster: React.FC<JJFOfficialAttachedPosterProps>
           </div>
 
           {/* Bottom Golden Corner Lotuses (Left & Right) */}
-          <div className="absolute -bottom-2 -left-3 pointer-events-none">
+          <div className="absolute bottom-1 left-0 pointer-events-none">
             <GoldenCornerLotus />
           </div>
-          <div className="absolute -bottom-2 -right-3 pointer-events-none">
+          <div className="absolute bottom-1 right-0 pointer-events-none">
             <GoldenCornerLotus flipped />
           </div>
         </div>

@@ -379,10 +379,23 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
     // If the official attached poster format is active and DOM preview exists, capture directly via html-to-image
     if (activeTheme.id === 'theme-official-attached-poster' && posterPreviewRef.current) {
       try {
-        const dataUrl = await toPng(posterPreviewRef.current, {
+        const node = posterPreviewRef.current;
+        const actualWidth = node.scrollWidth || node.offsetWidth || width;
+        const actualHeight = node.scrollHeight || node.offsetHeight || height;
+
+        const dataUrl = await toPng(node, {
           quality: 0.98,
           pixelRatio: 2.5,
           cacheBust: true,
+          width: actualWidth,
+          height: actualHeight,
+          style: {
+            transform: 'none',
+            maxHeight: 'none',
+            height: `${actualHeight}px`,
+            width: `${actualWidth}px`,
+            overflow: 'visible'
+          }
         });
         const res = await fetch(dataUrl);
         const blob = await res.blob();
