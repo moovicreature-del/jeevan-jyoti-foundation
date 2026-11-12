@@ -41,6 +41,8 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { toPng } from 'html-to-image';
+import { QRCodeCanvas } from 'qrcode.react';
+import { PosterAppOpenQR } from '../common/PosterAppOpenQR';
 import { RoyalFourCorners, RoyalCenterFlourish } from '../common/RoyalCertificateBorder';
 
 // Dedicated Official WhatsApp Icon SVG
@@ -376,8 +378,8 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
       throw new Error('Canvas context could not be created');
     }
 
-    // If the official attached poster format is active and DOM preview exists, capture directly via html-to-image
-    if (activeTheme.id === 'theme-official-attached-poster' && posterPreviewRef.current) {
+    // If DOM preview exists, capture directly via html-to-image for 100% WYSIWYG fidelity including App Open QR Code
+    if (posterPreviewRef.current) {
       try {
         const node = posterPreviewRef.current;
         const actualWidth = node.scrollWidth || node.offsetWidth || width;
@@ -1387,6 +1389,47 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('✓', checkX, checkY + 1);
+
+      ctx.restore();
+    }
+
+    // 4. Official App Open Scannable QR Code on Canvas Plaque
+    const qrCanvasEl = document.getElementById('quotes-poster-app-qr-canvas') as HTMLCanvasElement | null;
+    if (qrCanvasEl) {
+      const qrBoxSize = Math.round(footerCardHeight * 0.70);
+      const qrOffsetRight = includeWatermark
+        ? Math.round(footerCardHeight * 0.70) + Math.round(footerCardWidth * 0.04)
+        : Math.round(footerCardWidth * 0.02);
+      const qrX = footerCardX + footerCardWidth - qrBoxSize - qrOffsetRight;
+      const qrY = footerCardY + Math.round(footerCardHeight * 0.15);
+
+      ctx.save();
+      // Golden border divider
+      ctx.strokeStyle = activeTheme.isLight ? 'rgba(217, 119, 6, 0.35)' : 'rgba(251, 191, 36, 0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(qrX - Math.round(footerCardWidth * 0.015), footerCardY + footerCardHeight * 0.16);
+      ctx.lineTo(qrX - Math.round(footerCardWidth * 0.015), footerCardY + footerCardHeight * 0.84);
+      ctx.stroke();
+
+      // White QR backing card with subtle gold border
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#D4AF37';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(qrX, qrY, qrBoxSize, qrBoxSize, [8]);
+      ctx.fill();
+      ctx.stroke();
+
+      // Draw QR Canvas
+      const qrPad = 4;
+      ctx.drawImage(qrCanvasEl, qrX + qrPad, qrY + qrPad, qrBoxSize - qrPad * 2, qrBoxSize - qrPad * 2);
+
+      // Label under QR
+      ctx.fillStyle = activeTheme.isLight ? '#8B0000' : '#FDE68A';
+      ctx.font = `bold ${Math.max(10, Math.round(qrBoxSize * 0.15))}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('📲 ऐप खोलें', qrX + qrBoxSize / 2, qrY + qrBoxSize + 14);
 
       ctx.restore();
     }
@@ -2987,6 +3030,14 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                     </div>
                   </div>
 
+                  {/* Official App Open Scannable QR Code */}
+                  <div className="shrink-0 flex flex-col items-center justify-center pl-2 sm:pl-2.5 border-l border-amber-300/40 dark:border-slate-700/80">
+                    <PosterAppOpenQR
+                      size={44}
+                      variant="compact"
+                    />
+                  </div>
+
                   {/* Foundation Official Certificate Seal on Card Right */}
                   {/* ("सुविचार वाले पार्ट में पोस्टर पर ऑफिशियल सील सेम वही रखे जो बाकी सर्टिफिकेट पर पट्टी वाली रहती है उससे थोड़ा भी अलग ना हो") */}
                   {includeWatermark && (
@@ -3005,6 +3056,20 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                 </div>
               </div>
             )}
+            </div>
+
+            {/* Hidden Offscreen QR Canvas for 1080p Canvas Export */}
+            <div className="hidden" aria-hidden="true">
+              <QRCodeCanvas
+                id="quotes-poster-app-qr-canvas"
+                value="https://jeevan-jyoti-foundation-7eso.vercel.app"
+                size={300}
+                level="H"
+                includeMargin={true}
+                marginSize={2}
+                fgColor="#0f172a"
+                bgColor="#FFFFFF"
+              />
             </div>
 
             {/* DIRECT SOCIAL SHARING BAR UNDER PREVIEW */}

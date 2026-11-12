@@ -22,6 +22,7 @@ export interface FoundationInfo {
   phone: string;
   email: string;
   website: string;
+  appUrl?: string;
   upiId: string;
   bankAccountName: string;
   bankAccountNumber: string;

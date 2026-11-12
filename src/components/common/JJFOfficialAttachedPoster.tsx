@@ -2,6 +2,7 @@ import React from 'react';
 import { Sparkles, Award } from 'lucide-react';
 import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 import { PosterThemePictureSvg } from '../quotes/posterThemeArt';
+import { PosterAppOpenQR } from './PosterAppOpenQR';
 
 export type PosterThemeGraphicKey =
   | 'auto'
@@ -604,15 +605,26 @@ export const JJFOfficialAttachedPoster: React.FC<JJFOfficialAttachedPosterProps>
         </div>
 
         {/* =====================================================================
-            SECTION 3: FOOTER SIGNATURE & ORNATE CORNER LOTUSES
+            SECTION 3: FOOTER SIGNATURE, APP OPEN QR & ORNATE CORNER LOTUSES
            ===================================================================== */}
-        <div className="relative w-full z-10 pt-4 pb-4">
+        <div className="relative w-full z-10 pt-3 pb-3 flex flex-col items-center">
           {/* Foundation Attribution Signature */}
           <div
             className="text-base sm:text-lg md:text-xl font-black text-[#FFE082] font-serif tracking-wide drop-shadow-[0_2px_5px_rgba(0,0,0,0.9)]"
             style={{ textShadow: '0 2px 6px rgba(0, 0, 0, 0.95), 0 0 10px rgba(255, 215, 0, 0.4)' }}
           >
             {signoff}
+          </div>
+
+          {/* Official App Open Scannable QR Code Plaque & Direct Clickable Link */}
+          <div className="mt-2 z-10">
+            <PosterAppOpenQR
+              size={48}
+              variant="pill"
+              labelText="ऐप खोलें / स्कैन करें"
+              subText="https://jeevan-jyoti-foundation-7eso.vercel.app"
+              showClickableUrl={true}
+            />
           </div>
 
           {/* Bottom Golden Corner Lotuses (Left & Right) */}

@@ -31,6 +31,8 @@ import {
   Loader2
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { QRCodeCanvas } from 'qrcode.react';
+import { PosterAppOpenQR } from '../common/PosterAppOpenQR';
 import { compressImageToSafeDataUrl } from '../../utils/imageOptimizer';
 import toast from 'react-hot-toast';
 
@@ -779,6 +781,53 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
     // 6. Bottom Footer Ribbon
     const footerY = height - insetMargin - 75;
     const footerSepY = footerY - 25;
+
+    // 5.5. Official App Open QR Code Plaque on Canvas
+    const qrCanvas = document.getElementById('daily-wisdom-qr-canvas') as HTMLCanvasElement | null;
+    if (qrCanvas) {
+      const qrBoxW = 340;
+      const qrBoxH = 92;
+      const qrBoxX = (width - qrBoxW) / 2;
+      const qrBoxY = footerSepY - qrBoxH - 18;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
+      ctx.strokeStyle = '#D4AF37';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(qrBoxX, qrBoxY, qrBoxW, qrBoxH, [16]);
+      ctx.fill();
+      ctx.stroke();
+
+      // White QR backing
+      const qrSize = 74;
+      const qrX = qrBoxX + 9;
+      const qrY = qrBoxY + 9;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.roundRect(qrX, qrY, qrSize, qrSize, [8]);
+      ctx.fill();
+
+      // Draw QR Canvas
+      ctx.drawImage(qrCanvas, qrX + 2, qrY + 2, qrSize - 4, qrSize - 4);
+
+      // Text beside QR
+      const textX = qrBoxX + qrSize + 16;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#FFE082';
+      ctx.font = 'bold 18px "Noto Sans Devanagari", sans-serif';
+      ctx.fillText('📲 ऐप खोलें (SCAN TO OPEN)', textX, qrBoxY + 32);
+
+      ctx.fillStyle = '#FDE68A';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText('🔗 https://jeevan-jyoti-foundation-7eso.vercel.app', textX, qrBoxY + 54);
+
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '11px sans-serif';
+      ctx.fillText('नीति आयोग मान्यता प्राप्त NGO • स्थापना 2018', textX, qrBoxY + 72);
+      ctx.restore();
+    }
+
     const fSepGrad = ctx.createLinearGradient(width * 0.15, footerSepY, width * 0.85, footerSepY);
     fSepGrad.addColorStop(0, 'transparent');
     fSepGrad.addColorStop(0.5, '#D4AF37');
@@ -795,10 +844,10 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
     ctx.shadowBlur = 8;
     ctx.fillText('सेवा • शिक्षा • स्वास्थ्य', width / 2, footerY + 10);
 
-    ctx.font = 'bold 20px "Noto Sans Devanagari", sans-serif';
+    ctx.font = 'bold 19px monospace';
     ctx.fillStyle = '#E2E8F0';
     ctx.shadowBlur = 6;
-    ctx.fillText('नीति आयोग मान्यता प्राप्त NGO • jeevanjyotifoundation.org', width / 2, footerY + 44);
+    ctx.fillText('https://jeevan-jyoti-foundation-7eso.vercel.app', width / 2, footerY + 44);
 
     const dataUrl = canvas.toDataURL('image/png', 1.0);
     const blob = await new Promise<Blob>((resolve, reject) => {
@@ -1214,16 +1263,42 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
                   </div>
                 </div>
 
-                {/* Footer Ribbon */}
-                <div className="w-full pt-2 border-t border-amber-400/30 space-y-0.5">
-                  <div className="text-[10px] font-bold text-amber-200/95 tracking-wide">
-                    सेवा • शिक्षा • स्वास्थ्य
+                {/* Footer Ribbon with App Open QR Code & Direct Clickable Link */}
+                <div className="w-full pt-2 border-t border-amber-400/30 flex items-center justify-between gap-2 px-1 text-left">
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="text-[10px] font-bold text-amber-200/95 tracking-wide truncate">
+                      सेवा • शिक्षा • स्वास्थ्य
+                    </div>
+                    <a
+                      href="https://jeevan-jyoti-foundation-7eso.vercel.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[8.5px] font-mono text-amber-300 font-bold hover:underline flex items-center gap-1 cursor-pointer truncate"
+                      title="क्लिक करके ऐप खोलें: https://jeevan-jyoti-foundation-7eso.vercel.app"
+                    >
+                      <span>🔗</span>
+                      <span>jeevan-jyoti-foundation-7eso.vercel.app</span>
+                    </a>
                   </div>
-                  <div className="text-[9px] text-slate-300 font-mono">
-                    नीति आयोग मान्यता प्राप्त NGO
+                  <div className="shrink-0">
+                    <PosterAppOpenQR size={38} variant="compact" customUrl="https://jeevan-jyoti-foundation-7eso.vercel.app" />
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Hidden Offscreen QR Canvas for 1080p Canvas Export */}
+            <div className="hidden" aria-hidden="true">
+              <QRCodeCanvas
+                id="daily-wisdom-qr-canvas"
+                value="https://jeevan-jyoti-foundation-7eso.vercel.app"
+                size={300}
+                level="H"
+                includeMargin={true}
+                marginSize={2}
+                fgColor="#0f172a"
+                bgColor="#FFFFFF"
+              />
             </div>
 
             {/* Direct Action & Download Buttons under Preview */}

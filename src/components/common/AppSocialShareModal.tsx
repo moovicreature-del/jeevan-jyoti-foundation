@@ -55,9 +55,7 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
   const [cardFormat, setCardFormat] = useState<'portrait' | 'square'>('portrait');
   const shareCardRef = useRef<HTMLDivElement | null>(null);
 
-  const appUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}`
-    : 'https://jeevanjyotifoundation.org';
+  const appUrl = 'https://jeevan-jyoti-foundation-7eso.vercel.app';
 
   // Trigger joyous festive confetti on modal open
   useEffect(() => {
@@ -460,20 +458,41 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
                 {/* QR Code & Scan Strip */}
                 <div className="flex items-center justify-between gap-3 w-full max-w-sm pt-2 border-t border-amber-400/30">
                   <div className="text-left text-[10px] space-y-0.5">
-                    <div className="font-black text-amber-300">📲 सीधे ऐप पर जाएं:</div>
-                    <div className="text-slate-300 font-mono text-[9px]">jeevanjyotifoundation.org</div>
-                    <div className="text-amber-200/90 font-medium">कैमरे से स्कैन करें व जुड़ें</div>
+                    <div className="font-black text-amber-300">📲 सीधे ऐप पर जाएं (Click to Open):</div>
+                    <a
+                      href={appUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-amber-300 font-mono text-[9px] hover:underline flex items-center gap-1 cursor-pointer font-bold"
+                      title={`क्लिक करके ऐप खोलें: ${appUrl}`}
+                    >
+                      <span>🔗</span>
+                      <span>jeevan-jyoti-foundation-7eso.vercel.app</span>
+                    </a>
+                    <div className="text-amber-200/90 font-medium text-[9px]">कैमरे से स्कैन करें या लिंक पर क्लिक करें</div>
                   </div>
 
-                  <div className="p-1.5 bg-white rounded-xl shadow-md border border-amber-400 shrink-0">
+                  <a
+                    href={appUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`क्लिक करके ऐप खोलें: ${appUrl}`}
+                    className="p-1.5 bg-white rounded-xl shadow-md border-2 border-amber-400 shrink-0 ring-2 ring-amber-400/40 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                  >
                     <QRCodeSVG
                       value={appUrl}
-                      size={54}
-                      level="M"
-                      fgColor="#8B0000"
+                      size={58}
+                      level="H"
+                      fgColor="#0f172a"
                       bgColor="#FFFFFF"
+                      imageSettings={{
+                        src: '/logo.png',
+                        height: 15,
+                        width: 15,
+                        excavate: true
+                      }}
                     />
-                  </div>
+                  </a>
                 </div>
 
                 {/* Contact Ribbon */}
