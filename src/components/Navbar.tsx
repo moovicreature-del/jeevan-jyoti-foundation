@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, Award, ShieldCheck, Menu, X, Phone, Globe, QrCode, Lock, Smartphone, Download, HardDrive, Users, UserPlus, ChevronDown, MessageSquare, Facebook, Crown } from 'lucide-react';
+import { Heart, Award, ShieldCheck, Menu, X, Phone, Globe, QrCode, Lock, Smartphone, Download, HardDrive, Users, UserPlus, ChevronDown, MessageSquare, Facebook, Crown, Share2, Sparkles } from 'lucide-react';
 import { FOUNDATION_INFO } from '../data/foundationData';
 import { useLanguage } from '../context/LanguageContext';
 import { BrandLogo } from './common/BrandLogo';
@@ -12,9 +12,10 @@ interface Props {
   onOpenGoogleDrive?: () => void;
   onOpenStaff?: (tab?: 'options' | 'registration' | 'download') => void;
   onOpenMembership?: (tab?: 'plans' | 'payment' | 'download') => void;
+  onOpenAppShare?: () => void;
 }
 
-export const Navbar: React.FC<Props> = ({ onOpenDonate, onOpenReport, onOpenAdmin, onOpenGoogleDrive, onOpenStaff, onOpenMembership }) => {
+export const Navbar: React.FC<Props> = ({ onOpenDonate, onOpenReport, onOpenAdmin, onOpenGoogleDrive, onOpenStaff, onOpenMembership, onOpenAppShare }) => {
   const { language, setLanguage, isHindi, t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -134,6 +135,14 @@ export const Navbar: React.FC<Props> = ({ onOpenDonate, onOpenReport, onOpenAdmi
             <span>{isHindi ? 'ऐप इंस्टॉल करें' : 'Install App'}</span>
           </button>
           <button
+            onClick={onOpenAppShare || (() => window.dispatchEvent(new CustomEvent('open-app-share-modal')))}
+            className="px-3.5 py-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-stone-950 font-black text-xs rounded-xl shadow-md border border-amber-300 flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105 ring-2 ring-amber-400/40"
+            title={isHindi ? "संस्था ऐप व 3D लोगो पोस्टर सोशल मीडिया पर शेयर करें" : "Share Official App & Poster"}
+          >
+            <Share2 className="w-3.5 h-3.5 text-stone-900 fill-stone-900" />
+            <span>{isHindi ? '📲 ऐप शेयर करें' : 'Share App'}</span>
+          </button>
+          <button
             onClick={onOpenGoogleDrive}
             className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-900 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
             title={isHindi ? "गूगल ड्राइव दस्तावेज़ केंद्र (Google Drive Document Hub)" : "Google Drive Document Hub"}
@@ -195,6 +204,21 @@ export const Navbar: React.FC<Props> = ({ onOpenDonate, onOpenReport, onOpenAdmi
               <span>फाउंडेशन ऐप इंस्टॉल करें (Install App)</span>
             </div>
             <Download className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              if (onOpenAppShare) onOpenAppShare();
+              else window.dispatchEvent(new CustomEvent('open-app-share-modal'));
+            }}
+            className="w-full text-left py-2.5 px-3 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-stone-950 rounded-xl font-black flex items-center justify-between border border-amber-400 shadow-xs cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Share2 className="w-4 h-4 text-stone-900" />
+              <span>📲 ऐप शेयर करें (3D लोगो पोस्टर)</span>
+            </div>
+            <Sparkles className="w-4 h-4 text-stone-900" />
           </button>
 
           {/* Prominent Mobile Staff Section (Top Priority) */}

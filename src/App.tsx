@@ -64,10 +64,15 @@ import { QuickDonateOverlay } from './components/donation/QuickDonateOverlay';
 import { GoogleDriveHubModal } from './components/drive/GoogleDriveHubModal';
 import { StaffHubModal } from './components/staff/StaffHubModal';
 import { NgoMembershipModal } from './components/membership/NgoMembershipModal';
+import { AppSocialShareModal } from './components/common/AppSocialShareModal';
 
 export function App() {
   const { isLoading: isFirestoreLoading } = useHomeContent();
   const [verifyRouteId, setVerifyRouteId] = useState<string | null>(null);
+
+  // App Social Share & 3D Logo Poster Modal state
+  const [showAppSocialShareModal, setShowAppSocialShareModal] = useState<boolean>(false);
+  const [appShareTab, setAppShareTab] = useState<'general' | 'quotes' | 'volunteer' | 'donation'>('general');
 
   // NGO Membership Portal state
   const [showMembershipModal, setShowMembershipModal] = useState<boolean>(false);
@@ -346,11 +351,33 @@ export function App() {
 
     const handleOpenFirebasePhone = () => setShowFirebasePhoneModal(true);
     const handleOpenWhatsAppOtp = () => setShowTwilioWhatsAppModal(true);
+    const handleOpenAppShareEvent = (e: any) => {
+      if (e?.detail?.tab) {
+        setAppShareTab(e.detail.tab);
+      } else {
+        setAppShareTab('general');
+      }
+      setShowAppSocialShareModal(true);
+    };
 
     window.addEventListener('open-firebase-phone-auth', handleOpenFirebasePhone);
     window.addEventListener('open-firebase-phone-modal', handleOpenFirebasePhone);
     window.addEventListener('open-whatsapp-otp', handleOpenWhatsAppOtp);
     window.addEventListener('open-twilio-whatsapp-modal', handleOpenWhatsAppOtp);
+    window.addEventListener('open-app-share-modal', handleOpenAppShareEvent);
+    window.addEventListener('open-app-share', handleOpenAppShareEvent);
+
+    // Check for direct share url parameter
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const shareParam = urlParams.get('share') || urlParams.get('share_app') || urlParams.get('app_share');
+      if (shareParam || window.location.hash === '#share') {
+        if (['general', 'quotes', 'volunteer', 'donation'].includes(shareParam as string)) {
+          setAppShareTab(shareParam as any);
+        }
+        setShowAppSocialShareModal(true);
+      }
+    }
 
     return () => {
       window.removeEventListener('open-staff-modal', handleOpenStaffEvent);
@@ -361,6 +388,8 @@ export function App() {
       window.removeEventListener('open-firebase-phone-modal', handleOpenFirebasePhone);
       window.removeEventListener('open-whatsapp-otp', handleOpenWhatsAppOtp);
       window.removeEventListener('open-twilio-whatsapp-modal', handleOpenWhatsAppOtp);
+      window.removeEventListener('open-app-share-modal', handleOpenAppShareEvent);
+      window.removeEventListener('open-app-share', handleOpenAppShareEvent);
     };
   }, []);
 
@@ -422,6 +451,10 @@ export function App() {
           setMembershipModalTab(tab || 'plans');
           setShowMembershipModal(true);
         }}
+        onOpenAppShare={() => {
+          setAppShareTab('general');
+          setShowAppSocialShareModal(true);
+        }}
       />
 
       {/* Main Content Sections */}
@@ -433,6 +466,10 @@ export function App() {
           onOpenStaff={(tab) => {
             setStaffModalTab(tab || 'options');
             setShowStaffModal(true);
+          }}
+          onOpenAppShare={() => {
+            setAppShareTab('general');
+            setShowAppSocialShareModal(true);
           }}
         />
 
@@ -608,6 +645,10 @@ export function App() {
       <FloatingShareToolbar
         onOpenQr={() => setShowQrScannerModal(true)}
         onOpenQuickDonate={() => setShowQuickDonateModal(true)}
+        onOpenAppShare={() => {
+          setAppShareTab('general');
+          setShowAppSocialShareModal(true);
+        }}
       />
 
       {/* Network Status Offline Alert */}
@@ -831,6 +872,15 @@ export function App() {
               initialTab={membershipModalTab}
               initialPhone={membershipModalPhone}
               onClose={() => setShowMembershipModal(false)}
+            />
+          )}
+
+          {/* 16. Official App Social Share & 3D Logo Promotional Poster Modal */}
+          {showAppSocialShareModal && (
+            <AppSocialShareModal
+              isOpen={showAppSocialShareModal}
+              onClose={() => setShowAppSocialShareModal(false)}
+              initialTab={appShareTab}
             />
           )}
           {/* Global Toast Notification Container */}

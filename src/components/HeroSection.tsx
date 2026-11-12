@@ -25,13 +25,15 @@ interface Props {
   onOpenVolunteerPortal: () => void;
   onOpenAdmin?: () => void;
   onOpenStaff?: (tab?: 'options' | 'registration' | 'download') => void;
+  onOpenAppShare?: () => void;
 }
 
 export const HeroSection: React.FC<Props> = ({
   onOpenDonate,
   onOpenVolunteerPortal,
   onOpenAdmin,
-  onOpenStaff
+  onOpenStaff,
+  onOpenAppShare
 }) => {
   const { t, isHindi } = useLanguage();
   const { content } = useHomeContent();
@@ -57,69 +59,11 @@ export const HeroSection: React.FC<Props> = ({
   const slideCount = content.sliderPhotos?.length || 4;
   const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'shared'>('idle');
 
-  const handleShareImpact = async () => {
-    const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const shareTitle = isHindi ? FOUNDATION_INFO.nameHindi : FOUNDATION_INFO.nameEnglish;
-    const shareText = isHindi
-      ? `${FOUNDATION_INFO.nameHindi} (${FOUNDATION_INFO.nameEnglish})\n📍 ${FOUNDATION_INFO.address}\n\n🌟 हमारा मिशन: "सेवा • शिक्षा • स्वास्थ्य"\nग़ाज़ीपुर के ग्रामीण व निर्धन बच्चों को निःशुल्क गुणवत्तापूर्ण शिक्षा, अन्नपूर्णा भोजन सेवा एवं निःशुल्क चिकित्सा शिविर।\n\nहमारे मिशन से जुड़ें और सहयोग करें:`
-      : `${FOUNDATION_INFO.nameEnglish}\n📍 Ghazipur, Uttar Pradesh, India\n\n🌟 Mission: Free evening schools for underprivileged children, Annapurna daily meals, healthcare camps & women empowerment.\n\nJoin and support our mission:`;
-
-    const activeThumbUrl = content.appThumbnailUrl || content.appLogoUrl || '/pwa-icon-512.png';
-
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        // Try file sharing if supported by browser/device for instant rich card thumbnail preview
-        let shareFiles: File[] | undefined;
-        try {
-          if (activeThumbUrl && navigator.canShare) {
-            const resp = await fetch(activeThumbUrl);
-            const blob = await resp.blob();
-            const file = new File([blob], 'jeevan-jyoti-logo.png', { type: blob.type || 'image/png' });
-            if (navigator.canShare({ files: [file] })) {
-              shareFiles = [file];
-            }
-          }
-        } catch {
-          // File fetch optional fallback
-        }
-
-        const sharePayload: ShareData = {
-          title: shareTitle,
-          text: shareText,
-          url: shareUrl,
-          ...(shareFiles && shareFiles.length > 0 ? { files: shareFiles } : {})
-        };
-
-        await navigator.share(sharePayload);
-        setShareStatus('shared');
-        setTimeout(() => setShareStatus('idle'), 3000);
-        return;
-      } catch (err: unknown) {
-        if ((err as Error)?.name === 'AbortError') {
-          // User dismissed the native share sheet
-          return;
-        }
-      }
-    }
-
-    // Fallback: Copy mission and link to clipboard if Web Share API is unavailable or declined
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = `${shareText}\n${shareUrl}`;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
-      setShareStatus('copied');
-      setTimeout(() => setShareStatus('idle'), 3000);
-    } catch {
-      // In case copy fails
+  const handleShareImpact = () => {
+    if (onOpenAppShare) {
+      onOpenAppShare();
+    } else {
+      window.dispatchEvent(new CustomEvent('open-app-share-modal'));
     }
   };
 
@@ -193,29 +137,15 @@ export const HeroSection: React.FC<Props> = ({
                 <span>{isHindi ? '👥 स्टाफ रजिस्ट्रेशन व आई-कार्ड' : '👥 Staff Registration & ID'}</span>
               </button>
 
-              {/* Share Your Impact (Web Share API) Button */}
+              {/* Share Your Impact & App Modal Button */}
               <button
                 onClick={handleShareImpact}
-                className="px-6 py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-2xl text-sm transition-all shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5 border border-emerald-600 active:scale-95"
-                title={isHindi ? "संस्था का मिशन व प्रभाव साझा करें" : "Share Foundation Mission & Impact"}
-                aria-label="Share Your Impact"
+                className="px-6 py-3.5 bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black rounded-2xl text-sm transition-all shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5 border border-emerald-500 active:scale-95 ring-2 ring-emerald-400/30"
+                title={isHindi ? "संस्था ऐप व 3D लोगो पोस्टर सोशल मीडिया पर शेयर करें" : "Share Official App & 3D Logo Poster"}
+                aria-label="Share App and Impact"
               >
-                {shareStatus === 'copied' ? (
-                  <>
-                    <Check className="w-5 h-5 text-emerald-200" />
-                    <span>{isHindi ? 'मिशन कॉपी हुआ!' : 'Copied to Clipboard!'}</span>
-                  </>
-                ) : shareStatus === 'shared' ? (
-                  <>
-                    <Check className="w-5 h-5 text-emerald-200" />
-                    <span>{isHindi ? 'साझा किया गया!' : 'Shared Successfully!'}</span>
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="w-5 h-5 text-white" />
-                    <span>Share Your Impact</span>
-                  </>
-                )}
+                <Share2 className="w-5 h-5 text-amber-300" />
+                <span>{isHindi ? '📲 ऐप व पोस्टर शेयर करें' : 'Share App & Poster'}</span>
               </button>
             </div>
 

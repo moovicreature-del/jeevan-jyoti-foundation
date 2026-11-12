@@ -5,9 +5,10 @@ import { FOUNDATION_INFO } from '../data/foundationData';
 interface ShareProps {
   onOpenQr?: () => void;
   onOpenQuickDonate?: () => void;
+  onOpenAppShare?: () => void;
 }
 
-export const FloatingShareToolbar: React.FC<ShareProps> = ({ onOpenQr, onOpenQuickDonate }) => {
+export const FloatingShareToolbar: React.FC<ShareProps> = ({ onOpenQr, onOpenQuickDonate, onOpenAppShare }) => {
   const [copied, setCopied] = useState(false);
   const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://jeevanjyotifoundation.org';
   const shareText = `${FOUNDATION_INFO.nameHindi} (${FOUNDATION_INFO.nameEnglish}) - सेवा • शिक्षा • स्वास्थ्य अभियान ग़ाज़ीपुर। सहयोग करें व जुड़ें: ${shareUrl}`;
@@ -34,6 +35,14 @@ export const FloatingShareToolbar: React.FC<ShareProps> = ({ onOpenQr, onOpenQui
     <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2">
       {/* Action buttons */}
       <div className="flex flex-col gap-2 bg-white/95 backdrop-blur-md p-2 rounded-2xl border border-slate-300 shadow-2xl">
+        <button
+          onClick={onOpenAppShare || (() => window.dispatchEvent(new CustomEvent('open-app-share-modal')))}
+          className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-stone-950 flex items-center justify-center shadow-lg transition-all hover:scale-110 cursor-pointer border border-amber-300 ring-2 ring-amber-400/50"
+          title="📲 ऐप शेयर करें (3D लोगो व आकर्षक पोस्टर के साथ)"
+        >
+          <Share2 className="w-5 h-5 text-stone-900 fill-amber-700" />
+        </button>
+
         {onOpenQuickDonate && (
           <button
             onClick={onOpenQuickDonate}
