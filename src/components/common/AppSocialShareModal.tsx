@@ -30,10 +30,10 @@ import {
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 import { FOUNDATION_INFO } from '../../data/foundationData';
+import { exportPosterAsClickablePdf } from '../../utils/exportImage';
 import { BrandLogo } from './BrandLogo';
 
 interface AppSocialShareModalProps {
@@ -204,11 +204,11 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
     }
   };
 
-  // 3.5. Download as Clickable PDF (1-Touch Open App on click/touch)
+  // 3.5. Download as Clickable PDF (Embedded vector link + DOM-mapped URI annotations)
   const handleDownloadSharePdf = async () => {
     if (!shareCardRef.current) return;
     setIsDownloadingCard(true);
-    const toastId = toast.loading('📄 क्लिकेबल PDF पोस्टर तैयार हो रहा है (टच करते ही ऐप खुलेगा)...');
+    const toastId = toast.loading('📄 क्लिकेबल PDF पोस्टर तैयार हो रहा है (डाउनलोड के बाद भी लिंक काम करेगा)...');
 
     try {
       const node = shareCardRef.current;
@@ -220,39 +220,27 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
         pixelRatio: 2.5,
         cacheBust: true,
         width: actualWidth,
-        height: actualHeight
+        height: actualHeight,
+        style: {
+          transform: 'none',
+          maxHeight: 'none',
+          height: `${actualHeight}px`,
+          width: `${actualWidth}px`,
+          overflow: 'visible'
+        }
       });
 
-      const isPortrait = actualHeight >= actualWidth;
-      const pdf = new jsPDF({
-        orientation: isPortrait ? 'portrait' : 'landscape',
-        unit: 'mm',
-        format: 'a4'
+      await exportPosterAsClickablePdf({
+        dataUrl,
+        width: actualWidth,
+        height: actualHeight,
+        fileName: `JJF_App_Clickable_Poster_${Date.now()}.pdf`,
+        appUrl,
+        sourceElement: node
       });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      const imgAspect = actualWidth / actualHeight;
-      let renderW = pageWidth - 16;
-      let renderH = renderW / imgAspect;
-      if (renderH > pageHeight - 16) {
-        renderH = pageHeight - 16;
-        renderW = renderH * imgAspect;
-      }
-      const posX = (pageWidth - renderW) / 2;
-      const posY = (pageHeight - renderH) / 2;
-
-      pdf.addImage(dataUrl, 'PNG', posX, posY, renderW, renderH);
-
-      // Embedded Clickable Hyperlink: Clicking or touching ANYWHERE on the poster opens the app!
-      pdf.link(posX, posY, renderW, renderH, { url: appUrl });
-
-      const fileName = `JJF_App_Clickable_Poster_${Date.now()}.pdf`;
-      pdf.save(fileName);
 
       toast.dismiss(toastId);
-      toast.success('🎉 क्लिकेबल PDF पोस्टर डाउनलोड हो गया! इस PDF पर कहीं भी टच करते ही सीधे ऐप खुलेगा।', {
+      toast.success('🎉 क्लिकेबल PDF पोस्टर डाउनलोड हो गया! इसे खोलकर लिंक पर क्लिक/टच करते ही सीधे ऐप खुलेगा।', {
         duration: 6000,
         icon: '📄'
       });
@@ -531,8 +519,9 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
                       href={appUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       title={`क्लिक करके ऐप खोलें: ${appUrl}`}
-                      className="p-1.5 bg-white rounded-xl shadow-md border-2 border-amber-400 shrink-0 ring-2 ring-amber-400/40 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                      className="relative z-30 pointer-events-auto p-1.5 bg-white rounded-xl shadow-md border-2 border-amber-400 shrink-0 ring-2 ring-amber-400/40 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
                     >
                       <QRCodeSVG
                         value={appUrl}
@@ -550,16 +539,18 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
                     </a>
                   </div>
 
-                  {/* Full-Width High-Contrast Plaintext URL Pill (Zero Truncation + OCR & PDF Clickable) */}
+                  {/* Full-Width High-Contrast Plaintext URL Pill (Zero Truncation + Live Clickable + PDF Hyperlink) */}
                   <a
                     href={appUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 text-stone-950 font-mono text-[9px] sm:text-[10.5px] font-black shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer border border-amber-200 select-all whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative z-30 pointer-events-auto w-full px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 text-stone-950 font-mono text-[9px] sm:text-[10.5px] font-black shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer border border-amber-200 whitespace-nowrap"
                     title={`क्लिक करके ऐप खोलें: ${appUrl}`}
                   >
                     <span className="shrink-0">🔗</span>
                     <span>{appUrl}</span>
+                    <ExternalLink className="w-3 h-3 text-stone-900 shrink-0" />
                   </a>
                 </div>
 
@@ -571,66 +562,69 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
             </div>
 
             {/* Download and Copy Buttons for this Share Card */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-              <button
-                type="button"
-                onClick={handleDownloadSharePoster}
-                disabled={isDownloadingCard}
-                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-75 border border-amber-300"
-                title="इस आकर्षक शेयर पोस्टर को 1080p Ultra HD PNG में डाउनलोड करें"
-              >
-                {isDownloadingCard ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-950" />
-                    <span>तैयार हो रहा है...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>📥 1080p HD इमेज</span>
-                  </>
-                )}
-              </button>
-
+            <div className="space-y-2 pt-1">
+              {/* PRIMARY FEATURED BUTTON: CLICKABLE PDF POSTER (Hyperlink ALWAYS works after download!) */}
               <button
                 type="button"
                 onClick={handleDownloadSharePdf}
                 disabled={isDownloadingCard}
-                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-75 border border-emerald-400 ring-2 ring-emerald-400/30"
-                title="क्लिकेबल PDF पोस्टर डाउनलोड करें - जिसे टच करते ही सीधे ऐप खुल जाता है"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs sm:text-sm shadow-xl transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 border-2 border-emerald-300/80 ring-2 ring-emerald-400/30"
+                title="डाउनलोड के बाद भी लिंक क्लिक करने पर ऐप खोलने वाला क्लिकेबल PDF पोस्टर"
               >
-                <FileText className="w-3.5 h-3.5" />
-                <span>📄 क्लिकेबल PDF (टच टू ओपन)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700"
-              >
-                {copiedLink ? (
+                {isDownloadingCard ? (
                   <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-emerald-400">लिंक कॉपी हुआ!</span>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>क्लिकेबल PDF तैयार हो रहा है...</span>
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>🔗 लिंक कॉपी</span>
+                    <FileText className="w-4 h-4 text-emerald-100 stroke-[2.5]" />
+                    <span>📄 क्लिकेबल पोस्टर डाउनलोड (PDF — लिंक पर क्लिक से ऐप खुलेगा)</span>
                   </>
                 )}
               </button>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadSharePoster}
+                  disabled={isDownloadingCard}
+                  className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-75 border border-amber-300"
+                  title="WhatsApp स्टेटस व इंस्टाग्राम फोटो के लिए 1080p HD PNG इमेज डाउनलोड करें"
+                >
+                  <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>🖼️ 1080p HD फोटो (PNG)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700"
+                >
+                  {copiedLink ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400">लिंक कॉपी हुआ!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>🔗 ऐप लिंक कॉपी करें</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Helpful Guidance Notice for Touch-to-Open */}
             <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-400/35 text-[10.5px] text-amber-200 space-y-1 text-left">
               <div className="font-bold flex items-center gap-1.5 text-amber-300">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>पोस्टर से ऐप ओपन करने के 2 आसान तरीके:</span>
+                <span>डाउनलोड के बाद पोस्टर का हाइपरलिंक कैसे काम करेगा?</span>
               </div>
               <div className="pl-4 space-y-0.5 text-slate-300 text-[10px]">
-                <div>• <strong>टच टू ओपन PDF:</strong> 'क्लिकेबल PDF' फाइल डाउनलोड करें — इसे फोन में खोलकर कहीं भी टच करते ही सीधे ऐप खुल जाएगा।</div>
-                <div>• <strong>इमेज फोटो:</strong> 'HD इमेज' में दिए QR कोड या लिंक को फोन कैमरे / Google Lens से टच करें।</div>
+                <div>• <strong>क्लिकेबल PDF डाउनलोड:</strong> PDF फ़ाइल में असली हाइपरलिंक एम्बेड रहता है — मोबाइल या कंप्यूटर पर कहीं भी लिंक टच/क्लिक करते ही सीधे ऐप खुलेगा (WhatsApp पर भी डॉक्यूमेंट के रूप में भेज सकते हैं)।</div>
+                <div>• <strong>PNG फोटो इमेज:</strong> सामान्य PNG फोटो में क्लिक करने वाला हाइपरलिंक तकनीकी रूप से नहीं जुड़ता; फोटो में QR कोड या Google Lens से ऐप खुलता है।</div>
               </div>
             </div>
           </div>
@@ -773,19 +767,41 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
               </div>
             </div>
 
-            {/* DIRECT APP LINK COPY CARD */}
+            {/* DIRECT APP LINK COPY & OPEN CARD */}
             <div className="p-3 rounded-2xl bg-slate-900 border border-amber-500/30 flex items-center justify-between gap-2 shadow-xs">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="text-[10px] uppercase font-bold text-slate-400">सीधा वेबसाइट / ऐप लिंक:</div>
-                <div className="text-xs font-mono font-bold text-amber-300 truncate">{appUrl}</div>
+                <a
+                  href={appUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-xs font-mono font-bold text-amber-300 hover:text-yellow-200 underline underline-offset-2 truncate block cursor-pointer"
+                  title={`क्लिक करके ऐप खोलें: ${appUrl}`}
+                >
+                  {appUrl}
+                </a>
               </div>
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shrink-0 cursor-pointer shadow-xs transition"
-              >
-                {copiedLink ? '✓ कॉपी हुआ' : 'कॉपी करें'}
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <a
+                  href={appUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer shadow-xs transition flex items-center gap-1"
+                  title={`सीधे ऐप खोलें: ${appUrl}`}
+                >
+                  <span>खोलें</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs cursor-pointer shadow-xs transition"
+                >
+                  {copiedLink ? '✓ कॉपी हुआ' : 'कॉपी'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

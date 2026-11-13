@@ -32,10 +32,10 @@ import {
   FileText
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
 import { QRCodeCanvas } from 'qrcode.react';
 import { PosterAppOpenQR } from '../common/PosterAppOpenQR';
 import { compressImageToSafeDataUrl } from '../../utils/imageOptimizer';
+import { exportPosterAsClickablePdf } from '../../utils/exportImage';
 import toast from 'react-hot-toast';
 
 export interface DailyWisdomQuoteItem {
@@ -939,38 +939,21 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
   // Clickable PDF Poster Download (1-Touch Open App anywhere on PDF / bottom link)
   const handleDirectPdfDownload = async () => {
     setIsDownloading(true);
-    const toastId = toast.loading('📄 क्लिकेबल PDF पोस्टर तैयार हो रहा है (टच करते ही ऐप खुलेगा)...');
+    const toastId = toast.loading('📄 क्लिकेबल PDF पोस्टर तैयार हो रहा है (डाउनलोड के बाद भी लिंक काम करेगा)...');
     const OFFICIAL_APP_URL = 'https://jeevan-jyoti-foundation-7eso.vercel.app';
 
     try {
       const { dataUrl, fileName } = await renderDailyWisdomPosterCanvas();
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
+      await exportPosterAsClickablePdf({
+        dataUrl,
+        width: 1080,
+        height: 1560,
+        fileName: fileName.replace(/\.png$/i, '_Clickable.pdf'),
+        appUrl: OFFICIAL_APP_URL
       });
 
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const aspect = 1080 / 1560;
-      let renderH = pageHeight - 16;
-      let renderW = renderH * aspect;
-      if (renderW > pageWidth - 16) {
-        renderW = pageWidth - 16;
-        renderH = renderW / aspect;
-      }
-      const posX = (pageWidth - renderW) / 2;
-      const posY = (pageHeight - renderH) / 2;
-
-      pdf.addImage(dataUrl, 'PNG', posX, posY, renderW, renderH);
-      // Full-poster embedded URI annotation: tapping link text or QR in PDF opens the app directly
-      pdf.link(posX, posY, renderW, renderH, { url: OFFICIAL_APP_URL });
-
-      const pdfFileName = fileName.replace(/\.png$/i, '_Clickable.pdf');
-      pdf.save(pdfFileName);
-
       toast.dismiss(toastId);
-      toast.success('🎉 क्लिकेबल PDF पोस्टर डाउनलोड हो गया! इस PDF पर लिंक टच करते ही सीधे ऐप खुलेगा।', {
+      toast.success('🎉 क्लिकेबल PDF पोस्टर डाउनलोड हो गया! इसे खोलकर लिंक टच करते ही सीधे ऐप खुलेगा।', {
         duration: 5500,
         icon: '📄'
       });
@@ -1349,7 +1332,8 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
                     href="https://jeevan-jyoti-foundation-7eso.vercel.app"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-1 px-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-stone-950 font-mono font-black text-[8px] sm:text-[9px] flex items-center justify-center gap-1 cursor-pointer shadow-sm border border-amber-200 whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative z-30 pointer-events-auto w-full py-1 px-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-stone-950 font-mono font-black text-[8px] sm:text-[9px] flex items-center justify-center gap-1 cursor-pointer shadow-sm border border-amber-200 whitespace-nowrap"
                     title="क्लिक करके ऐप खोलें: https://jeevan-jyoti-foundation-7eso.vercel.app"
                   >
                     <span>🔗</span>
@@ -1375,13 +1359,25 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
 
             {/* Direct Action & Download Buttons under Preview */}
             <div className="pt-2 flex flex-col gap-2 max-w-[340px] mx-auto w-full">
-              {/* PRIMARY ACTION 1: DIRECT 1080p ULTRA HD POSTER DOWNLOAD */}
+              {/* PRIMARY ACTION 1: CLICKABLE PDF DOWNLOAD (HYPERLINK WORKS AFTER DOWNLOAD) */}
+              <button
+                type="button"
+                onClick={handleDirectPdfDownload}
+                disabled={isDownloading}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs sm:text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer border-2 border-emerald-300/80 ring-1 ring-emerald-400/40 disabled:opacity-75"
+                title="डाउनलोड के बाद भी लिंक क्लिक करने पर ऐप खोलने वाला क्लिकेबल PDF पोस्टर"
+              >
+                <FileText className="w-4 h-4 text-emerald-100 stroke-[2.5]" />
+                <span>📄 क्लिकेबल पोस्टर डाउनलोड (PDF — लिंक काम करेगा)</span>
+              </button>
+
+              {/* ACTION 2: DIRECT 1080p ULTRA HD POSTER PNG IMAGE DOWNLOAD */}
               <button
                 type="button"
                 onClick={handleDirectDownload}
                 disabled={isDownloading}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black text-xs sm:text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer border border-amber-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-75"
-                title="इस पोस्टर को सीधे 1080p Ultra HD PNG के रूप में डाउनलोड करें"
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border border-amber-300 hover:scale-[1.01] active:scale-[0.98] disabled:opacity-75"
+                title="WhatsApp स्टेटस के लिए 1080p HD PNG फोटो डाउनलोड करें"
               >
                 {isDownloading ? (
                   <>
@@ -1391,21 +1387,9 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
                 ) : (
                   <>
                     <Download className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-                    <span>📥 सीधा 1080p HD पोस्टर डाउनलोड करें</span>
+                    <span>🖼️ 1080p HD फोटो इमेज (PNG)</span>
                   </>
                 )}
-              </button>
-
-              {/* PRIMARY ACTION 1B: CLICKABLE PDF DOWNLOAD (TOUCH LINK TO OPEN APP DIRECTLY) */}
-              <button
-                type="button"
-                onClick={handleDirectPdfDownload}
-                disabled={isDownloading}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border border-emerald-400 ring-1 ring-emerald-400/40 disabled:opacity-75"
-                title="क्लिकेबल PDF डाउनलोड करें - डाउनलोड के बाद लिंक टच करते ही सीधे ऐप खुलेगा"
-              >
-                <FileText className="w-4 h-4 text-emerald-200" />
-                <span>📄 क्लिकेबल PDF डाउनलोड (टच टू ओपन ऐप)</span>
               </button>
 
               {/* SECONDARY ROW: WhatsApp Share & Copy to Clipboard */}

@@ -36,8 +36,9 @@ export const PosterAppOpenQR: React.FC<PosterAppOpenQRProps> = ({
         href={appUrl}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
         title={`ऐप खोलें: ${appUrl} (क्लिक करें या स्कैन करें)`}
-        className={`group inline-flex flex-col items-center select-none text-center cursor-pointer transition-transform hover:scale-105 active:scale-95 ${className}`}
+        className={`relative z-30 pointer-events-auto group inline-flex flex-col items-center text-center cursor-pointer transition-transform hover:scale-105 active:scale-95 ${className}`}
       >
         <div className="p-1 sm:p-1.5 bg-white rounded-xl shadow-md border-2 border-amber-400 ring-2 ring-amber-500/30 group-hover:border-amber-300 group-hover:ring-amber-300">
           <QRCodeSVG
@@ -69,8 +70,9 @@ export const PosterAppOpenQR: React.FC<PosterAppOpenQRProps> = ({
         href={appUrl}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
         title={`ऐप खोलें: ${appUrl}`}
-        className={`p-1 bg-white rounded-lg shadow-sm border border-amber-300 inline-block select-none cursor-pointer transition-transform hover:scale-105 active:scale-95 ${className}`}
+        className={`relative z-30 pointer-events-auto p-1 bg-white rounded-lg shadow-sm border border-amber-300 inline-block cursor-pointer transition-transform hover:scale-105 active:scale-95 ${className}`}
       >
         <QRCodeSVG
           value={appUrl}
@@ -92,13 +94,14 @@ export const PosterAppOpenQR: React.FC<PosterAppOpenQRProps> = ({
 
   // Default 'pill' variant: Elegant royal golden plaque with QR & direct clickable Vercel link
   return (
-    <div className={`inline-flex flex-col items-center gap-1 select-none ${className}`}>
+    <div className={`relative z-30 pointer-events-auto inline-flex flex-col items-center gap-1.5 ${className}`}>
       <a
         href={appUrl}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
         title={`क्लिक करके ऐप खोलें: ${appUrl}`}
-        className="group inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-black/65 backdrop-blur-xs border border-amber-400/80 shadow-xl select-none text-left ring-1 ring-amber-400/40 hover:bg-black/85 hover:border-amber-300 transition-all hover:scale-[1.02] active:scale-98 cursor-pointer"
+        className="group inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-black/65 backdrop-blur-xs border border-amber-400/80 shadow-xl text-left ring-1 ring-amber-400/40 hover:bg-black/85 hover:border-amber-300 transition-all hover:scale-[1.02] active:scale-98 cursor-pointer"
       >
         {/* Pristine White QR Code Container with Gold Border */}
         <div className="shrink-0 p-1 bg-white rounded-lg shadow-md border border-amber-400/90 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -141,8 +144,9 @@ export const PosterAppOpenQR: React.FC<PosterAppOpenQRProps> = ({
           href={appUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
           title={`ऐप ओपन करें: ${appUrl}`}
-          className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 text-stone-950 font-black text-[8.5px] sm:text-[10px] shadow-md border border-amber-300 transition-all hover:scale-105 active:scale-95 cursor-pointer ring-1 ring-amber-500/40 whitespace-nowrap"
+          className="relative z-30 pointer-events-auto inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 text-stone-950 font-black text-[8.5px] sm:text-[10px] shadow-md border border-amber-300 transition-all hover:scale-105 active:scale-95 cursor-pointer ring-1 ring-amber-500/40 whitespace-nowrap"
         >
           <Globe className="w-3 h-3 text-stone-900 shrink-0" />
           <span className="font-mono">{appUrl}</span>

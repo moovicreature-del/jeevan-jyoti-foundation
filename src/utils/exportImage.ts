@@ -692,3 +692,126 @@ export async function exportElementsAsMultiPagePdf(
 
 export const exportAsImage = exportElementAsPng;
 
+/**
+ * Exports any rendered poster (from dataUrl + optional DOM sourceElement) into an A4 Clickable PDF.
+ * Embeds:
+ * 1) Native DOM-mapped URI link boxes over every <a href="http..."> element on the poster (QR + yellow URL pill)
+ * 2) Dedicated crisp golden vector bottom action bar with pdf.textWithLink so every mobile/desktop PDF reader opens the link on 1 tap
+ * 3) Focused lower-poster clickable region + full-poster clickable annotation fallback
+ */
+export async function exportPosterAsClickablePdf(params: {
+  dataUrl: string;
+  width: number;
+  height: number;
+  fileName: string;
+  appUrl?: string;
+  sourceElement?: HTMLElement | null;
+}): Promise<void> {
+  const {
+    dataUrl,
+    width,
+    height,
+    fileName,
+    appUrl = 'https://jeevan-jyoti-foundation-7eso.vercel.app',
+    sourceElement
+  } = params;
+
+  const isPortrait = height >= width;
+  const pdf = new jsPDF({
+    orientation: isPortrait ? 'portrait' : 'landscape',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const aspect = Math.max(1, width) / Math.max(1, height);
+
+  // Reserve 14mm at bottom for the dedicated interactive vector hyperlink pill
+  const topMargin = 6;
+  const bottomBarReserve = 16;
+  const maxW = pageWidth - 14;
+  const maxH = pageHeight - topMargin - bottomBarReserve;
+
+  let renderW = maxW;
+  let renderH = renderW / aspect;
+  if (renderH > maxH) {
+    renderH = maxH;
+    renderW = renderH * aspect;
+  }
+
+  const posX = (pageWidth - renderW) / 2;
+  const posY = topMargin + (maxH - renderH) / 2;
+
+  // 1. Place high-resolution poster visual
+  pdf.addImage(dataUrl, 'PNG', posX, posY, renderW, renderH);
+
+  // 2. Map every live HTML <a href="http..."> link inside sourceElement into exact mm coordinates
+  let mappedDomLinks = 0;
+  if (sourceElement) {
+    try {
+      const containerRect = sourceElement.getBoundingClientRect();
+      if (containerRect.width > 0 && containerRect.height > 0) {
+        const anchors = sourceElement.querySelectorAll<HTMLAnchorElement>('a[href^="http"]');
+        anchors.forEach((anchor) => {
+          const href = anchor.getAttribute('href');
+          if (!href) return;
+          const aRect = anchor.getBoundingClientRect();
+          if (aRect.width <= 0 || aRect.height <= 0) return;
+          const relX = (aRect.left - containerRect.left) / containerRect.width;
+          const relY = (aRect.top - containerRect.top) / containerRect.height;
+          const relW = aRect.width / containerRect.width;
+          const relH = aRect.height / containerRect.height;
+          pdf.link(
+            posX + relX * renderW,
+            posY + relY * renderH,
+            relW * renderW,
+            relH * renderH,
+            { url: href }
+          );
+          mappedDomLinks++;
+        });
+      }
+    } catch (err) {
+      console.warn('Could not map DOM anchor rects into PDF:', err);
+    }
+  }
+
+  // 3. Also attach a focused URI annotation over the lower 24% footer zone (QR + URL Pill) if canvas-rendered or fallback
+  if (mappedDomLinks === 0) {
+    const footerStripH = renderH * 0.24;
+    const footerStripY = posY + renderH - footerStripH;
+    pdf.link(posX, footerStripY, renderW, footerStripH, { url: appUrl });
+  }
+
+  // 4. Dedicated Crisp Vector Clickable Link Pill right below the poster (uses real PDF textWithLink + pdf.link!)
+  const pillW = Math.min(pageWidth - 16, Math.max(renderW, 138));
+  const pillH = 10.5;
+  const pillX = (pageWidth - pillW) / 2;
+  const pillY = Math.min(pageHeight - pillH - 3.5, posY + renderH + 2.5);
+
+  pdf.setFillColor(252, 211, 77); // Royal Amber Gold (#FCD34D)
+  pdf.setDrawColor(146, 64, 14); // Deep Amber/Brown border (#92400E)
+  pdf.setLineWidth(0.5);
+  pdf.roundedRect(pillX, pillY, pillW, pillH, 4, 4, 'FD');
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(15, 23, 42); // Crisp Dark Slate (#0F172A)
+
+  const linkLabel = `Open App (Tap / Click Link):  ${appUrl}`;
+  const textWidth = pdf.getTextWidth(linkLabel);
+  const textX = (pageWidth - textWidth) / 2;
+  const textY = pillY + 6.6;
+
+  pdf.textWithLink(linkLabel, textX, textY, { url: appUrl });
+  // Ensure the entire golden pill button region is clickable
+  pdf.link(pillX, pillY, pillW, pillH, { url: appUrl });
+
+  // 5. Fallback clickable overlay across the upper poster body so tapping anywhere opens app
+  pdf.link(posX, posY, renderW, renderH, { url: appUrl });
+
+  const finalName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+  pdf.save(finalName);
+}
+

@@ -42,9 +42,9 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
 import { QRCodeCanvas } from 'qrcode.react';
 import { PosterAppOpenQR } from '../common/PosterAppOpenQR';
+import { exportPosterAsClickablePdf } from '../../utils/exportImage';
 import { RoyalFourCorners, RoyalCenterFlourish } from '../common/RoyalCertificateBorder';
 
 // Dedicated Official WhatsApp Icon SVG
@@ -1658,37 +1658,19 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
   // Clickable PDF Poster Downloader (Tap anywhere / bottom link in PDF to open official app)
   const handleDownloadPosterPdf = async () => {
     setIsGenerating(true);
-    const toastId = toast.loading('📄 क्लिकेबल PDF पोस्टर तैयार हो रहा है (टच करते ही ऐप खुलेगा)...');
+    const toastId = toast.loading('📄 क्लिकेबल PDF पोस्टर तैयार हो रहा है (डाउनलोड के बाद भी लिंक काम करेगा)...');
     const OFFICIAL_APP_URL = 'https://jeevan-jyoti-foundation-7eso.vercel.app';
 
     try {
       const { canvas, dataUrl, file } = await renderPosterCanvas();
-      const isPortrait = canvas.height >= canvas.width;
-      const pdf = new jsPDF({
-        orientation: isPortrait ? 'portrait' : 'landscape',
-        unit: 'mm',
-        format: 'a4'
+      await exportPosterAsClickablePdf({
+        dataUrl,
+        width: canvas.width,
+        height: canvas.height,
+        fileName: file.name.replace(/\.png$/i, '_Clickable.pdf'),
+        appUrl: OFFICIAL_APP_URL,
+        sourceElement: posterPreviewRef.current
       });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const aspect = canvas.width / Math.max(1, canvas.height);
-
-      let renderW = pageWidth - 14;
-      let renderH = renderW / aspect;
-      if (renderH > pageHeight - 14) {
-        renderH = pageHeight - 14;
-        renderW = renderH * aspect;
-      }
-      const posX = (pageWidth - renderW) / 2;
-      const posY = (pageHeight - renderH) / 2;
-
-      pdf.addImage(dataUrl, 'PNG', posX, posY, renderW, renderH);
-      // Embed clickable hyperlink across poster & bottom URL pill
-      pdf.link(posX, posY, renderW, renderH, { url: OFFICIAL_APP_URL });
-
-      const pdfFileName = file.name.replace(/\.png$/i, '_Clickable.pdf');
-      pdf.save(pdfFileName);
 
       toast.dismiss(toastId);
       toast.success('🎉 क्लिकेबल PDF पोस्टर डाउनलोड हो गया! डाउनलोड के बाद लिंक टच करते ही सीधे ऐप खुलेगा।', {
@@ -3143,8 +3125,9 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                   href="https://jeevan-jyoti-foundation-7eso.vercel.app"
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   title="क्लिक करके ऐप खोलें: https://jeevan-jyoti-foundation-7eso.vercel.app"
-                  className="relative z-10 w-full mt-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:brightness-105 text-stone-950 border border-amber-300 shadow-md flex items-center justify-center gap-1.5 text-[9.5px] sm:text-[10.5px] font-mono font-black tracking-tight transition cursor-pointer whitespace-nowrap"
+                  className="relative z-30 pointer-events-auto w-full mt-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:brightness-105 text-stone-950 border border-amber-300 shadow-md flex items-center justify-center gap-1.5 text-[9.5px] sm:text-[10.5px] font-mono font-black tracking-tight transition cursor-pointer whitespace-nowrap"
                 >
                   <ExternalLink className="w-3 h-3 text-stone-900 shrink-0" />
                   <span>https://jeevan-jyoti-foundation-7eso.vercel.app</span>
