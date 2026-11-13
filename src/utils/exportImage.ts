@@ -572,6 +572,34 @@ export async function exportElementAsPdf(
     }
 
     pdf.addImage(result.dataUrl, 'JPEG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST');
+
+    // Automatically map all clickable <a href="http..."> links inside the DOM element to native PDF URI annotations
+    try {
+      const containerRect = element.getBoundingClientRect();
+      if (containerRect.width > 0 && containerRect.height > 0) {
+        const anchors = element.querySelectorAll<HTMLAnchorElement>('a[href^="http"]');
+        anchors.forEach((anchor) => {
+          const href = anchor.getAttribute('href');
+          if (!href) return;
+          const aRect = anchor.getBoundingClientRect();
+          if (aRect.width <= 0 || aRect.height <= 0) return;
+          const relX = (aRect.left - containerRect.left) / containerRect.width;
+          const relY = (aRect.top - containerRect.top) / containerRect.height;
+          const relW = aRect.width / containerRect.width;
+          const relH = aRect.height / containerRect.height;
+          pdf.link(
+            offsetX + relX * renderWidth,
+            offsetY + relY * renderHeight,
+            relW * renderWidth,
+            relH * renderHeight,
+            { url: href }
+          );
+        });
+      }
+    } catch (linkErr) {
+      console.warn('Could not attach PDF link annotations:', linkErr);
+    }
+
     pdf.save(finalFileName);
     return true;
   } catch (err) {

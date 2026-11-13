@@ -37,10 +37,12 @@ import {
   BookOpen,
   Search,
   ListOrdered,
-  CheckCircle2
+  CheckCircle2,
+  FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import { QRCodeCanvas } from 'qrcode.react';
 import { PosterAppOpenQR } from '../common/PosterAppOpenQR';
 import { RoyalFourCorners, RoyalCenterFlourish } from '../common/RoyalCertificateBorder';
@@ -1434,7 +1436,28 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
       ctx.restore();
     }
 
-    // Bottom border strip was moved to the top (Bottom details removed as requested)
+    // 5. Bottom High-Contrast Plaintext App Link Pill (Guaranteed visible in PNG download for OCR / tap-to-open)
+    ctx.save();
+    const bottomUrl = 'https://jeevan-jyoti-foundation-7eso.vercel.app';
+    const urlPillW = Math.min(width - inset * 3, Math.round(width * 0.78));
+    const urlPillH = Math.max(30, Math.round(height * 0.032));
+    const urlPillX = Math.round((width - urlPillW) / 2);
+    const urlPillY = height - inset - urlPillH - Math.round(height * 0.01);
+
+    ctx.fillStyle = '#FCD34D';
+    ctx.strokeStyle = '#92400E';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.roundRect(urlPillX, urlPillY, urlPillW, urlPillH, [Math.round(urlPillH / 2)]);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#0F172A';
+    ctx.font = `bold ${Math.max(13, Math.round(width * 0.018))}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(bottomUrl, width / 2, urlPillY + urlPillH / 2 + 1);
+    ctx.restore();
 
     // Convert canvas to image Data URL & Blob
     const dataUrl = canvas.toDataURL('image/png', 1.0);
@@ -1627,6 +1650,55 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
       console.error('Error rendering poster canvas:', err);
       toast.dismiss(toastId);
       toast.error('पोस्टर डाउनलोड करने में समस्या आई। कृपया पुनः प्रयास करें।');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Clickable PDF Poster Downloader (Tap anywhere / bottom link in PDF to open official app)
+  const handleDownloadPosterPdf = async () => {
+    setIsGenerating(true);
+    const toastId = toast.loading('📄 क्लिकेबल PDF पोस्टर तैयार हो रहा है (टच करते ही ऐप खुलेगा)...');
+    const OFFICIAL_APP_URL = 'https://jeevan-jyoti-foundation-7eso.vercel.app';
+
+    try {
+      const { canvas, dataUrl, file } = await renderPosterCanvas();
+      const isPortrait = canvas.height >= canvas.width;
+      const pdf = new jsPDF({
+        orientation: isPortrait ? 'portrait' : 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const aspect = canvas.width / Math.max(1, canvas.height);
+
+      let renderW = pageWidth - 14;
+      let renderH = renderW / aspect;
+      if (renderH > pageHeight - 14) {
+        renderH = pageHeight - 14;
+        renderW = renderH * aspect;
+      }
+      const posX = (pageWidth - renderW) / 2;
+      const posY = (pageHeight - renderH) / 2;
+
+      pdf.addImage(dataUrl, 'PNG', posX, posY, renderW, renderH);
+      // Embed clickable hyperlink across poster & bottom URL pill
+      pdf.link(posX, posY, renderW, renderH, { url: OFFICIAL_APP_URL });
+
+      const pdfFileName = file.name.replace(/\.png$/i, '_Clickable.pdf');
+      pdf.save(pdfFileName);
+
+      toast.dismiss(toastId);
+      toast.success('🎉 क्लिकेबल PDF पोस्टर डाउनलोड हो गया! डाउनलोड के बाद लिंक टच करते ही सीधे ऐप खुलेगा।', {
+        duration: 5500,
+        icon: '📄'
+      });
+    } catch (err: any) {
+      console.error('Error exporting clickable PDF poster:', err);
+      toast.dismiss(toastId);
+      toast.error('PDF पोस्टर डाउनलोड में समस्या आई। कृपया पुनः प्रयास करें।');
     } finally {
       setIsGenerating(false);
     }
@@ -2586,28 +2658,39 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                 </button>
               </div>
 
-              {/* SECONDARY ROW: HD POSTER DOWNLOAD & CLIPBOARD IMAGE COPY */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+              {/* SECONDARY ROW: HD POSTER DOWNLOAD, CLICKABLE PDF & CLIPBOARD IMAGE COPY */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5">
                 <button
                   type="button"
                   onClick={handleDownloadPoster}
                   disabled={isGenerating}
-                  className="px-4 py-2.5 bg-slate-950 hover:bg-slate-900 text-amber-400 rounded-xl font-black text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+                  className="px-3 py-2.5 bg-slate-950 hover:bg-slate-900 text-amber-400 rounded-xl font-black text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50"
                   title="1080p Ultra HD पोस्टर सीधे डिवाइस में डाउनलोड करें"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>{isGenerating ? 'तैयार हो रहा है...' : 'HD पोस्टर डाउनलोड करें'}</span>
+                  <Download className="w-4 h-4 shrink-0" />
+                  <span>{isGenerating ? 'तैयार...' : 'HD इमेज डाउनलोड'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadPosterPdf}
+                  disabled={isGenerating}
+                  className="px-3 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-black text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md disabled:opacity-50 border border-emerald-400"
+                  title="क्लिकेबल PDF पोस्टर डाउनलोड करें - टच करते ही ऐप खुलेगा"
+                >
+                  <FileText className="w-4 h-4 shrink-0" />
+                  <span>क्लिकेबल PDF (टच लिंक)</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleCopyImageToClipboard}
                   disabled={isGenerating}
-                  className="px-4 py-2.5 bg-slate-900/90 hover:bg-slate-900 text-slate-100 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                  className="px-3 py-2.5 bg-slate-900/90 hover:bg-slate-900 text-slate-100 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
                   title="पोस्टर इमेज को क्लिपबोर्ड में कॉपी करें (Ctrl+V से सीधे पेस्ट करें)"
                 >
-                  <Copy className="w-3.5 h-3.5 text-amber-400" />
-                  <span>इमेज क्लिपबोर्ड में कॉपी</span>
+                  <Copy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>इमेज कॉपी करें</span>
                 </button>
               </div>
 
@@ -3054,6 +3137,18 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                     </div>
                   )}
                 </div>
+
+                {/* Bottom Full-Text App Link Strip (Visible in PNG download + Clickable in Live Preview & PDF) */}
+                <a
+                  href="https://jeevan-jyoti-foundation-7eso.vercel.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="क्लिक करके ऐप खोलें: https://jeevan-jyoti-foundation-7eso.vercel.app"
+                  className="relative z-10 w-full mt-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:brightness-105 text-stone-950 border border-amber-300 shadow-md flex items-center justify-center gap-1.5 text-[9.5px] sm:text-[10.5px] font-mono font-black tracking-tight transition cursor-pointer whitespace-nowrap"
+                >
+                  <ExternalLink className="w-3 h-3 text-stone-900 shrink-0" />
+                  <span>https://jeevan-jyoti-foundation-7eso.vercel.app</span>
+                </a>
               </div>
             )}
             </div>
@@ -3108,7 +3203,7 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                 </button>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] pt-1 text-slate-400 border-t border-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] pt-1 text-slate-400 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={handleDownloadPoster}
@@ -3116,7 +3211,18 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                   className="hover:text-amber-400 flex items-center gap-1 cursor-pointer transition font-bold"
                 >
                   <Download className="w-3.5 h-3.5 text-amber-400" />
-                  <span>1080p HD डाउनलोड</span>
+                  <span>1080p HD इमेज</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadPosterPdf}
+                  disabled={isGenerating}
+                  className="hover:text-emerald-300 text-emerald-400 flex items-center gap-1 cursor-pointer transition font-black"
+                  title="डाउनलोड के बाद टच करते ही ऐप खोलने वाला क्लिकेबल PDF"
+                >
+                  <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>📄 क्लिकेबल PDF (टच लिंक)</span>
                 </button>
 
                 <button
@@ -3239,14 +3345,24 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
             </div>
 
             {/* Bottom Actions */}
-            <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-800 text-slate-300 font-bold">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-2 border-t border-slate-800 text-slate-300 font-bold">
               <button
                 type="button"
                 onClick={handleDownloadPoster}
                 className="text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>HD पोस्टर डाउनलोड करें</span>
+                <span>HD इमेज डाउनलोड</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadPosterPdf}
+                className="text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer font-black"
+                title="डाउनलोड के बाद टच करते ही ऐप खोलने वाला क्लिकेबल PDF"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>📄 क्लिकेबल PDF (टच लिंक)</span>
               </button>
 
               <button
@@ -3255,7 +3371,7 @@ export const MotivationalQuotesPosterStudio: React.FC<Props> = ({ onClose, isMod
                 className="hover:text-white flex items-center gap-1 cursor-pointer"
               >
                 <Copy className="w-3.5 h-3.5 text-indigo-400" />
-                <span>इमेज क्लिपबोर्ड में कॉपी करें</span>
+                <span>इमेज कॉपी</span>
               </button>
             </div>
           </div>

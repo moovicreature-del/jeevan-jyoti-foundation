@@ -28,9 +28,11 @@ import {
   Share2,
   MessageCircle,
   Copy,
-  Loader2
+  Loader2,
+  FileText
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import { QRCodeCanvas } from 'qrcode.react';
 import { PosterAppOpenQR } from '../common/PosterAppOpenQR';
 import { compressImageToSafeDataUrl } from '../../utils/imageOptimizer';
@@ -785,13 +787,13 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
     // 5.5. Official App Open QR Code Plaque on Canvas
     const qrCanvas = document.getElementById('daily-wisdom-qr-canvas') as HTMLCanvasElement | null;
     if (qrCanvas) {
-      const qrBoxW = 340;
-      const qrBoxH = 92;
+      const qrBoxW = 560;
+      const qrBoxH = 96;
       const qrBoxX = (width - qrBoxW) / 2;
       const qrBoxY = footerSepY - qrBoxH - 18;
 
       ctx.save();
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.82)';
       ctx.strokeStyle = '#D4AF37';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
@@ -800,8 +802,8 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
       ctx.stroke();
 
       // White QR backing
-      const qrSize = 74;
-      const qrX = qrBoxX + 9;
+      const qrSize = 78;
+      const qrX = qrBoxX + 10;
       const qrY = qrBoxY + 9;
       ctx.fillStyle = '#FFFFFF';
       ctx.beginPath();
@@ -812,19 +814,19 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
       ctx.drawImage(qrCanvas, qrX + 2, qrY + 2, qrSize - 4, qrSize - 4);
 
       // Text beside QR
-      const textX = qrBoxX + qrSize + 16;
+      const textX = qrBoxX + qrSize + 20;
       ctx.textAlign = 'left';
       ctx.fillStyle = '#FFE082';
-      ctx.font = 'bold 18px "Noto Sans Devanagari", sans-serif';
-      ctx.fillText('📲 ऐप खोलें (SCAN TO OPEN)', textX, qrBoxY + 32);
+      ctx.font = 'bold 20px "Noto Sans Devanagari", sans-serif';
+      ctx.fillText('📲 ऐप खोलें (SCAN OR TAP LINK)', textX, qrBoxY + 32);
 
       ctx.fillStyle = '#FDE68A';
-      ctx.font = 'bold 12px monospace';
-      ctx.fillText('🔗 https://jeevan-jyoti-foundation-7eso.vercel.app', textX, qrBoxY + 54);
+      ctx.font = 'bold 14px monospace';
+      ctx.fillText('https://jeevan-jyoti-foundation-7eso.vercel.app', textX, qrBoxY + 56);
 
-      ctx.fillStyle = '#94A3B8';
-      ctx.font = '11px sans-serif';
-      ctx.fillText('नीति आयोग मान्यता प्राप्त NGO • स्थापना 2018', textX, qrBoxY + 72);
+      ctx.fillStyle = '#CBD5E1';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('नीति आयोग मान्यता प्राप्त NGO • स्थापना 2018', textX, qrBoxY + 78);
       ctx.restore();
     }
 
@@ -839,15 +841,33 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
     ctx.lineTo(width * 0.85, footerSepY);
     ctx.stroke();
 
-    ctx.font = 'bold 26px "Noto Sans Devanagari", sans-serif';
+    ctx.font = 'bold 25px "Noto Sans Devanagari", sans-serif';
     ctx.fillStyle = '#FCD34D';
     ctx.shadowBlur = 8;
-    ctx.fillText('सेवा • शिक्षा • स्वास्थ्य', width / 2, footerY + 10);
+    ctx.fillText('सेवा • शिक्षा • स्वास्थ्य', width / 2, footerY + 4);
+
+    // High-contrast Golden Pill for complete URL so mobile OCR / Gallery detects & opens on touch
+    ctx.save();
+    ctx.shadowBlur = 0;
+    const urlText = 'https://jeevan-jyoti-foundation-7eso.vercel.app';
+    const pillW = 620;
+    const pillH = 38;
+    const pillX = (width - pillW) / 2;
+    const pillY = footerY + 20;
+    ctx.fillStyle = '#FCD34D';
+    ctx.beginPath();
+    ctx.roundRect(pillX, pillY, pillW, pillH, [19]);
+    ctx.fill();
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
     ctx.font = 'bold 19px monospace';
-    ctx.fillStyle = '#E2E8F0';
-    ctx.shadowBlur = 6;
-    ctx.fillText('https://jeevan-jyoti-foundation-7eso.vercel.app', width / 2, footerY + 44);
+    ctx.fillStyle = '#0F172A';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(urlText, width / 2, pillY + pillH / 2 + 1);
+    ctx.restore();
 
     const dataUrl = canvas.toDataURL('image/png', 1.0);
     const blob = await new Promise<Blob>((resolve, reject) => {
@@ -911,6 +931,53 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
       console.error('Direct download error:', err);
       toast.dismiss(toastId);
       toast.error('पोस्टर डाउनलोड में समस्या आई। पोस्टर एडिटर से डाउनलोड का प्रयास करें।');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Clickable PDF Poster Download (1-Touch Open App anywhere on PDF / bottom link)
+  const handleDirectPdfDownload = async () => {
+    setIsDownloading(true);
+    const toastId = toast.loading('📄 क्लिकेबल PDF पोस्टर तैयार हो रहा है (टच करते ही ऐप खुलेगा)...');
+    const OFFICIAL_APP_URL = 'https://jeevan-jyoti-foundation-7eso.vercel.app';
+
+    try {
+      const { dataUrl, fileName } = await renderDailyWisdomPosterCanvas();
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const aspect = 1080 / 1560;
+      let renderH = pageHeight - 16;
+      let renderW = renderH * aspect;
+      if (renderW > pageWidth - 16) {
+        renderW = pageWidth - 16;
+        renderH = renderW / aspect;
+      }
+      const posX = (pageWidth - renderW) / 2;
+      const posY = (pageHeight - renderH) / 2;
+
+      pdf.addImage(dataUrl, 'PNG', posX, posY, renderW, renderH);
+      // Full-poster embedded URI annotation: tapping link text or QR in PDF opens the app directly
+      pdf.link(posX, posY, renderW, renderH, { url: OFFICIAL_APP_URL });
+
+      const pdfFileName = fileName.replace(/\.png$/i, '_Clickable.pdf');
+      pdf.save(pdfFileName);
+
+      toast.dismiss(toastId);
+      toast.success('🎉 क्लिकेबल PDF पोस्टर डाउनलोड हो गया! इस PDF पर लिंक टच करते ही सीधे ऐप खुलेगा।', {
+        duration: 5500,
+        icon: '📄'
+      });
+    } catch (err: any) {
+      console.error('Direct PDF download error:', err);
+      toast.dismiss(toastId);
+      toast.error('PDF पोस्टर डाउनलोड में समस्या आई। कृपया पुनः प्रयास करें।');
     } finally {
       setIsDownloading(false);
     }
@@ -1263,26 +1330,31 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
                   </div>
                 </div>
 
-                {/* Footer Ribbon with App Open QR Code & Direct Clickable Link */}
-                <div className="w-full pt-2 border-t border-amber-400/30 flex items-center justify-between gap-2 px-1 text-left">
-                  <div className="space-y-0.5 min-w-0">
-                    <div className="text-[10px] font-bold text-amber-200/95 tracking-wide truncate">
-                      सेवा • शिक्षा • स्वास्थ्य
+                {/* Footer Ribbon with App Open QR Code & Direct Full https:// Clickable Link */}
+                <div className="w-full pt-2 border-t border-amber-400/30 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 px-1 text-left">
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="text-[10px] font-bold text-amber-200/95 tracking-wide">
+                        सेवा • शिक्षा • स्वास्थ्य
+                      </div>
+                      <div className="text-[8.5px] text-amber-300/90 font-semibold">
+                        📲 स्कैन करें या नीचे दिए गए लिंक को टच करें
+                      </div>
                     </div>
-                    <a
-                      href="https://jeevan-jyoti-foundation-7eso.vercel.app"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[8.5px] font-mono text-amber-300 font-bold hover:underline flex items-center gap-1 cursor-pointer truncate"
-                      title="क्लिक करके ऐप खोलें: https://jeevan-jyoti-foundation-7eso.vercel.app"
-                    >
-                      <span>🔗</span>
-                      <span>jeevan-jyoti-foundation-7eso.vercel.app</span>
-                    </a>
+                    <div className="shrink-0">
+                      <PosterAppOpenQR size={38} variant="compact" customUrl="https://jeevan-jyoti-foundation-7eso.vercel.app" />
+                    </div>
                   </div>
-                  <div className="shrink-0">
-                    <PosterAppOpenQR size={38} variant="compact" customUrl="https://jeevan-jyoti-foundation-7eso.vercel.app" />
-                  </div>
+                  <a
+                    href="https://jeevan-jyoti-foundation-7eso.vercel.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-1 px-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-stone-950 font-mono font-black text-[8px] sm:text-[9px] flex items-center justify-center gap-1 cursor-pointer shadow-sm border border-amber-200 whitespace-nowrap"
+                    title="क्लिक करके ऐप खोलें: https://jeevan-jyoti-foundation-7eso.vercel.app"
+                  >
+                    <span>🔗</span>
+                    <span>https://jeevan-jyoti-foundation-7eso.vercel.app</span>
+                  </a>
                 </div>
               </div>
             </div>
@@ -1322,6 +1394,18 @@ export const DailyWisdomTab: React.FC<DailyWisdomTabProps> = ({
                     <span>📥 सीधा 1080p HD पोस्टर डाउनलोड करें</span>
                   </>
                 )}
+              </button>
+
+              {/* PRIMARY ACTION 1B: CLICKABLE PDF DOWNLOAD (TOUCH LINK TO OPEN APP DIRECTLY) */}
+              <button
+                type="button"
+                onClick={handleDirectPdfDownload}
+                disabled={isDownloading}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-xs shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer border border-emerald-400 ring-1 ring-emerald-400/40 disabled:opacity-75"
+                title="क्लिकेबल PDF डाउनलोड करें - डाउनलोड के बाद लिंक टच करते ही सीधे ऐप खुलेगा"
+              >
+                <FileText className="w-4 h-4 text-emerald-200" />
+                <span>📄 क्लिकेबल PDF डाउनलोड (टच टू ओपन ऐप)</span>
               </button>
 
               {/* SECONDARY ROW: WhatsApp Share & Copy to Clipboard */}

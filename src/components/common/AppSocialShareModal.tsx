@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 import { FOUNDATION_INFO } from '../../data/foundationData';
@@ -198,6 +199,67 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
       console.error('Download share card error:', err);
       toast.dismiss(toastId);
       toast.error('पोस्टर डाउनलोड में समस्या आई।');
+    } finally {
+      setIsDownloadingCard(false);
+    }
+  };
+
+  // 3.5. Download as Clickable PDF (1-Touch Open App on click/touch)
+  const handleDownloadSharePdf = async () => {
+    if (!shareCardRef.current) return;
+    setIsDownloadingCard(true);
+    const toastId = toast.loading('📄 क्लिकेबल PDF पोस्टर तैयार हो रहा है (टच करते ही ऐप खुलेगा)...');
+
+    try {
+      const node = shareCardRef.current;
+      const actualWidth = node.scrollWidth || 600;
+      const actualHeight = node.scrollHeight || 800;
+
+      const dataUrl = await toPng(node, {
+        quality: 0.98,
+        pixelRatio: 2.5,
+        cacheBust: true,
+        width: actualWidth,
+        height: actualHeight
+      });
+
+      const isPortrait = actualHeight >= actualWidth;
+      const pdf = new jsPDF({
+        orientation: isPortrait ? 'portrait' : 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const imgAspect = actualWidth / actualHeight;
+      let renderW = pageWidth - 16;
+      let renderH = renderW / imgAspect;
+      if (renderH > pageHeight - 16) {
+        renderH = pageHeight - 16;
+        renderW = renderH * imgAspect;
+      }
+      const posX = (pageWidth - renderW) / 2;
+      const posY = (pageHeight - renderH) / 2;
+
+      pdf.addImage(dataUrl, 'PNG', posX, posY, renderW, renderH);
+
+      // Embedded Clickable Hyperlink: Clicking or touching ANYWHERE on the poster opens the app!
+      pdf.link(posX, posY, renderW, renderH, { url: appUrl });
+
+      const fileName = `JJF_App_Clickable_Poster_${Date.now()}.pdf`;
+      pdf.save(fileName);
+
+      toast.dismiss(toastId);
+      toast.success('🎉 क्लिकेबल PDF पोस्टर डाउनलोड हो गया! इस PDF पर कहीं भी टच करते ही सीधे ऐप खुलेगा।', {
+        duration: 6000,
+        icon: '📄'
+      });
+    } catch (err) {
+      console.error('PDF export error:', err);
+      toast.dismiss(toastId);
+      toast.error('PDF पोस्टर तैयार करने में समस्या आई।');
     } finally {
       setIsDownloadingCard(false);
     }
@@ -455,43 +517,49 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
                   <div>• 📜 डिजिटल स्वयंसेवक व दान प्रमाण पत्र सत्यापन</div>
                 </div>
 
-                {/* QR Code & Scan Strip */}
-                <div className="flex items-center justify-between gap-3 w-full max-w-sm pt-2 border-t border-amber-400/30">
-                  <div className="text-left text-[10px] space-y-0.5">
-                    <div className="font-black text-amber-300">📲 सीधे ऐप पर जाएं (Click to Open):</div>
+                {/* QR Code & Full-Text Touch-to-Open Link Strip */}
+                <div className="w-full max-w-sm pt-2 border-t border-amber-400/30 space-y-2">
+                  <div className="flex items-center justify-between gap-3 w-full">
+                    <div className="text-left text-[10px] space-y-1 min-w-0">
+                      <div className="font-black text-amber-300">📲 सीधे ऐप पर जाएं (Tap / Scan QR):</div>
+                      <div className="text-amber-100/90 font-semibold text-[9px] leading-snug">
+                        नीचे दिए गए लिंक को टच करें या QR कोड स्कैन करके तुरंत ऐप खोलें:
+                      </div>
+                    </div>
+
                     <a
                       href={appUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-amber-300 font-mono text-[9px] hover:underline flex items-center gap-1 cursor-pointer font-bold"
                       title={`क्लिक करके ऐप खोलें: ${appUrl}`}
+                      className="p-1.5 bg-white rounded-xl shadow-md border-2 border-amber-400 shrink-0 ring-2 ring-amber-400/40 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
                     >
-                      <span>🔗</span>
-                      <span>jeevan-jyoti-foundation-7eso.vercel.app</span>
+                      <QRCodeSVG
+                        value={appUrl}
+                        size={58}
+                        level="H"
+                        fgColor="#0f172a"
+                        bgColor="#FFFFFF"
+                        imageSettings={{
+                          src: '/logo.png',
+                          height: 15,
+                          width: 15,
+                          excavate: true
+                        }}
+                      />
                     </a>
-                    <div className="text-amber-200/90 font-medium text-[9px]">कैमरे से स्कैन करें या लिंक पर क्लिक करें</div>
                   </div>
 
+                  {/* Full-Width High-Contrast Plaintext URL Pill (Zero Truncation + OCR & PDF Clickable) */}
                   <a
                     href={appUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className="w-full px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 text-stone-950 font-mono text-[9px] sm:text-[10.5px] font-black shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer border border-amber-200 select-all whitespace-nowrap"
                     title={`क्लिक करके ऐप खोलें: ${appUrl}`}
-                    className="p-1.5 bg-white rounded-xl shadow-md border-2 border-amber-400 shrink-0 ring-2 ring-amber-400/40 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
                   >
-                    <QRCodeSVG
-                      value={appUrl}
-                      size={58}
-                      level="H"
-                      fgColor="#0f172a"
-                      bgColor="#FFFFFF"
-                      imageSettings={{
-                        src: '/logo.png',
-                        height: 15,
-                        width: 15,
-                        excavate: true
-                      }}
-                    />
+                    <span className="shrink-0">🔗</span>
+                    <span>{appUrl}</span>
                   </a>
                 </div>
 
@@ -503,7 +571,7 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
             </div>
 
             {/* Download and Copy Buttons for this Share Card */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
               <button
                 type="button"
                 onClick={handleDownloadSharePoster}
@@ -519,9 +587,20 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
                 ) : (
                   <>
                     <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>📥 HD पोस्टर डाउनलोड</span>
+                    <span>📥 1080p HD इमेज</span>
                   </>
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadSharePdf}
+                disabled={isDownloadingCard}
+                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-xs shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-75 border border-emerald-400 ring-2 ring-emerald-400/30"
+                title="क्लिकेबल PDF पोस्टर डाउनलोड करें - जिसे टच करते ही सीधे ऐप खुल जाता है"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>📄 क्लिकेबल PDF (टच टू ओपन)</span>
               </button>
 
               <button
@@ -537,10 +616,22 @@ export const AppSocialShareModal: React.FC<AppSocialShareModalProps> = ({
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5" />
-                    <span>🔗 लिंक कॉपी करें</span>
+                    <span>🔗 लिंक कॉपी</span>
                   </>
                 )}
               </button>
+            </div>
+
+            {/* Helpful Guidance Notice for Touch-to-Open */}
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-400/35 text-[10.5px] text-amber-200 space-y-1 text-left">
+              <div className="font-bold flex items-center gap-1.5 text-amber-300">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>पोस्टर से ऐप ओपन करने के 2 आसान तरीके:</span>
+              </div>
+              <div className="pl-4 space-y-0.5 text-slate-300 text-[10px]">
+                <div>• <strong>टच टू ओपन PDF:</strong> 'क्लिकेबल PDF' फाइल डाउनलोड करें — इसे फोन में खोलकर कहीं भी टच करते ही सीधे ऐप खुल जाएगा।</div>
+                <div>• <strong>इमेज फोटो:</strong> 'HD इमेज' में दिए QR कोड या लिंक को फोन कैमरे / Google Lens से टच करें।</div>
+              </div>
             </div>
           </div>
 

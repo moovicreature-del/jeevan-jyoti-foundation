@@ -128,9 +128,9 @@ export const PosterAppOpenQR: React.FC<PosterAppOpenQRProps> = ({
           <div className="text-[8px] sm:text-[8.5px] text-amber-200 font-mono tracking-wider uppercase font-bold truncate">
             OFFICIAL APP • CLICK TO OPEN
           </div>
-          <div className="text-[8px] sm:text-[9px] text-amber-300 font-mono font-bold truncate flex items-center gap-1 underline underline-offset-2">
-            <span>🔗</span>
-            <span>jeevan-jyoti-foundation-7eso.vercel.app</span>
+          <div className="text-[7.5px] sm:text-[8.5px] text-amber-300 font-mono font-extrabold break-all flex items-center gap-1 underline underline-offset-2">
+            <span className="shrink-0">🔗</span>
+            <span>{appUrl}</span>
           </div>
         </div>
       </a>
@@ -142,10 +142,10 @@ export const PosterAppOpenQR: React.FC<PosterAppOpenQRProps> = ({
           target="_blank"
           rel="noopener noreferrer"
           title={`ऐप ओपन करें: ${appUrl}`}
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 text-stone-950 font-black text-[9px] sm:text-[10px] shadow-md border border-amber-300 transition-all hover:scale-105 active:scale-95 cursor-pointer ring-1 ring-amber-500/40"
+          className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 text-stone-950 font-black text-[8.5px] sm:text-[10px] shadow-md border border-amber-300 transition-all hover:scale-105 active:scale-95 cursor-pointer ring-1 ring-amber-500/40 whitespace-nowrap"
         >
           <Globe className="w-3 h-3 text-stone-900 shrink-0" />
-          <span className="font-mono truncate">https://jeevan-jyoti-foundation-7eso.vercel.app</span>
+          <span className="font-mono">{appUrl}</span>
           <ExternalLink className="w-2.5 h-2.5 text-stone-900 shrink-0" />
         </a>
       )}
