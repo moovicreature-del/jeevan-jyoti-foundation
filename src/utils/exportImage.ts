@@ -377,9 +377,18 @@ export async function captureElementToImageData(
       quality: quality,
       pixelRatio: scale,
       backgroundColor: bg,
-      cacheBust: false,
+      width: targetWidth,
+      height: targetHeight,
+      cacheBust: true,
       skipFonts: true,
       fontEmbedCSS: '',
+      style: {
+        transform: 'none',
+        maxHeight: 'none',
+        width: `${targetWidth}px`,
+        height: `${targetHeight}px`,
+        overflow: 'visible'
+      },
       filter: (node: Node) => {
         if (node instanceof HTMLElement && (node.classList.contains('no-print') || node.classList.contains('no-export'))) {
           return false;
@@ -388,7 +397,7 @@ export async function captureElementToImageData(
       }
     };
 
-    const dataUrl = format === 'png' 
+    const dataUrl = format === 'png'
       ? await toPng(element, config)
       : await toJpeg(element, config);
 
@@ -473,7 +482,56 @@ export async function exportElementAsJpg(
 }
 
 /**
- * High-Resolution Vector-Wrapped PDF Export (A4 Precision Fit with Lossless PNG at 350+ DPI)
+ * Draws a crisp, universal Golden Vector Action Bar with standalone textWithLink + bounded pdf.link
+ * Guaranteed clickable across Android Drive PDF Viewer, Chrome, Safari, iOS Files, WhatsApp & Adobe Acrobat.
+ */
+function appendClickableUrlBarToPdf(
+  pdf: jsPDF,
+  pageWidth: number,
+  pageHeight: number,
+  posterBottomY: number,
+  posterWidth: number,
+  appUrl: string
+): void {
+  const pillW = Math.min(pageWidth - 14, Math.max(posterWidth, 148));
+  const pillH = 13;
+  const pillX = (pageWidth - pillW) / 2;
+  const pillY = Math.min(pageHeight - pillH - 3, posterBottomY + 2.5);
+
+  pdf.setFillColor(252, 211, 77); // Royal Amber Gold (#FCD34D)
+  pdf.setDrawColor(146, 64, 14); // Deep Amber/Brown border (#92400E)
+  pdf.setLineWidth(0.55);
+  pdf.roundedRect(pillX, pillY, pillW, pillH, 4, 4, 'FD');
+
+  // Top micro instruction label
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(120, 53, 15);
+  const caption = 'TAP OR CLICK LINK BELOW TO OPEN APP:';
+  const captionW = pdf.getTextWidth(caption);
+  pdf.text(caption, (pageWidth - captionW) / 2, pillY + 4.4);
+
+  // Main standalone clickable hyperlink text
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10.5);
+  pdf.setTextColor(15, 23, 42);
+  const urlW = pdf.getTextWidth(appUrl);
+  const urlX = (pageWidth - urlW) / 2;
+  const urlY = pillY + 9.8;
+
+  pdf.textWithLink(appUrl, urlX, urlY, { url: appUrl });
+
+  // Crisp underline under the clickable URL
+  pdf.setDrawColor(15, 23, 42);
+  pdf.setLineWidth(0.35);
+  pdf.line(urlX, urlY + 0.8, urlX + urlW, urlY + 0.8);
+
+  // Bounded link rectangle covering ONLY this golden pill button (never overlaps full page)
+  pdf.link(pillX, pillY, pillW, pillH, { url: appUrl });
+}
+
+/**
+ * High-Resolution Vector-Wrapped PDF Export (A4 Precision Fit with Lossless Image + Clickable PDF Hyperlinks)
  */
 export async function exportElementAsPdf(
   element: HTMLElement,
@@ -494,7 +552,7 @@ export async function exportElementAsPdf(
   try {
     const elemWidth = result.width;
     const elemHeight = result.height;
-    
+
     // Auto-detect orientation if not forced
     const isPortrait = elemHeight > elemWidth;
     const orientation = options?.orientation && options.orientation !== 'auto'
@@ -514,25 +572,36 @@ export async function exportElementAsPdf(
     // Preserve exact aspect ratio with crisp margins
     const elemAspect = elemWidth / elemHeight;
 
+    // Collect clickable external links from DOM before rendering
+    const anchors = Array.from(element.querySelectorAll<HTMLAnchorElement>('a[href^="http"]'));
+    const hasAttachedPoster =
+      Boolean(element.querySelector('#jjf-official-attached-poster')) ||
+      element.id === 'jjf-official-attached-poster' ||
+      anchors.some((a) => (a.getAttribute('href') || '').includes('vercel.app'));
+
     // Detect if this element represents an A4 letterhead or official certificate document
     const isA4Doc =
-      options?.isFullBleedA4 === true ||
-      element.classList.contains('official-letterhead-a4') ||
-      Boolean(element.querySelector('.official-letterhead-a4')) ||
-      element.classList.contains('membership-certificate-document') ||
-      Boolean(element.querySelector('.membership-certificate-document')) ||
-      element.classList.contains('printable-appointment-letter') ||
-      Boolean(element.querySelector('.printable-appointment-letter')) ||
-      element.id.toLowerCase().includes('letterhead') ||
-      element.id.toLowerCase().includes('certificate') ||
-      element.id.toLowerCase().includes('appointment') ||
-      element.id.toLowerCase().includes('membership');
+      !hasAttachedPoster && (
+        options?.isFullBleedA4 === true ||
+        element.classList.contains('official-letterhead-a4') ||
+        Boolean(element.querySelector('.official-letterhead-a4')) ||
+        element.classList.contains('membership-certificate-document') ||
+        Boolean(element.querySelector('.membership-certificate-document')) ||
+        element.classList.contains('printable-appointment-letter') ||
+        Boolean(element.querySelector('.printable-appointment-letter')) ||
+        element.id.toLowerCase().includes('letterhead') ||
+        element.id.toLowerCase().includes('certificate') ||
+        element.id.toLowerCase().includes('appointment') ||
+        element.id.toLowerCase().includes('membership')
+      );
 
     // True A4 Portrait Document Check: A4 doc or portrait aspect ratio (~210/297 = 0.707)
-    const isA4PortraitDoc = isA4Doc || (orientation === 'portrait' && Math.abs(elemAspect - (210 / 297)) < 0.15);
+    const isA4PortraitDoc = !hasAttachedPoster && (
+      isA4Doc || (orientation === 'portrait' && Math.abs(elemAspect - (210 / 297)) < 0.15)
+    );
 
     // True ID Card Document Check - ONLY if explicitly flagged or genuine small pocket badge
-    const isIdCardDoc = !isA4PortraitDoc && (
+    const isIdCardDoc = !isA4PortraitDoc && !hasAttachedPoster && (
       options?.isIdCard === true ||
       element.classList.contains('printable-id-card') ||
       (element.id.toLowerCase().includes('id-card') && element.offsetWidth < 520) ||
@@ -544,20 +613,31 @@ export async function exportElementAsPdf(
     let offsetX = 0;
     let offsetY = 0;
 
-    if (isA4PortraitDoc) {
-      // 100% Full-bleed A4 (210mm x 297mm) - Exact match for official foundation letterhead certificate
+    if (hasAttachedPoster) {
+      // Reserve 18mm at bottom for the universal clickable vector URL bar
+      const topMargin = 5;
+      const bottomBarReserve = 18;
+      const usableWidth = pageWidth - 14;
+      const usableHeight = pageHeight - topMargin - bottomBarReserve;
+      renderWidth = usableWidth;
+      renderHeight = usableWidth / elemAspect;
+      if (renderHeight > usableHeight) {
+        renderHeight = usableHeight;
+        renderWidth = usableHeight * elemAspect;
+      }
+      offsetX = (pageWidth - renderWidth) / 2;
+      offsetY = topMargin + (usableHeight - renderHeight) / 2;
+    } else if (isA4PortraitDoc) {
       renderWidth = pageWidth;
       renderHeight = pageHeight;
       offsetX = 0;
       offsetY = 0;
     } else if (isIdCardDoc) {
-      // ID Card pocket badge centered on A4 sheet
       renderWidth = Math.min(pageWidth - 12, 92);
       renderHeight = renderWidth / elemAspect;
       offsetX = (pageWidth - renderWidth) / 2;
       offsetY = (pageHeight - renderHeight) / 2;
     } else {
-      // General proportional document
       const margin = 6;
       const usableWidth = pageWidth - (margin * 2);
       const usableHeight = pageHeight - (margin * 2);
@@ -571,13 +651,13 @@ export async function exportElementAsPdf(
       offsetY = (pageHeight - renderHeight) / 2;
     }
 
-    pdf.addImage(result.dataUrl, 'JPEG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST');
+    const imgFormat = result.dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+    pdf.addImage(result.dataUrl, imgFormat, offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST');
 
     // Automatically map all clickable <a href="http..."> links inside the DOM element to native PDF URI annotations
     try {
       const containerRect = element.getBoundingClientRect();
       if (containerRect.width > 0 && containerRect.height > 0) {
-        const anchors = element.querySelectorAll<HTMLAnchorElement>('a[href^="http"]');
         anchors.forEach((anchor) => {
           const href = anchor.getAttribute('href');
           if (!href) return;
@@ -587,17 +667,24 @@ export async function exportElementAsPdf(
           const relY = (aRect.top - containerRect.top) / containerRect.height;
           const relW = aRect.width / containerRect.width;
           const relH = aRect.height / containerRect.height;
-          pdf.link(
-            offsetX + relX * renderWidth,
-            offsetY + relY * renderHeight,
-            relW * renderWidth,
-            relH * renderHeight,
-            { url: href }
-          );
+          // Add slight +1.5mm tap padding for reliable mobile taps
+          const pad = 1.5;
+          const lx = Math.max(offsetX, offsetX + relX * renderWidth - pad);
+          const ly = Math.max(offsetY, offsetY + relY * renderHeight - pad);
+          const lw = Math.min(renderWidth, relW * renderWidth + pad * 2);
+          const lh = Math.min(renderHeight, relH * renderHeight + pad * 2);
+          pdf.link(lx, ly, lw, lh, { url: href });
         });
       }
     } catch (linkErr) {
       console.warn('Could not attach PDF link annotations:', linkErr);
+    }
+
+    // If this is a social/festival poster, append crisp vector clickable URL pill bar below poster
+    if (hasAttachedPoster) {
+      const appAnchor = anchors.find((a) => (a.getAttribute('href') || '').includes('vercel.app'));
+      const targetAppUrl = appAnchor?.getAttribute('href') || 'https://jeevan-jyoti-foundation-7eso.vercel.app';
+      appendClickableUrlBarToPdf(pdf, pageWidth, pageHeight, offsetY + renderHeight, renderWidth, targetAppUrl);
     }
 
     pdf.save(finalFileName);
@@ -695,9 +782,9 @@ export const exportAsImage = exportElementAsPng;
 /**
  * Exports any rendered poster (from dataUrl + optional DOM sourceElement) into an A4 Clickable PDF.
  * Embeds:
- * 1) Native DOM-mapped URI link boxes over every <a href="http..."> element on the poster (QR + yellow URL pill)
- * 2) Dedicated crisp golden vector bottom action bar with pdf.textWithLink so every mobile/desktop PDF reader opens the link on 1 tap
- * 3) Focused lower-poster clickable region + full-poster clickable annotation fallback
+ * 1) Non-overlapping DOM-mapped URI link boxes over every <a href="http..."> element on the poster (QR + yellow URL pill)
+ * 2) Dedicated crisp golden vector bottom action bar with standalone pdf.textWithLink + pdf.link so every mobile/desktop PDF reader opens the link on 1 tap
+ * 3) Footer-zone fallback clickable rect (bottom 22% of poster) when no DOM anchors are available (HTML5 Canvas posters)
  */
 export async function exportPosterAsClickablePdf(params: {
   dataUrl: string;
@@ -727,9 +814,9 @@ export async function exportPosterAsClickablePdf(params: {
   const pageHeight = pdf.internal.pageSize.getHeight();
   const aspect = Math.max(1, width) / Math.max(1, height);
 
-  // Reserve 14mm at bottom for the dedicated interactive vector hyperlink pill
-  const topMargin = 6;
-  const bottomBarReserve = 16;
+  // Reserve 18mm at bottom for the dedicated interactive vector hyperlink pill
+  const topMargin = 5;
+  const bottomBarReserve = 18;
   const maxW = pageWidth - 14;
   const maxH = pageHeight - topMargin - bottomBarReserve;
 
@@ -743,8 +830,12 @@ export async function exportPosterAsClickablePdf(params: {
   const posX = (pageWidth - renderW) / 2;
   const posY = topMargin + (maxH - renderH) / 2;
 
-  // 1. Place high-resolution poster visual
-  pdf.addImage(dataUrl, 'PNG', posX, posY, renderW, renderH);
+  // 1. Place high-resolution poster visual (auto-detect PNG vs JPEG)
+  const imgFmt =
+    dataUrl.startsWith('data:image/jpeg') || dataUrl.startsWith('data:image/jpg')
+      ? 'JPEG'
+      : 'PNG';
+  pdf.addImage(dataUrl, imgFmt, posX, posY, renderW, renderH);
 
   // 2. Map every live HTML <a href="http..."> link inside sourceElement into exact mm coordinates
   let mappedDomLinks = 0;
@@ -762,13 +853,12 @@ export async function exportPosterAsClickablePdf(params: {
           const relY = (aRect.top - containerRect.top) / containerRect.height;
           const relW = aRect.width / containerRect.width;
           const relH = aRect.height / containerRect.height;
-          pdf.link(
-            posX + relX * renderW,
-            posY + relY * renderH,
-            relW * renderW,
-            relH * renderH,
-            { url: href }
-          );
+          const pad = 1.5;
+          const lx = Math.max(posX, posX + relX * renderW - pad);
+          const ly = Math.max(posY, posY + relY * renderH - pad);
+          const lw = Math.min(renderW, relW * renderW + pad * 2);
+          const lh = Math.min(renderH, relH * renderH + pad * 2);
+          pdf.link(lx, ly, lw, lh, { url: href });
           mappedDomLinks++;
         });
       }
@@ -777,39 +867,15 @@ export async function exportPosterAsClickablePdf(params: {
     }
   }
 
-  // 3. Also attach a focused URI annotation over the lower 24% footer zone (QR + URL Pill) if canvas-rendered or fallback
+  // 3. Focused lower-footer URI annotation covering ONLY the QR & bottom URL pill zone (never full page)
   if (mappedDomLinks === 0) {
-    const footerStripH = renderH * 0.24;
+    const footerStripH = renderH * 0.22;
     const footerStripY = posY + renderH - footerStripH;
     pdf.link(posX, footerStripY, renderW, footerStripH, { url: appUrl });
   }
 
-  // 4. Dedicated Crisp Vector Clickable Link Pill right below the poster (uses real PDF textWithLink + pdf.link!)
-  const pillW = Math.min(pageWidth - 16, Math.max(renderW, 138));
-  const pillH = 10.5;
-  const pillX = (pageWidth - pillW) / 2;
-  const pillY = Math.min(pageHeight - pillH - 3.5, posY + renderH + 2.5);
-
-  pdf.setFillColor(252, 211, 77); // Royal Amber Gold (#FCD34D)
-  pdf.setDrawColor(146, 64, 14); // Deep Amber/Brown border (#92400E)
-  pdf.setLineWidth(0.5);
-  pdf.roundedRect(pillX, pillY, pillW, pillH, 4, 4, 'FD');
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(9.5);
-  pdf.setTextColor(15, 23, 42); // Crisp Dark Slate (#0F172A)
-
-  const linkLabel = `Open App (Tap / Click Link):  ${appUrl}`;
-  const textWidth = pdf.getTextWidth(linkLabel);
-  const textX = (pageWidth - textWidth) / 2;
-  const textY = pillY + 6.6;
-
-  pdf.textWithLink(linkLabel, textX, textY, { url: appUrl });
-  // Ensure the entire golden pill button region is clickable
-  pdf.link(pillX, pillY, pillW, pillH, { url: appUrl });
-
-  // 5. Fallback clickable overlay across the upper poster body so tapping anywhere opens app
-  pdf.link(posX, posY, renderW, renderH, { url: appUrl });
+  // 4. Dedicated Crisp Vector Clickable Link Pill right below the poster (real PDF textWithLink + bounded pdf.link)
+  appendClickableUrlBarToPdf(pdf, pageWidth, pageHeight, posY + renderH, renderW, appUrl);
 
   const finalName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
   pdf.save(finalName);

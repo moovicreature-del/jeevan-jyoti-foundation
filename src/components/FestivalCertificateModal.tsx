@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { X, Printer, Download, Share2, Sparkles, ShieldCheck, Calendar, CheckCircle2, Camera, AlertCircle, Trash2, UploadCloud, Check, FileText, Mail, Languages, Palette, ChevronDown, Award } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { FestivalGreetingRecord } from '../types';
 import { FOUNDATION_INFO } from '../data/foundationData';
 import { FESTIVALS_LIST, getFestivalsForYear } from '../data/festivalsData';
@@ -166,16 +167,34 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
   const executeDownloadPdf = async () => {
     if (!certificateRef.current || downloading) return;
     setDownloading('pdf');
+    const toastId = toast.loading(
+      displayFormat === 'poster'
+        ? '📄 क्लिकेबल PDF पोस्टर तैयार हो रहा है (डाउनलोड के बाद भी लिंक काम करेगा)...'
+        : '📄 उच्च गुणवत्ता A4 PDF प्रमाण पत्र तैयार हो रहा है...'
+    );
     try {
-      const formatTag = displayFormat === 'poster' ? 'Official_Social_Poster_Portrait' : 'Greeting_Certificate_A4';
+      const formatTag = displayFormat === 'poster' ? 'Official_Social_Poster_Clickable_PDF' : 'Greeting_Certificate_A4';
       const fileName = `${greeting.recipientName.replace(/\s+/g, '_')}_${greeting.festivalId}_${formatTag}`;
       const highResScale = (typeof window !== 'undefined' ? (window.devicePixelRatio || 1) * 3 : 3.5);
-      await exportElementAsPdf(certificateRef.current, fileName, {
+      const ok = await exportElementAsPdf(certificateRef.current, fileName, {
         orientation: displayFormat === 'poster' ? 'portrait' : 'landscape',
         pixelRatio: highResScale
       });
+      toast.dismiss(toastId);
+      if (ok) {
+        toast.success(
+          displayFormat === 'poster'
+            ? '🎉 क्लिकेबल PDF पोस्टर डाउनलोड हो गया! PDF में दिए लिंक पर टच करते ही सीधे ऐप खुलेगा।'
+            : '🎉 A4 PDF प्रमाण पत्र सफलतापूर्वक डाउनलोड हो गया!',
+          { duration: 5500, icon: '📄' }
+        );
+      } else {
+        toast.error('PDF तैयार करने में समस्या आई। कृपया पुनः प्रयास करें।');
+      }
     } catch (err) {
       console.error('Error downloading PDF:', err);
+      toast.dismiss(toastId);
+      toast.error('PDF डाउनलोड त्रुटि! कृपया पुनः प्रयास करें।');
     } finally {
       setDownloading(null);
     }
@@ -340,10 +359,16 @@ export const FestivalCertificateModal: React.FC<Props> = ({ greeting, onClose })
               onClick={() => handleInitiateDownload('pdf')}
               disabled={downloading !== null}
               className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-amber-950 text-xs font-black rounded-xl flex items-center gap-1.5 cursor-pointer transition-all shadow-md disabled:opacity-50"
-              title="Download PDF Certificate (A4 Landscape)"
+              title={displayFormat === 'poster' ? 'डाउनलोड के बाद भी लिंक क्लिक करने वाला PDF पोस्टर' : 'Download PDF Certificate (A4 Landscape)'}
             >
               <FileText className="w-3.5 h-3.5" />
-              <span>{downloading === 'pdf' ? 'PDF तैयार...' : 'PDF (A4)'}</span>
+              <span>
+                {downloading === 'pdf'
+                  ? 'PDF तैयार...'
+                  : displayFormat === 'poster'
+                  ? 'क्लिकेबल PDF (लिंक सहित)'
+                  : 'PDF (A4)'}
+              </span>
             </button>
             <button
               onClick={onClose}
